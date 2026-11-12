@@ -19,7 +19,7 @@ export function GroupRallyChip({groupId}: {groupId: number}) {
   }, [groupId]);
   if (!quest) return null;
   return (
-    <Link href={`/activities/quests/${quest.id}`} className={styles.chip} title={quest.title}>
+    <Link href={`/activities/quests/${quest.id}`} className={styles.chip} style={{color: "#fff"}} title={quest.title}>
       <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M12 2 2 7l10 5 10-5-10-5zm0 13L4.5 11.3 2 12.5l10 5 10-5-2.5-1.2L12 15z"/></svg>
       This group runs a weekly Rally
     </Link>

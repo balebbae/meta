@@ -1,4 +1,4 @@
-import {AUDIENCES, CATEGORIES, type Audience, type Category, type ShareLevel} from '@/lib/activities/types';
+import {AUDIENCES, CATEGORIES, type Answer, type Audience, type Category, type ShareLevel} from '@/lib/activities/types';
 import type {PolicyMatrix} from '@/lib/activities/policies';
 
 export const CATEGORY_LABEL: Record<Category, string> = {
@@ -106,4 +106,12 @@ function describeLevels(row: Record<Audience, ShareLevel>, visible: Audience[], 
   if (c === 'sleep') return best === 'exact' ? 'your exact sleep' : best === 'rounded' ? 'sleep rounded to the hour' : 'only whether you slept 7h+';
   if (c === 'body') return 'body metrics at ' + LEVEL_LABEL[best].toLowerCase() + ' precision';
   return 'claimed cells, never routes';
+}
+
+/** Plain-language rendering of an Answer for previews and the audit log (server-safe). */
+export function describeAnswer(a: Answer): string {
+  if (a.withheld) return a.level === 'muse_only' ? 'Withheld: Muse-only. Your Muse used it for your plan but says nothing.' : 'Withheld: not shared with this audience.';
+  if (a.value === null) return 'No data in your vault yet for this question.';
+  if (typeof a.value === 'boolean') return a.value ? 'Yes' : 'No';
+  return String(a.value);
 }

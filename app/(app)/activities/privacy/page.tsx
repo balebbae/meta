@@ -3,11 +3,10 @@ import {redirect} from 'next/navigation';
 import {OnboardingGate} from '@/components/activities/OnboardingGate';
 import {PrivacyPanel} from '@/components/activities/PrivacyPanel';
 import {SourcesPanel} from '@/components/activities/SourcesPanel';
-import {describeAnswer} from '@/components/activities/AnswerPreview';
 import {listAudit} from '@/lib/activities/answers';
 import {listConnections, publicConnection} from '@/lib/activities/connections';
 import {getPolicies} from '@/lib/activities/policies';
-import {AUDIENCE_LABEL, LEVEL_LABEL} from '@/lib/activities/summary';
+import {AUDIENCE_LABEL, describeAnswer, LEVEL_LABEL} from '@/lib/activities/summary';
 import {listVaultEvents} from '@/lib/activities/vault';
 import {getSessionUser} from '@/lib/auth';
 import styles from '@/components/activities/activities.module.css';
@@ -40,7 +39,7 @@ export default async function PrivacyPage({searchParams}: {searchParams: Promise
         Raw data lives only in your Muse&apos;s vault. Everyone else gets answers at the level you set here. <Link href="/activities/muse">See what your Muse knows</Link>.
       </p>
       <PrivacyPanel initial={policies} />
-      <div className={styles.card}>
+      <div className={styles.card} id="audit">
         <h2 className={styles.h2}>Who asked my Muse what, and what it said</h2>
         {audit.length === 0 ? (
           <p className={styles.sub}>Nothing yet. As soon as a game, Discover or a mentor match asks, it shows up here.</p>

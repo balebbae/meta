@@ -1,6 +1,6 @@
 'use client';
 import {useEffect, useState} from 'react';
-import {AUDIENCE_LABEL, LEVEL_LABEL} from '@/lib/activities/summary';
+import {AUDIENCE_LABEL, describeAnswer, LEVEL_LABEL} from '@/lib/activities/summary';
 import type {Answer, Audience, QuestionType} from '@/lib/activities/types';
 import styles from './activities.module.css';
 
@@ -14,13 +14,6 @@ const QUESTIONS: {id: QuestionType; label: string}[] = [
   {id: 'last_workout', label: 'Last workout'},
 ];
 const AUDS: Audience[] = ['game_participants', 'friends', 'mentor_match', 'public', 'only_me'];
-
-export function describeAnswer(a: Answer): string {
-  if (a.withheld) return a.level === 'muse_only' ? 'Withheld: Muse-only. Your Muse used it for your plan but says nothing.' : 'Withheld: not shared with this audience.';
-  if (a.value === null) return 'No data in your vault yet for this question.';
-  if (typeof a.value === 'boolean') return a.value ? 'Yes' : 'No';
-  return String(a.value);
-}
 
 /** §14 live redaction demo: ask your own Muse as a given audience; re-asks whenever policies change (refreshKey). */
 export function AnswerPreview({refreshKey = 0, defaultQuestion = 'avg_hr_this_week', defaultAudience = 'game_participants'}: {refreshKey?: number; defaultQuestion?: QuestionType; defaultAudience?: Audience}) {

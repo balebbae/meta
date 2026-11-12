@@ -1,14 +1,15 @@
 'use client';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import {LogWorkoutSheet, type LogTab} from './LogWorkoutSheet';
 import styles from './activities.module.css';
 
 /** /activities/log: opens the sheet immediately (nav target for "Log a workout"). */
 export function LogWorkoutPage({initialTab}: {initialTab: LogTab}) {
   const router = useRouter();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
+  useEffect(() => setOpen(true), []);
   return (
     <main className={styles.page}>
       <h1 className={styles.h1}>Log a workout</h1>

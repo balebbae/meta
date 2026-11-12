@@ -524,3 +524,196 @@ from quests q, (values
 ) v(user_id, event, text, damage, ago)
 where q.title = 'Plank Goblin Week' and q.conversation_id = 1
   and not exists (select 1 from messages m where m.kind = 'rally_game' and (m.payload->>'questId')::int = q.id);
+
+
+-- ---- Activities (scope A): profiles, tags, demo week of vault events for users 1-6 (idempotent) ----
+
+insert into activity_profiles (user_id, weekly_active_days, primary_goal, schedule, with_whom, onboarding_step)
+values (1, '3-4', 'Be consistent', '{Mornings,Weekends}'::text[], 'friends', 'done'),
+       (2, '5+', 'Train for an event', '{Mornings}'::text[], 'match', 'done'),
+       (3, '1-2', 'Get started', '{Evenings}'::text[], 'friends', 'done'),
+       (4, '3-4', 'Get stronger', '{Lunch,Evenings}'::text[], 'group', 'done'),
+       (5, '1-2', 'Lose the phone and go outside', '{Weekends}'::text[], 'friends', 'done'),
+       (6, '3-4', 'Get faster', '{Mornings,Evenings}'::text[], 'solo', 'done')
+on conflict (user_id) do nothing;
+
+insert into user_tags (user_id, tag, kind, origin, visibility, confirmed)
+values (1, 'Running', 'activity', 'selected', 'friends', true),
+       (1, 'Lifting', 'activity', 'selected', 'friends', true),
+       (1, 'Be consistent', 'goal', 'selected', 'friends', true),
+       (1, 'Mornings', 'style', 'selected', 'friends', true),
+       (1, 'Small group', 'style', 'selected', 'friends', true),
+       (2, 'Running', 'activity', 'selected', 'friends', true),
+       (2, 'Cycling', 'activity', 'selected', 'friends', true),
+       (2, 'Train for an event', 'goal', 'selected', 'friends', true),
+       (2, 'Competitive', 'style', 'selected', 'friends', true),
+       (3, 'Walking', 'activity', 'selected', 'friends', true),
+       (3, 'Yoga', 'activity', 'selected', 'friends', true),
+       (3, 'Get started', 'goal', 'selected', 'friends', true),
+       (3, 'Chill', 'style', 'selected', 'friends', true),
+       (3, 'Bad knee, low impact', 'constraint', 'selected', 'muse_only', true),
+       (4, 'Lifting', 'activity', 'selected', 'friends', true),
+       (4, 'HIIT', 'activity', 'selected', 'friends', true),
+       (4, 'Get stronger', 'goal', 'selected', 'friends', true),
+       (4, 'Big group', 'style', 'selected', 'friends', true),
+       (5, 'Hiking', 'activity', 'selected', 'friends', true),
+       (5, 'Walking', 'activity', 'selected', 'friends', true),
+       (5, 'Lose the phone and go outside', 'goal', 'selected', 'friends', true),
+       (5, 'Weekends', 'style', 'selected', 'friends', true),
+       (6, 'Running', 'activity', 'selected', 'friends', true),
+       (6, 'Swimming', 'activity', 'selected', 'friends', true),
+       (6, 'Get faster', 'goal', 'selected', 'friends', true),
+       (6, 'Solo', 'style', 'selected', 'friends', true)
+on conflict (user_id, kind, tag) do nothing;
+
+-- Caleb (user 1): heart rate is Muse-only for every other audience so the live redaction demo (§14) works out of the box.
+insert into share_policies (user_id, category, audience, level)
+values (1, 'heart', 'game_participants', 'muse_only'), (1, 'heart', 'friends', 'muse_only'), (1, 'heart', 'mentor_match', 'muse_only'), (1, 'heart', 'public', 'none'), (1, 'heart', 'only_me', 'exact')
+on conflict (user_id, category, audience) do nothing;
+
+insert into connections (user_id, source, status, tokens, connected_at)
+values (1, 'mock', 'connected', '{"device":"Demo watch","seeded":true}'::jsonb, now()), (2, 'mock', 'connected', '{"device":"Demo watch","seeded":true}'::jsonb, now()), (3, 'mock', 'connected', '{"device":"Demo watch","seeded":true}'::jsonb, now()), (4, 'mock', 'connected', '{"device":"Demo watch","seeded":true}'::jsonb, now()), (5, 'mock', 'connected', '{"device":"Demo watch","seeded":true}'::jsonb, now()), (6, 'mock', 'connected', '{"device":"Demo watch","seeded":true}'::jsonb, now())
+on conflict (user_id, source) do nothing;
+
+insert into vault_events (user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
+select v.* from (values
+  (1, 'mock', 'mock:1:run:d6', 'run', now() - interval '9483 minutes', now() - interval '9443 minutes', 5.19, 40, null, 142, 'device', 'normal'),
+  (1, 'mock', 'mock:1:strength:d5', 'strength', now() - interval '8027 minutes', now() - interval '7978 minutes', null, 49, null, 146, 'device', 'normal'),
+  (1, 'mock', 'mock:1:run:d3', 'run', now() - interval '5172 minutes', now() - interval '5127 minutes', 6.65, 45, null, 139, 'device', 'normal'),
+  (1, 'mock', 'mock:1:walk:d2', 'walk', now() - interval '3734 minutes', now() - interval '3702 minutes', 4.25, 32, null, 106, 'device', 'normal'),
+  (1, 'mock', 'mock:1:run:d0', 'run', now() - interval '829 minutes', now() - interval '783 minutes', 3.86, 46, null, 149, 'device', 'normal'),
+  (1, 'mock', 'mock:1:steps:d0', 'steps', now() - interval '1275 minutes', now() - interval '-165 minutes', null, null, 6271, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:sleep:d0', 'sleep', now() - interval '1365 minutes', now() - interval '1003 minutes', null, 362, null, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:steps:d1', 'steps', now() - interval '2715 minutes', now() - interval '1275 minutes', null, null, 7182, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:sleep:d1', 'sleep', now() - interval '2805 minutes', now() - interval '2380 minutes', null, 425, null, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:steps:d2', 'steps', now() - interval '4155 minutes', now() - interval '2715 minutes', null, null, 9843, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:sleep:d2', 'sleep', now() - interval '4245 minutes', now() - interval '3763 minutes', null, 482, null, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:steps:d3', 'steps', now() - interval '5595 minutes', now() - interval '4155 minutes', null, null, 10034, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:sleep:d3', 'sleep', now() - interval '5685 minutes', now() - interval '5324 minutes', null, 361, null, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:steps:d4', 'steps', now() - interval '7035 minutes', now() - interval '5595 minutes', null, null, 6703, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:sleep:d4', 'sleep', now() - interval '7125 minutes', now() - interval '6658 minutes', null, 467, null, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:steps:d5', 'steps', now() - interval '8475 minutes', now() - interval '7035 minutes', null, null, 9955, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:sleep:d5', 'sleep', now() - interval '8565 minutes', now() - interval '8189 minutes', null, 376, null, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:steps:d6', 'steps', now() - interval '9915 minutes', now() - interval '8475 minutes', null, null, 8675, null, 'device', 'normal'),
+  (1, 'mock', 'mock:1:sleep:d6', 'sleep', now() - interval '10005 minutes', now() - interval '9590 minutes', null, 415, null, null, 'device', 'normal')
+) as v(user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
+where not exists (select 1 from vault_events e where e.user_id = v.user_id and e.source = v.source and e.external_id = v.external_id);
+
+insert into vault_events (user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
+select v.* from (values
+  (2, 'mock', 'mock:2:walk:d6', 'walk', now() - interval '9456 minutes', now() - interval '9413 minutes', 3.79, 43, null, 113, 'device', 'normal'),
+  (2, 'mock', 'mock:2:yoga:d5', 'yoga', now() - interval '7315 minutes', now() - interval '7280 minutes', null, 35, null, 95, 'device', 'normal'),
+  (2, 'mock', 'mock:2:walk:d3', 'walk', now() - interval '5175 minutes', now() - interval '5138 minutes', 3.1, 37, null, 116, 'device', 'normal'),
+  (2, 'mock', 'mock:2:walk:d2', 'walk', now() - interval '3725 minutes', now() - interval '3678 minutes', 2.95, 47, null, 105, 'device', 'normal'),
+  (2, 'mock', 'mock:2:strength:d0', 'strength', now() - interval '837 minutes', now() - interval '782 minutes', null, 55, null, 144, 'device', 'normal'),
+  (2, 'mock', 'mock:2:steps:d0', 'steps', now() - interval '1275 minutes', now() - interval '-165 minutes', null, null, 6757, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:sleep:d0', 'sleep', now() - interval '1365 minutes', now() - interval '877 minutes', null, 488, null, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:steps:d1', 'steps', now() - interval '2715 minutes', now() - interval '1275 minutes', null, null, 5722, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:sleep:d1', 'sleep', now() - interval '2805 minutes', now() - interval '2340 minutes', null, 465, null, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:steps:d2', 'steps', now() - interval '4155 minutes', now() - interval '2715 minutes', null, null, 8972, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:sleep:d2', 'sleep', now() - interval '4245 minutes', now() - interval '3741 minutes', null, 504, null, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:steps:d3', 'steps', now() - interval '5595 minutes', now() - interval '4155 minutes', null, null, 10200, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:sleep:d3', 'sleep', now() - interval '5685 minutes', now() - interval '5312 minutes', null, 373, null, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:steps:d4', 'steps', now() - interval '7035 minutes', now() - interval '5595 minutes', null, null, 5127, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:sleep:d4', 'sleep', now() - interval '7125 minutes', now() - interval '6673 minutes', null, 452, null, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:steps:d5', 'steps', now() - interval '8475 minutes', now() - interval '7035 minutes', null, null, 10550, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:sleep:d5', 'sleep', now() - interval '8565 minutes', now() - interval '8121 minutes', null, 444, null, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:steps:d6', 'steps', now() - interval '9915 minutes', now() - interval '8475 minutes', null, null, 9451, null, 'device', 'normal'),
+  (2, 'mock', 'mock:2:sleep:d6', 'sleep', now() - interval '10005 minutes', now() - interval '9625 minutes', null, 380, null, null, 'device', 'normal')
+) as v(user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
+where not exists (select 1 from vault_events e where e.user_id = v.user_id and e.source = v.source and e.external_id = v.external_id);
+
+insert into vault_events (user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
+select v.* from (values
+  (3, 'mock', 'mock:3:ride:d6', 'ride', now() - interval '9470 minutes', now() - interval '9406 minutes', 22.3, 64, null, 143, 'device', 'normal'),
+  (3, 'mock', 'mock:3:run:d5', 'run', now() - interval '8052 minutes', now() - interval '8004 minutes', 7.46, 48, null, 151, 'device', 'normal'),
+  (3, 'mock', 'mock:3:strength:d3', 'strength', now() - interval '5141 minutes', now() - interval '5089 minutes', null, 52, null, 158, 'device', 'normal'),
+  (3, 'mock', 'mock:3:ride:d2', 'ride', now() - interval '3718 minutes', now() - interval '3657 minutes', 13, 61, null, 155, 'device', 'normal'),
+  (3, 'mock', 'mock:3:steps:d0', 'steps', now() - interval '1275 minutes', now() - interval '-165 minutes', null, null, 5532, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:sleep:d0', 'sleep', now() - interval '1365 minutes', now() - interval '996 minutes', null, 369, null, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:steps:d1', 'steps', now() - interval '2715 minutes', now() - interval '1275 minutes', null, null, 6123, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:sleep:d1', 'sleep', now() - interval '2805 minutes', now() - interval '2297 minutes', null, 508, null, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:steps:d2', 'steps', now() - interval '4155 minutes', now() - interval '2715 minutes', null, null, 10626, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:sleep:d2', 'sleep', now() - interval '4245 minutes', now() - interval '3844 minutes', null, 401, null, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:steps:d3', 'steps', now() - interval '5595 minutes', now() - interval '4155 minutes', null, null, 8782, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:sleep:d3', 'sleep', now() - interval '5685 minutes', now() - interval '5290 minutes', null, 395, null, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:steps:d4', 'steps', now() - interval '7035 minutes', now() - interval '5595 minutes', null, null, 6484, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:sleep:d4', 'sleep', now() - interval '7125 minutes', now() - interval '6672 minutes', null, 453, null, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:steps:d5', 'steps', now() - interval '8475 minutes', now() - interval '7035 minutes', null, null, 10504, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:sleep:d5', 'sleep', now() - interval '8565 minutes', now() - interval '8093 minutes', null, 472, null, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:steps:d6', 'steps', now() - interval '9915 minutes', now() - interval '8475 minutes', null, null, 9493, null, 'device', 'normal'),
+  (3, 'mock', 'mock:3:sleep:d6', 'sleep', now() - interval '10005 minutes', now() - interval '9542 minutes', null, 463, null, null, 'device', 'normal')
+) as v(user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
+where not exists (select 1 from vault_events e where e.user_id = v.user_id and e.source = v.source and e.external_id = v.external_id);
+
+insert into vault_events (user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
+select v.* from (values
+  (4, 'mock', 'mock:4:strength:d6', 'strength', now() - interval '9484 minutes', now() - interval '9429 minutes', null, 55, null, 160, 'device', 'normal'),
+  (4, 'mock', 'mock:4:strength:d5', 'strength', now() - interval '8029 minutes', now() - interval '7971 minutes', null, 58, null, 157, 'device', 'normal'),
+  (4, 'mock', 'mock:4:run:d3', 'run', now() - interval '5169 minutes', now() - interval '5143 minutes', 4.6, 26, null, 162, 'device', 'normal'),
+  (4, 'mock', 'mock:4:yoga:d2', 'yoga', now() - interval '3003 minutes', now() - interval '2972 minutes', null, 31, null, 100, 'device', 'normal'),
+  (4, 'mock', 'mock:4:strength:d0', 'strength', now() - interval '849 minutes', now() - interval '794 minutes', null, 55, null, 158, 'device', 'normal'),
+  (4, 'mock', 'mock:4:steps:d0', 'steps', now() - interval '1275 minutes', now() - interval '-165 minutes', null, null, 6283, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:sleep:d0', 'sleep', now() - interval '1365 minutes', now() - interval '987 minutes', null, 378, null, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:steps:d1', 'steps', now() - interval '2715 minutes', now() - interval '1275 minutes', null, null, 5162, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:sleep:d1', 'sleep', now() - interval '2805 minutes', now() - interval '2359 minutes', null, 446, null, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:steps:d2', 'steps', now() - interval '4155 minutes', now() - interval '2715 minutes', null, null, 9954, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:sleep:d2', 'sleep', now() - interval '4245 minutes', now() - interval '3869 minutes', null, 376, null, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:steps:d3', 'steps', now() - interval '5595 minutes', now() - interval '4155 minutes', null, null, 11714, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:sleep:d3', 'sleep', now() - interval '5685 minutes', now() - interval '5299 minutes', null, 386, null, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:steps:d4', 'steps', now() - interval '7035 minutes', now() - interval '5595 minutes', null, null, 4623, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:sleep:d4', 'sleep', now() - interval '7125 minutes', now() - interval '6633 minutes', null, 492, null, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:steps:d5', 'steps', now() - interval '8475 minutes', now() - interval '7035 minutes', null, null, 9874, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:sleep:d5', 'sleep', now() - interval '8565 minutes', now() - interval '8164 minutes', null, 401, null, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:steps:d6', 'steps', now() - interval '9915 minutes', now() - interval '8475 minutes', null, null, 8665, null, 'device', 'normal'),
+  (4, 'mock', 'mock:4:sleep:d6', 'sleep', now() - interval '10005 minutes', now() - interval '9561 minutes', null, 444, null, null, 'device', 'normal')
+) as v(user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
+where not exists (select 1 from vault_events e where e.user_id = v.user_id and e.source = v.source and e.external_id = v.external_id);
+
+insert into vault_events (user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
+select v.* from (values
+  (5, 'mock', 'mock:5:run:d6', 'run', now() - interval '9457 minutes', now() - interval '9410 minutes', 3.64, 47, null, 142, 'device', 'normal'),
+  (5, 'mock', 'mock:5:run:d5', 'run', now() - interval '8033 minutes', now() - interval '7991 minutes', 7.1, 42, null, 158, 'device', 'normal'),
+  (5, 'mock', 'mock:5:walk:d3', 'walk', now() - interval '5170 minutes', now() - interval '5144 minutes', 3.59, 26, null, 109, 'device', 'normal'),
+  (5, 'mock', 'mock:5:run:d2', 'run', now() - interval '3709 minutes', now() - interval '3677 minutes', 3.89, 32, null, 152, 'device', 'normal'),
+  (5, 'mock', 'mock:5:run:d0', 'run', now() - interval '823 minutes', now() - interval '789 minutes', 5.66, 34, null, 161, 'device', 'normal'),
+  (5, 'mock', 'mock:5:swim:d1', 'swim', now() - interval '2286 minutes', now() - interval '2244 minutes', 1.2, 42, null, 146, 'device', 'normal'),
+  (5, 'mock', 'mock:5:steps:d0', 'steps', now() - interval '1275 minutes', now() - interval '-165 minutes', null, null, 7304, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:sleep:d0', 'sleep', now() - interval '1365 minutes', now() - interval '869 minutes', null, 496, null, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:steps:d1', 'steps', now() - interval '2715 minutes', now() - interval '1275 minutes', null, null, 9774, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:sleep:d1', 'sleep', now() - interval '2805 minutes', now() - interval '2436 minutes', null, 369, null, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:steps:d2', 'steps', now() - interval '4155 minutes', now() - interval '2715 minutes', null, null, 9127, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:sleep:d2', 'sleep', now() - interval '4245 minutes', now() - interval '3811 minutes', null, 434, null, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:steps:d3', 'steps', now() - interval '5595 minutes', now() - interval '4155 minutes', null, null, 9510, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:sleep:d3', 'sleep', now() - interval '5685 minutes', now() - interval '5312 minutes', null, 373, null, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:steps:d4', 'steps', now() - interval '7035 minutes', now() - interval '5595 minutes', null, null, 5088, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:sleep:d4', 'sleep', now() - interval '7125 minutes', now() - interval '6692 minutes', null, 433, null, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:steps:d5', 'steps', now() - interval '8475 minutes', now() - interval '7035 minutes', null, null, 9928, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:sleep:d5', 'sleep', now() - interval '8565 minutes', now() - interval '8121 minutes', null, 444, null, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:steps:d6', 'steps', now() - interval '9915 minutes', now() - interval '8475 minutes', null, null, 8605, null, 'device', 'normal'),
+  (5, 'mock', 'mock:5:sleep:d6', 'sleep', now() - interval '10005 minutes', now() - interval '9529 minutes', null, 476, null, null, 'device', 'normal')
+) as v(user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
+where not exists (select 1 from vault_events e where e.user_id = v.user_id and e.source = v.source and e.external_id = v.external_id);
+
+insert into vault_events (user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
+select v.* from (values
+  (6, 'mock', 'mock:6:yoga:d6', 'yoga', now() - interval '8751 minutes', now() - interval '8706 minutes', null, 45, null, 94, 'device', 'normal'),
+  (6, 'mock', 'mock:6:walk:d5', 'walk', now() - interval '8031 minutes', now() - interval '7997 minutes', 3.97, 34, null, 116, 'device', 'normal'),
+  (6, 'mock', 'mock:6:yoga:d3', 'yoga', now() - interval '4435 minutes', now() - interval '4404 minutes', null, 31, null, 101, 'device', 'normal'),
+  (6, 'mock', 'mock:6:run:d2', 'run', now() - interval '3705 minutes', now() - interval '3670 minutes', 6, 35, null, 153, 'device', 'normal'),
+  (6, 'mock', 'mock:6:steps:d0', 'steps', now() - interval '1275 minutes', now() - interval '-165 minutes', null, null, 3862, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:sleep:d0', 'sleep', now() - interval '1365 minutes', now() - interval '989 minutes', null, 376, null, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:steps:d1', 'steps', now() - interval '2715 minutes', now() - interval '1275 minutes', null, null, 6680, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:sleep:d1', 'sleep', now() - interval '2805 minutes', now() - interval '2408 minutes', null, 397, null, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:steps:d2', 'steps', now() - interval '4155 minutes', now() - interval '2715 minutes', null, null, 10512, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:sleep:d2', 'sleep', now() - interval '4245 minutes', now() - interval '3839 minutes', null, 406, null, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:steps:d3', 'steps', now() - interval '5595 minutes', now() - interval '4155 minutes', null, null, 12041, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:sleep:d3', 'sleep', now() - interval '5685 minutes', now() - interval '5284 minutes', null, 401, null, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:steps:d4', 'steps', now() - interval '7035 minutes', now() - interval '5595 minutes', null, null, 7316, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:sleep:d4', 'sleep', now() - interval '7125 minutes', now() - interval '6713 minutes', null, 412, null, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:steps:d5', 'steps', now() - interval '8475 minutes', now() - interval '7035 minutes', null, null, 8883, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:sleep:d5', 'sleep', now() - interval '8565 minutes', now() - interval '8122 minutes', null, 443, null, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:steps:d6', 'steps', now() - interval '9915 minutes', now() - interval '8475 minutes', null, null, 9968, null, 'device', 'normal'),
+  (6, 'mock', 'mock:6:sleep:d6', 'sleep', now() - interval '10005 minutes', now() - interval '9522 minutes', null, 483, null, null, 'device', 'normal')
+) as v(user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
+where not exists (select 1 from vault_events e where e.user_id = v.user_id and e.source = v.source and e.external_id = v.external_id);

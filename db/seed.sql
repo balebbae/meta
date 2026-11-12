@@ -178,14 +178,14 @@ on conflict do nothing;
 
 -- profile agent: people who are NOT friends with Caleb (for Friend Requests / People You May Know)
 insert into users (name, email, avatar_url, cover_url, bio, is_online) values
-  ('Olivia Chen', 'olivia@example.com', 'https://i.pravatar.cc/300?img=44', 'https://picsum.photos/seed/cover-olivia/1200/450', 'UX researcher. Austin, TX.', true),
-  ('Jamal Wright', 'jamal@example.com', 'https://i.pravatar.cc/300?img=60', 'https://picsum.photos/seed/cover-jamal/1200/450', 'Data engineer by day, DJ by night.', false),
-  ('Isabella Rossi', 'isabella@example.com', 'https://i.pravatar.cc/300?img=49', 'https://picsum.photos/seed/cover-isabella/1200/450', 'Architecture student. Espresso enthusiast.', true),
-  ('Kenji Tanaka', 'kenji@example.com', 'https://i.pravatar.cc/300?img=15', 'https://picsum.photos/seed/cover-kenji/1200/450', 'Game dev. Unity + Rust.', false),
-  ('Grace Kim', 'grace@example.com', 'https://i.pravatar.cc/300?img=29', 'https://picsum.photos/seed/cover-grace/1200/450', 'Pianist. Marathon runner.', true),
-  ('Ravi Menon', 'ravi@example.com', 'https://i.pravatar.cc/300?img=11', 'https://picsum.photos/seed/cover-ravi/1200/450', 'Cloud infra @ a startup you have not heard of.', false),
-  ('Lucas Fernandez', 'lucas@example.com', 'https://i.pravatar.cc/300?img=57', 'https://picsum.photos/seed/cover-lucas/1200/450', 'Soccer, salsa, software.', true),
-  ('Emily Park', 'emily@example.com', 'https://i.pravatar.cc/300?img=20', 'https://picsum.photos/seed/cover-emily/1200/450', 'Nursing student. Cat person.', false)
+  ('Olivia Chen', 'olivia@example.com', 'https://i.pravatar.cc/300?img=44', 'https://images.unsplash.com/photo-1480714378408-67cf0d13bc1b?w=1200&h=450&fit=crop&q=80', 'UX researcher. Austin, TX.', true),
+  ('Jamal Wright', 'jamal@example.com', 'https://i.pravatar.cc/300?img=60', 'https://images.unsplash.com/photo-1444723121867-7a241cacace9?w=1200&h=450&fit=crop&q=80', 'Data engineer by day, DJ by night.', false),
+  ('Isabella Rossi', 'isabella@example.com', 'https://i.pravatar.cc/300?img=49', 'https://images.unsplash.com/photo-1501594907352-04cda38ebc29?w=1200&h=450&fit=crop&q=80', 'Architecture student. Espresso enthusiast.', true),
+  ('Kenji Tanaka', 'kenji@example.com', 'https://i.pravatar.cc/300?img=15', 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1200&h=450&fit=crop&q=80', 'Game dev. Unity + Rust.', false),
+  ('Grace Kim', 'grace@example.com', 'https://i.pravatar.cc/300?img=29', 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&h=450&fit=crop&q=80', 'Pianist. Marathon runner.', true),
+  ('Ravi Menon', 'ravi@example.com', 'https://i.pravatar.cc/300?img=11', 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1200&h=450&fit=crop&q=80', 'Cloud infra @ a startup you have not heard of.', false),
+  ('Lucas Fernandez', 'lucas@example.com', 'https://i.pravatar.cc/300?img=57', 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1200&h=450&fit=crop&q=80', 'Soccer, salsa, software.', true),
+  ('Emily Park', 'emily@example.com', 'https://i.pravatar.cc/300?img=20', 'https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=1200&h=450&fit=crop&q=80', 'Nursing student. Cat person.', false)
 on conflict (email) do nothing;
 
 -- keep these people out of Caleb's friend list even if the seed is re-run
@@ -222,15 +222,15 @@ on conflict do nothing;
 insert into posts (author_id, content, image_url, audience, share_count, created_at)
 select 1, v.content, v.image_url, 'public', v.shares, now() - v.age
 from (values
-  ('Opening ceremony energy. 1,200 hackers in one room.', 'https://picsum.photos/seed/caleb-opening/1200/800', 31, interval '6 days'),
-  ('Late-night debugging with the best team.', 'https://picsum.photos/seed/caleb-team/1200/900', 8, interval '9 days'),
-  ('Campus in the fall never gets old.', 'https://picsum.photos/seed/caleb-campus/1200/800', 14, interval '13 days'),
-  ('New desk setup. Finally cable-managed.', 'https://picsum.photos/seed/caleb-desk/1200/800', 5, interval '20 days'),
-  ('Weekend hike at Cedar Ridge.', 'https://picsum.photos/seed/caleb-hike/1200/900', 19, interval '27 days'),
-  ('Sponsor fair setup is done. Doors open at 9.', 'https://picsum.photos/seed/caleb-sponsors/1200/800', 3, interval '34 days'),
-  ('Coffee, code, repeat.', 'https://picsum.photos/seed/caleb-coffee/1200/1200', 2, interval '41 days'),
-  ('Throwback to our first hackathon as organizers.', 'https://picsum.photos/seed/caleb-throwback/1200/800', 27, interval '60 days'),
-  ('Dallas skyline from the Reunion Tower.', 'https://picsum.photos/seed/caleb-skyline/1200/800', 12, interval '75 days')
+  ('Opening ceremony energy. 1,200 hackers in one room.', 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=800&fit=crop&q=80', 31, interval '6 days'),
+  ('Late-night debugging with the best team.', 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&h=900&fit=crop&q=80', 8, interval '9 days'),
+  ('Campus in the fall never gets old.', 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1200&h=800&fit=crop&q=80', 14, interval '13 days'),
+  ('New desk setup. Finally cable-managed.', 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&h=800&fit=crop&q=80', 5, interval '20 days'),
+  ('Weekend hike at Cedar Ridge.', 'https://images.unsplash.com/photo-1476231682828-37e571bc172f?w=1200&h=900&fit=crop&q=80', 19, interval '27 days'),
+  ('Sponsor fair setup is done. Doors open at 9.', 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?w=1200&h=800&fit=crop&q=80', 3, interval '34 days'),
+  ('Coffee, code, repeat.', 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1200&h=1200&fit=crop&q=80', 2, interval '41 days'),
+  ('Throwback to our first hackathon as organizers.', 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=1200&h=800&fit=crop&q=80', 27, interval '60 days'),
+  ('Dallas skyline from the Reunion Tower.', 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1200&h=800&fit=crop&q=80', 12, interval '75 days')
 ) as v(content, image_url, shares, age)
 where not exists (select 1 from posts p where p.author_id = 1 and p.image_url = v.image_url);
 

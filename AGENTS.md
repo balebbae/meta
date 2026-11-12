@@ -1,35 +1,25 @@
 # AGENTS.md
 
-Project-specific guidance for AI coding agents.
+Facebook clone: Next.js 16 (App Router) + React 19 + TypeScript, Neon Postgres via `@neondatabase/serverless`, SuperTokens for auth. Hosted on Vercel. One-day hackathon project: optimise for a working, pixel-faithful demo.
 
-<!-- ASTRYX:START -->
-Astryx v0.7.13 · 174 components
-CLI: run every command as `pnpm exec astryx <cmd>` (shown below as `astryx ...`).
+## Commands
+- `pnpm install`
+- `pnpm dev` (http://localhost:3000), `pnpm build`, `pnpm typecheck`
+- `pnpm db:setup` creates tables + seeds (`--reset` drops first). Needs `DATABASE_URL` in `.env.local`.
 
-SETUP (once, in app entry e.g. main.tsx) — without these, components render unstyled:
-  import "@astryxdesign/core/reset.css";
-  import "@astryxdesign/core/astryx.css";
+## Env (`.env.local`, git-ignored; see `.env.example`)
+`DATABASE_URL`, `SUPERTOKENS_CONNECTION_URI`, `SUPERTOKENS_API_KEY`, `NEXT_PUBLIC_APP_URL`.
 
-WORKFLOW — start every page from a template, never from scratch:
-1. `astryx build "<idea>"` — names the template to scaffold from and the parts it lacks.
-2. `astryx template <name> <path>` — scaffold it; keep its frame, gap and padding; replace the content.
-3. `astryx template <Block>` for parts it lacks; `astryx component <Name>` to read props before using one.
-Changing an existing page? Keep it: skip step 2 and add blocks/components inside its sections.
-Before you deliver a build, run `astryx doctor --built <dir>`; don't deliver it if it fails.
+## Layout
+- `app/(app)/*` signed-in pages sharing the Facebook chrome (`components/layout/Header|LeftSidebar|RightSidebar`).
+- `app/auth/*` sign-in / sign-up (SuperTokens, email + password), styled like facebook.com's login page.
+- `app/api/**` route handlers (CRUD). Every handler calls `getSessionUser()` from `lib/auth.ts` and returns 401 when null.
+- `lib/db.ts` exports `sql` (tagged template). `lib/queries.ts` holds read queries. `lib/types.ts` holds shared types.
+- `db/schema.sql`, `db/seed.sql` are the source of truth for the schema.
 
-RULES:
-- No <div> — components handle all layout and spacing.
-- Read `astryx docs layout` before changing a template's frame.
-- Dense data = rows (Table, List/Item), not Card-wrapped lists. Badge = counts only.
-- Style with component props first, then tokens (var(--color-*|--spacing-*|--radius-*)). No raw hex/px. No StyleX/Tailwind compiler here — don't use xstyle/utility classes directly. Some templates use StyleX and need a compiler plugin; see `astryx docs styling-overview`.
-- Palettes and custom colors go through the theme, never :root overrides. Run `astryx theme add <slug>` to import; `theme eject <slug>` only forks source. See `astryx docs theme`.
-- SELF-CHECK: re-read the file; replace any raw <div>/<span>, imported .css/@apply, or hardcoded #hex/px with the component or a token.
-
-`astryx help` lists every command. Key ones beyond the workflow:
-  search "<query>"   find any component / hook / doc / template
-  discover <words>   integrations you could add
-  docs <topic>       getting-started, principles, tokens, theme … (`astryx docs` lists all)
-  docs cli           commands and API reference
-  docs authoring     build an integration package, and every field it holds
-  upgrade --from <old version> --apply   run after a dependency bump
-<!-- ASTRYX:END -->
+## UI rules
+- Match facebook.com desktop exactly: measure against the real site (open facebook.com; the logged-out login page is public, feed screenshots are on Meta's newsroom and image search). Use the CSS variables in `app/globals.css` (`--fb-*`); no new colour hex values outside that file.
+- Plain CSS Modules (`*.module.css`) or inline style objects. No Tailwind, no UI kit.
+- Icons: inline SVG components in `components/icons.tsx` drawn to resemble Facebook's 20/24px glyphs.
+- Use `next/image` for remote images (hosts are allow-listed in `next.config.ts`).
+- Responsive: 3-column at >= 1100px, hide the right rail below that, hide the left rail below 900px, mobile bottom tab bar below 700px.

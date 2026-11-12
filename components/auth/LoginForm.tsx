@@ -3,7 +3,7 @@ import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import {EmailPassword, initSuperTokensFrontend} from '@/lib/supertokens/frontend';
 import {FloatingInput} from '@/components/auth/FloatingInput';
-import {SignUpDialog} from '@/components/auth/SignUpDialog';
+import Link from 'next/link';
 import {MetaWordmark} from '@/components/auth/logos';
 import styles from '@/components/auth/auth.module.css';
 
@@ -15,7 +15,6 @@ export function LoginForm() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [showSignUp, setShowSignUp] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -88,18 +87,16 @@ export function LoginForm() {
         <button className={styles.primaryBtn} type="submit" disabled={busy}>
           {busy ? 'Logging in\u2026' : 'Log in'}
         </button>
-        <a className={styles.forgot} href="#" onClick={e => e.preventDefault()}>
+        <a className={styles.textBtn} href="#" onClick={e => e.preventDefault()}>
           Forgot password?
         </a>
-        <div className={styles.divider} />
-        <button className={styles.outlineBtn} type="button" onClick={() => setShowSignUp(true)}>
+        <Link className={styles.outlineBtn} href="/auth/reg">
           Create new account
-        </button>
+        </Link>
         <div className={styles.metaMark}>
           <MetaWordmark height={12} />
         </div>
       </form>
-      {showSignUp ? <SignUpDialog onClose={() => setShowSignUp(false)} /> : null}
     </>
   );
 }

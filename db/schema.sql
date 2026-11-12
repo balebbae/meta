@@ -188,6 +188,62 @@ create table if not exists user_details (
   languages text
 );
 
+-- messaging agent: direct messages + group chats
+create table if not exists conversations (
+  id serial primary key,
+  is_group boolean not null default false,
+  name text,
+  image_url text,
+  created_by integer references users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists conversations_updated_idx on conversations (updated_at desc);
+
+create table if not exists conversation_members (
+  conversation_id integer not null references conversations(id) on delete cascade,
+  user_id integer not null references users(id) on delete cascade,
+  role text not null default 'member' check (role in ('admin', 'member')),
+  joined_at timestamptz not null default now(),
+  last_read_message_id integer,
+  primary key (conversation_id, user_id)
+);
+create index if not exists conversation_members_user_idx on conversation_members (user_id);
+
+create table if not exists messages (
+  id serial primary key,
+  conversation_id integer not null references conversations(id) on delete cascade,
+  sender_id integer references users(id) on delete set null,
+  body text not null default '',
+  image_url text,
+  created_at timestamptz not null default now()
+);
+create index if not exists messages_conversation_idx on messages (conversation_id, id);
+
+create table if not exists message_reads (
+  message_id integer not null references messages(id) on delete cascade,
+  user_id integer not null references users(id) on delete cascade,
+  read_at timestamptz not null default now(),
+  primary key (message_id, user_id)
+);
+
+alter table notifications add column if not exists conversation_id integer references conversations(id) on delete cascade;
+
+-- push agent: Web Push subscriptions (one row per browser/device)
+create table if not exists push_subscriptions (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+create index if not exists push_subscriptions_user_idx on push_subscriptions (user_id);
+
+-- sign-up: pronoun picked when Gender = Custom on /auth/reg
+alter table user_details add column if not exists pronouns text;
+
 -- Closeness / Muse gamification
 create table if not exists xp_events (
   id serial primary key,

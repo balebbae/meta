@@ -16,6 +16,7 @@ export function Avatar({
   style?: CSSProperties;
   className?: string;
 }) {
+  const imgStyle: CSSProperties = {width: size, height: size, borderRadius: '50%', objectFit: 'cover', display: 'block'};
   return (
     <span
       className={className}
@@ -27,13 +28,12 @@ export function Avatar({
         flexShrink: 0,
         ...style,
       }}>
-      <Image
-        src={src}
-        alt={alt}
-        width={size}
-        height={size}
-        style={{width: size, height: size, borderRadius: '50%', objectFit: 'cover', display: 'block'}}
-      />
+      {src.startsWith('data:') ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt={alt} width={size} height={size} style={imgStyle} />
+      ) : (
+        <Image src={src} alt={alt} width={size} height={size} style={imgStyle} />
+      )}
       {online && (
         <span
           aria-label="Active now"

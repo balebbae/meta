@@ -23,3 +23,8 @@ Facebook clone: Next.js 16 (App Router) + React 19 + TypeScript, Neon Postgres v
 - Icons: inline SVG components in `components/icons.tsx` drawn to resemble Facebook's 20/24px glyphs.
 - Use `next/image` for remote images (hosts are allow-listed in `next.config.ts`).
 - Responsive: 3-column at >= 1100px, hide the right rail below that, hide the left rail below 900px, mobile bottom tab bar below 700px.
+
+## Messaging + push (round 2)
+- Messaging tables: `conversations`, `conversation_members`, `messages`, `message_reads` (see db/schema.sql). Queries in `lib/messaging-queries.ts`, API under `app/api/conversations/**`, UI in `components/messages/**`, full page at `app/(app)/messages`.
+- `lib/push.ts` exports `sendPushToUser(userId, {title, body, url, tag})`; message sends call it for every other member. Push subscriptions live in `push_subscriptions`; service worker is `public/sw.js`; VAPID keys come from `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`.
+- Profile pictures may be base64 data URLs (`users.avatar_url`); render them with a plain `<img>` (next/image rejects `data:`), keep them under ~300 KB by resizing on the client.

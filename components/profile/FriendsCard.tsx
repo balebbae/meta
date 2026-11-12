@@ -1,4 +1,4 @@
-import Image from 'next/image';
+import Image from '@/components/ui/SmartImage';
 import Link from 'next/link';
 import type {FriendSummary} from '@/lib/profile-queries';
 import styles from './profile.module.css';

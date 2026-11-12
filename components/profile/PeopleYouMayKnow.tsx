@@ -1,7 +1,7 @@
 'use client';
 
 import {useRef, useState} from 'react';
-import Image from 'next/image';
+import Image from '@/components/ui/SmartImage';
 import Link from 'next/link';
 import type {FriendSummary} from '@/lib/profile-queries';
 import {profileApi} from './api';

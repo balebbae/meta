@@ -1,5 +1,5 @@
 'use client';
-import Image from 'next/image';
+import Image from '@/components/ui/SmartImage';
 import Link from 'next/link';
 import {useState} from 'react';
 import type {GroupPost} from '@/lib/secondary-queries';

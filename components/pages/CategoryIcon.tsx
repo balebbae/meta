@@ -1,3 +1,4 @@
+import {FbCategoryIcon} from './icons';
 const P: Record<string, string> = {
   Vehicles: 'M5 11l1.5-4.5h11L19 11M5 11h14v5H5zM7 16v2M17 16v2M7.5 13.5h.01M16.5 13.5h.01',
   'Property Rentals': 'M4 10l8-6 8 6v10H4zM10 20v-6h4v6',
@@ -21,6 +22,8 @@ const P: Record<string, string> = {
 };
 
 export function CategoryIcon({name, size = 20}: {name: string; size?: number}) {
+  const fb = FbCategoryIcon({name, size});
+  if (fb) return fb;
   const d = P[name] ?? 'M5 5h14v14H5z';
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

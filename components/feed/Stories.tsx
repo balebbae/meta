@@ -1,5 +1,5 @@
 'use client';
-import Image from 'next/image';
+import Image from '@/components/ui/SmartImage';
 import {useRef, useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import {ChevronLeftIcon, ChevronRightIcon, PlusIcon} from '@/components/icons';

@@ -261,3 +261,148 @@ from (values
 ) as v(email, work, work_title, education, high_school, current_city, hometown, relationship, phone, website, birthday, gender, languages)
 join users u on u.email = v.email
 on conflict (user_id) do nothing;
+
+-- ---------- Messaging (idempotent) ----------
+-- Group: HackUTD Organizers (Caleb 1, Priya 2, Marcus 3, Noah 7)
+with c as (
+  insert into conversations (is_group, name, created_by, created_at, updated_at)
+  select true, 'HackUTD Organizers', 1, now() - interval '6 days', now() - interval '25 minutes'
+  where not exists (select 1 from conversations where name = 'HackUTD Organizers')
+  returning id
+)
+insert into conversation_members (conversation_id, user_id, role, joined_at)
+select c.id, m.uid, case when m.uid = 1 then 'admin' else 'member' end, now() - interval '6 days'
+from c cross join (values (1), (2), (3), (7)) as m(uid)
+on conflict do nothing;
+
+insert into messages (conversation_id, sender_id, body, created_at)
+select c.id, m.sender, m.body, now() - m.ago
+from conversations c
+cross join (values
+  (1, 'Hey team, kicking off planning for HackUTD 2027. Who is around this week?', 1, interval '5 days 4 hours'),
+  (2, 'I am free Tuesday and Thursday evenings', 2, interval '5 days 3 hours 50 minutes'),
+  (3, 'Thursday works for me', 3, interval '5 days 3 hours 40 minutes'),
+  (7, 'Same, Thursday. Can we do the ECSW atrium?', 4, interval '5 days 3 hours 10 minutes'),
+  (1, 'Thursday 7pm ECSW it is. I will book the room', 5, interval '5 days 2 hours'),
+  (2, 'Sponsor update: we have verbal yeses from Toyota and State Farm 🎉', 6, interval '3 days 6 hours'),
+  (3, 'LETS GO', 7, interval '3 days 5 hours 58 minutes'),
+  (7, 'Huge. That covers food for both days', 8, interval '3 days 5 hours 50 minutes'),
+  (1, 'Amazing work Priya. I will draft the tier sheet tonight', 9, interval '3 days 5 hours'),
+  (2, 'Also need someone to own the check-in flow in HARP this year', 10, interval '1 day 2 hours'),
+  (7, 'I can take that. Wallet passes too?', 11, interval '1 day 1 hour 55 minutes'),
+  (2, 'Yes please, the Apple Wallet pass was the most requested thing last year', 12, interval '1 day 1 hour 50 minutes'),
+  (3, 'I pushed the new judging rubric to the drive, take a look when you can', 13, interval '2 hours'),
+  (1, 'On it 👀', 14, interval '1 hour 58 minutes'),
+  (2, 'Reminder: venue walkthrough tomorrow at 10am, meet at the ECSW lobby', 15, interval '25 minutes')
+) as m(sender, body, ord, ago)
+where c.name = 'HackUTD Organizers' and not exists (select 1 from messages where conversation_id = c.id)
+order by m.ord;
+
+-- DM: Caleb <-> Priya
+with c as (
+  insert into conversations (is_group, created_by, created_at, updated_at)
+  select false, 1, now() - interval '10 days', now() - interval '3 hours'
+  where not exists (
+    select 1 from conversations x
+    where not x.is_group
+      and exists (select 1 from conversation_members where conversation_id = x.id and user_id = 1)
+      and exists (select 1 from conversation_members where conversation_id = x.id and user_id = 2)
+      and (select count(*) from conversation_members where conversation_id = x.id) = 2)
+  returning id
+)
+insert into conversation_members (conversation_id, user_id, role, joined_at)
+select c.id, m.uid, 'member', now() - interval '10 days' from c cross join (values (1), (2)) as m(uid)
+on conflict do nothing;
+
+insert into messages (conversation_id, sender_id, body, created_at)
+select x.id, m.sender, m.body, now() - m.ago
+from conversations x
+cross join (values
+  (2, 'Did you see the recap post? 1,200 hackers 😭', 1, interval '2 days 5 hours'),
+  (1, 'Yes!! Still cannot believe we pulled that off', 2, interval '2 days 4 hours 58 minutes'),
+  (2, 'Coffee tomorrow to debrief? Northside at 9?', 3, interval '2 days 4 hours 50 minutes'),
+  (1, 'Deal. I will bring the feedback forms', 4, interval '2 days 4 hours 40 minutes'),
+  (2, 'Perfect', 5, interval '2 days 4 hours 39 minutes'),
+  (1, 'Also can you send me the sponsor contact sheet when you get a sec', 6, interval '1 day 3 hours'),
+  (2, 'Sent to your utd email', 7, interval '1 day 2 hours 30 minutes'),
+  (1, 'Got it, thank you 🙏', 8, interval '1 day 2 hours 20 minutes'),
+  (2, 'Are you going to the photography club meetup Saturday?', 9, interval '3 hours 5 minutes'),
+  (1, 'Planning to! Sofia said she would bring the film camera', 10, interval '3 hours')
+) as m(sender, body, ord, ago)
+where not x.is_group
+  and exists (select 1 from conversation_members where conversation_id = x.id and user_id = 1)
+  and exists (select 1 from conversation_members where conversation_id = x.id and user_id = 2)
+  and (select count(*) from conversation_members where conversation_id = x.id) = 2
+  and not exists (select 1 from messages where conversation_id = x.id)
+order by m.ord;
+
+-- DM: Caleb <-> Daniel
+with c as (
+  insert into conversations (is_group, created_by, created_at, updated_at)
+  select false, 5, now() - interval '4 days', now() - interval '1 day 4 hours'
+  where not exists (
+    select 1 from conversations x
+    where not x.is_group
+      and exists (select 1 from conversation_members where conversation_id = x.id and user_id = 1)
+      and exists (select 1 from conversation_members where conversation_id = x.id and user_id = 5)
+      and (select count(*) from conversation_members where conversation_id = x.id) = 2)
+  returning id
+)
+insert into conversation_members (conversation_id, user_id, role, joined_at)
+select c.id, m.uid, 'member', now() - interval '4 days' from c cross join (values (1), (5)) as m(uid)
+on conflict do nothing;
+
+insert into messages (conversation_id, sender_id, body, created_at)
+select x.id, m.sender, m.body, now() - m.ago
+from conversations x
+cross join (values
+  (5, 'Yo, that sunset pic from Klyde Warren was from your spot right?', 1, interval '1 day 5 hours'),
+  (1, 'Haha yes, west lawn by the food trucks', 2, interval '1 day 4 hours 50 minutes'),
+  (5, 'Taco run this weekend?', 3, interval '1 day 4 hours 10 minutes'),
+  (1, 'Always 🌮', 4, interval '1 day 4 hours')
+) as m(sender, body, ord, ago)
+where not x.is_group
+  and exists (select 1 from conversation_members where conversation_id = x.id and user_id = 1)
+  and exists (select 1 from conversation_members where conversation_id = x.id and user_id = 5)
+  and (select count(*) from conversation_members where conversation_id = x.id) = 2
+  and not exists (select 1 from messages where conversation_id = x.id)
+order by m.ord;
+
+-- Group: Dallas Photography Club (Caleb 1, Sofia 4, Zoe 10)
+with c as (
+  insert into conversations (is_group, name, image_url, created_by, created_at, updated_at)
+  select true, 'Dallas Photography Club', 'https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=200&h=200&fit=crop&q=80', 4, now() - interval '20 days', now() - interval '2 days'
+  where not exists (select 1 from conversations where name = 'Dallas Photography Club')
+  returning id
+)
+insert into conversation_members (conversation_id, user_id, role, joined_at)
+select c.id, m.uid, case when m.uid = 4 then 'admin' else 'member' end, now() - interval '20 days'
+from c cross join (values (1), (4), (10)) as m(uid)
+on conflict do nothing;
+
+insert into messages (conversation_id, sender_id, body, image_url, created_at)
+select c.id, m.sender, m.body, m.img, now() - m.ago
+from conversations c
+cross join (values
+  (4, 'Saturday meetup is on. White Rock Lake, golden hour, bring film if you have it', null, 1, interval '2 days 3 hours'),
+  (10, 'I will bring the Pentax', null, 2, interval '2 days 2 hours 40 minutes'),
+  (4, 'Test roll from last week', 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=900&h=600&fit=crop&q=80', 3, interval '2 days 2 hours 30 minutes'),
+  (1, 'That grain is gorgeous', null, 4, interval '2 days 2 hours')
+) as m(sender, body, img, ord, ago)
+where c.name = 'Dallas Photography Club' and not exists (select 1 from messages where conversation_id = c.id)
+order by m.ord;
+
+-- read state: everyone has read everything except Caleb, who has 2 unread in HackUTD Organizers and 1 in Caleb<->Priya
+update conversation_members cm
+set last_read_message_id = sub.max_id
+from (select conversation_id, max(id) as max_id from messages group by conversation_id) sub
+where cm.conversation_id = sub.conversation_id and cm.last_read_message_id is null and cm.user_id <> 1;
+
+update conversation_members cm
+set last_read_message_id = sub.cutoff
+from (
+  select m.conversation_id,
+         (select id from messages m2 where m2.conversation_id = m.conversation_id and m2.sender_id = 1 order by id desc limit 1) as cutoff
+  from messages m group by m.conversation_id
+) sub
+where cm.conversation_id = sub.conversation_id and cm.user_id = 1 and cm.last_read_message_id is null;

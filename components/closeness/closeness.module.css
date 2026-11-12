@@ -104,3 +104,25 @@
   font-size: 13px;
   color: var(--fb-secondary-text, #65676b);
 }
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.tab,
+.tabOn {
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+}
+.tabOn {
+  background: #e7f0ff;
+  color: var(--fb-blue);
+}

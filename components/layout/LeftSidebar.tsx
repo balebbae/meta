@@ -30,6 +30,7 @@ import styles from './layout.module.css';
 const PRIMARY = [
   {label: 'Meta AI', href: '/meta-ai', Icon: RailMetaAIIcon},
   {label: 'Friends', href: '/friends', Icon: RailFriendsIcon},
+  {label: 'Activities', href: '/activities', Icon: RailGamingIcon},
   {label: 'Closeness', href: '/closeness', Icon: RailMemoriesIcon},
   {label: 'Memories', href: '/memories', Icon: RailMemoriesIcon},
   {label: 'Saved', href: '/saved', Icon: RailSavedIcon},

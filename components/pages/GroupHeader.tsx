@@ -6,6 +6,7 @@ import {useRouter} from 'next/navigation';
 import type {Group, GroupMember} from '@/lib/secondary-queries';
 import {formatCount} from '@/lib/secondary-data';
 import {CheckIcon, GlobeIcon, LockIcon, MoreIcon, PlusIcon, ShareIcon} from './icons';
+import {GroupRallyChip} from '@/components/activities/GroupRallyChip';
 import styles from './groups.module.css';
 
 const TABS = [
@@ -52,6 +53,7 @@ export function GroupHeader({group, members, tab}: {group: Group; members: Group
               <span>{group.privacy === 'private' ? 'Private group' : 'Public group'}</span>
               <span>·</span>
               <Link href={`/groups/${group.id}?tab=members`}>{formatCount(count)} members</Link>
+              <GroupRallyChip groupId={group.id} />
             </div>
             <div className={styles.facepile}>
               {members.slice(0, 10).map(m => (

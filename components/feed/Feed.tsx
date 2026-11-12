@@ -9,6 +9,7 @@ import {MobileStories} from '@/components/mobile/MobileStories';
 import type {FriendSummary} from '@/lib/profile-queries';
 import type {Post, Story, User} from '@/lib/types';
 import styles from './feed.module.css';
+import {TurfSuggestion} from '@/components/activities/TurfSuggestion';
 
 export function Feed({
   viewer,
@@ -24,6 +25,7 @@ export function Feed({
   requests?: FriendSummary[];
 }) {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [turfPrompt, setTurfPrompt] = useState<string | null>(null);
   const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [loading, setLoading] = useState(false);
   const sentinel = useRef<HTMLDivElement>(null);
@@ -55,7 +57,14 @@ export function Feed({
 
   return (
     <>
-      <Composer viewer={viewer} onCreated={p => setPosts(list => [p, ...list])} />
+      <Composer
+        viewer={viewer}
+        onCreated={(p, activity) => {
+          setPosts(list => [p, ...list]);
+          setTurfPrompt(activity === 'Working out' || activity === 'Running' ? activity : null);
+        }}
+      />
+      {turfPrompt && <TurfSuggestion activity={turfPrompt} onDismiss={() => setTurfPrompt(null)} />}
       <CreateStoryCard />
       <MobileComposer viewer={viewer} />
       <MobileStories viewer={viewer} requests={requests} stories={stories} />

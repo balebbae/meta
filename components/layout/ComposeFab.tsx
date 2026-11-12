@@ -7,7 +7,7 @@ export const COMPOSE_EVENT = 'fb:compose';
 
 export function ComposeFab() {
   return (
-    <Tooltip label="Create post">
+    <Tooltip label="Create post" position="top">
       <button
         className={styles.fab}
         aria-label="Create post"

@@ -90,7 +90,8 @@
   align-items: center;
   gap: 6px;
 }
-.bossSlot > div[role='progressbar'] {
+.bossSlot > div[role='progressbar'],
+.bossSlot > div[role='progressbar'] + div {
   width: 100%;
 }
 .bossName {

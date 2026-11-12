@@ -10,11 +10,13 @@ import styles from '@/components/pages/saved.module.css';
 export const metadata: Metadata = {title: 'Memories | Facebook'};
 export const dynamic = 'force-dynamic';
 
+const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? '' : 's'} ago`;
+
 function dayLabel(iso: string, now: Date) {
   const d = new Date(iso);
   const days = Math.round((now.getTime() - d.getTime()) / 86_400_000);
   const when = d.toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'});
-  return {key: d.toDateString(), title: days === 1 ? 'Yesterday' : days < 7 ? `${days} days ago` : days < 30 ? `${Math.round(days / 7)} weeks ago` : `${Math.round(days / 30)} months ago`, when};
+  return {key: d.toDateString(), title: days === 1 ? 'Yesterday' : days < 7 ? `${days} days ago` : days < 30 ? plural(Math.round(days / 7), 'week') : plural(Math.round(days / 30), 'month'), when};
 }
 
 export default async function MemoriesPage() {

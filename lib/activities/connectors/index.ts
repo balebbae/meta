@@ -2,13 +2,16 @@ import type {Connector, ConnectorId, Platform} from '@/lib/activities/types';
 import {appleHealthConnector} from './apple_health';
 import {whoopConnector, whoopConfigured} from './whoop';
 import {stravaConnector, stravaConfigured} from './strava';
-import {GOOGLE_HEALTH, OURA, makeOAuthStub, oauthConfigured} from './oauth-stubs';
-import {garminConnector, healthConnectConnector, phoneStepsConnector} from './native-mocks';
+import {GOOGLE_HEALTH, OURA, oauthConfigured} from './oauth-stubs';
+import {ouraConnector} from './oura';
+export {ouraConnector, googleHealthConnector};
+import {googleHealthConnector} from './google_health';
+import {garminConnector} from './garmin';
+import {healthConnectConnector} from './health_connect';
+import {phoneStepsConnector} from './phone_steps';
 import {manualConnector} from './manual';
 import {mockConnector} from './mock';
 
-export const ouraConnector = makeOAuthStub(OURA);
-export const googleHealthConnector = makeOAuthStub(GOOGLE_HEALTH);
 
 const REGISTRY: Partial<Record<ConnectorId, Connector>> = {
   apple_health: appleHealthConnector,

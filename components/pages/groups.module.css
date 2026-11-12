@@ -40,9 +40,10 @@
   gap: 16px;
 }
 .feedHead {
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 24px;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--fb-text-secondary);
   margin: 0 0 -4px;
 }
 .post {

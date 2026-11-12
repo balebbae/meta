@@ -1,6 +1,6 @@
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 16px;
 }
 .card {
@@ -29,12 +29,63 @@
 .date {
   font-size: 13px;
   font-weight: 600;
-  color: var(--fb-notif);
-  text-transform: uppercase;
+  color: var(--fb-text-secondary);
   line-height: 16px;
 }
-.title {
+.dateLive {
+  composes: date;
+  color: var(--fb-notif);
+}
+.more {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: -4px 0 16px;
+}
+.chip {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--fb-radius-pill);
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.chip:hover {
+  background: var(--fb-icon-bg-hover);
+}
+.chipActive {
+  composes: chip;
+  background: color-mix(in srgb, var(--fb-blue) 12%, var(--fb-card));
+  color: var(--fb-blue);
+}
+.catTitle {
   font-size: 17px;
+  font-weight: 700;
+  padding: 16px 8px 4px;
+}
+.chev {
+  color: var(--fb-text-secondary);
+  display: inline-flex;
+}
+.title {
+  font-size: 15px;
   font-weight: 600;
   line-height: 20px;
   color: var(--fb-text);
@@ -46,11 +97,16 @@
 .title:hover {
   text-decoration: underline;
 }
-.loc,
-.count {
-  font-size: 15px;
+.loc {
+  font-size: 13px;
+  font-weight: 600;
   color: var(--fb-text-secondary);
-  line-height: 20px;
+  line-height: 16px;
+}
+.count {
+  font-size: 12px;
+  color: var(--fb-text-secondary);
+  line-height: 16px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

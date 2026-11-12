@@ -4,7 +4,8 @@ import {getSessionUser} from '@/lib/auth';
 import {listMemories} from '@/lib/secondary-queries';
 import {PostCard} from '@/components/feed/PostCard';
 import {PanelDivider, PanelHeader, PanelRow, SecondaryLayout} from '@/components/pages/SecondaryLayout';
-import {BellIcon, ClockIcon, GearIcon} from '@/components/pages/icons';
+import {BellIcon, CalendarXIcon, HomeIcon, PeopleIcon} from '@/components/pages/icons';
+import {PanelSection} from '@/components/pages/SecondaryLayout';
 import styles from '@/components/pages/saved.module.css';
 
 export const metadata: Metadata = {title: 'Memories | Facebook'};
@@ -36,15 +37,18 @@ export default async function MemoriesPage() {
       panel={
         <>
           <PanelHeader title="Memories" settings={false} />
-          <PanelRow icon={<ClockIcon />} label="On this day" href="/memories" active />
+          <PanelRow icon={<HomeIcon />} label="Memories Home" href="/memories" active />
           <PanelDivider />
-          <PanelRow icon={<BellIcon />} label="Notifications" href="/memories?tab=notifications" />
-          <PanelRow icon={<GearIcon />} label="Hide people or dates" href="/memories?tab=settings" />
+          <PanelSection title="Settings" />
+          <PanelRow icon={<BellIcon />} label="Notifications" sublabel="Highlights" href="/memories?tab=notifications" />
+          <PanelRow icon={<PeopleIcon />} label="Hide People" sublabel="0 Hidden" href="/memories?tab=people" />
+          <PanelRow icon={<CalendarXIcon />} label="Hide Dates" sublabel="0 Hidden" href="/memories?tab=dates" />
         </>
       }>
       <div className={styles.list}>
         <div className={styles.memoryHero}>
-          <div className={styles.memoryBanner}>
+          <div className={styles.memoryBanner} aria-hidden />
+          <div className={styles.memoryText}>
             <h2>On this day</h2>
             <p>
               {user.name.split(' ')[0]}, we care about you and the memories you share here. We thought you&apos;d like to look back on these posts.

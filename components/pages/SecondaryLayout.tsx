@@ -44,6 +44,8 @@ export function PanelRow({
   active,
   chevron,
   onClick,
+  sublabel,
+  trailing,
 }: {
   icon: ReactNode;
   label: string;
@@ -51,12 +53,18 @@ export function PanelRow({
   active?: boolean;
   chevron?: boolean;
   onClick?: () => void;
+  sublabel?: string;
+  trailing?: ReactNode;
 }) {
   const cls = active ? styles.rowActive : styles.row;
   const inner = (
     <>
       <span className={styles.rowIcon}>{icon}</span>
-      <span className={styles.rowLabel}>{label}</span>
+      <span className={styles.rowLabel}>
+        {label}
+        {sublabel && <span className={styles.rowSub}>{sublabel}</span>}
+      </span>
+      {trailing}
       {chevron && (
         <span className={styles.rowChevron}>
           <ChevronRightIcon />

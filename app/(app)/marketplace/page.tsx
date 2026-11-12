@@ -29,7 +29,7 @@ export default async function MarketplacePage({searchParams}: {searchParams: Pro
       ) : (
         <div className={styles.grid}>
           {listings.map(l => (
-            <ListingCard key={l.id} listing={l} />
+            <ListingCard key={l.id} listing={l} justListed={Date.now() - new Date(l.createdAt).getTime() < 36 * 3600 * 1000} />
           ))}
         </div>
       )}

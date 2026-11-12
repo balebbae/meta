@@ -1,6 +1,6 @@
 .list {
-  width: var(--fb-feed-w);
-  max-width: 100%;
+  width: 100%;
+  max-width: 1000px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -21,9 +21,9 @@
 }
 .thumb {
   position: relative;
-  width: 150px;
-  height: 150px;
-  flex: 0 0 150px;
+  width: 144px;
+  height: 144px;
+  flex: 0 0 144px;
   border-radius: var(--fb-radius);
   overflow: hidden;
   background: var(--fb-hover-strong);
@@ -69,6 +69,61 @@
   gap: 8px;
   padding-top: 12px;
 }
+.headRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.filterBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.filterBtn:hover {
+  background: var(--fb-icon-bg-hover);
+}
+.collectionRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: var(--fb-radius);
+  color: var(--fb-text);
+}
+.collectionRow:hover {
+  background: var(--fb-hover);
+}
+.collectionTile {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: var(--fb-blue);
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 48px;
+}
+.collectionName {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.collectionPriv {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+}
 .btn {
   height: 36px;
   padding: 0 12px;
@@ -90,6 +145,11 @@
   gap: 6px;
   font-size: 13px;
   color: var(--fb-text-secondary);
+  margin-top: 6px;
+}
+.collection strong {
+  color: var(--fb-text);
+  font-weight: 600;
 }
 .collection img {
   border-radius: 50%;
@@ -109,19 +169,46 @@
   overflow: hidden;
 }
 .memoryBanner {
-  background: linear-gradient(135deg, #0866ff 0%, #5e9bff 100%);
-  color: #fff;
-  padding: 24px 16px;
+  background: linear-gradient(135deg, #f0735a 0%, #f49a86 100%);
+  height: 96px;
+  position: relative;
+  overflow: hidden;
 }
-.memoryBanner h2 {
+.memoryBanner::before,
+.memoryBanner::after {
+  content: '';
+  position: absolute;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+.memoryBanner::before {
+  width: 120px;
+  height: 80px;
+  left: 10%;
+  top: 14px;
+  transform: rotate(-6deg);
+}
+.memoryBanner::after {
+  width: 120px;
+  height: 80px;
+  right: 10%;
+  top: 20px;
+  transform: rotate(5deg);
+}
+.memoryText {
+  padding: 16px;
+  text-align: center;
+}
+.memoryText h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: 17px;
   font-weight: 700;
 }
-.memoryBanner p {
+.memoryText p {
   margin: 4px 0 0;
   font-size: 15px;
-  opacity: 0.9;
+  color: var(--fb-text-secondary);
 }
 .dayHead {
   font-size: 17px;

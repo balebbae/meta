@@ -204,3 +204,59 @@ export const ImageIcon = (p: IconProps) => (
     <path d="M4.5 3h15A3.5 3.5 0 0 1 23 6.5v11a3.5 3.5 0 0 1-3.5 3.5h-15A3.5 3.5 0 0 1 1 17.5v-11A3.5 3.5 0 0 1 4.5 3ZM7 7a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm13.5 10.5v-3.3l-4.1-4.1a1 1 0 0 0-1.4 0L8.4 16.7l-2-2a1 1 0 0 0-1.4 0L3 16.7v.8c0 .83.67 1.5 1.5 1.5h15c.83 0 1.5-.67 1.5-1.5Z" />
   </svg>
 );
+export const BriefcaseIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M9 4a2 2 0 0 0-2 2v1H5a3 3 0 0 0-3 3v2.5h20V10a3 3 0 0 0-3-3h-2V6a2 2 0 0 0-2-2H9Zm0 3V6h6v1H9ZM2 14v4a3 3 0 0 0 3 3h14a3 3 0 0 0 3-3v-4h-8.5v1a.75.75 0 0 1-.75.75h-1.5a.75.75 0 0 1-.75-.75v-1H2Z" />
+  </svg>
+);
+export const ShieldIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 2 4 5v6c0 5.25 3.4 9.74 8 11 4.6-1.26 8-5.75 8-11V5l-8-3Zm-1 13.5-3.5-3.5 1.4-1.4 2.1 2.1 4.6-4.6 1.4 1.4-6 6Z" />
+  </svg>
+);
+export const SlidersIcon = (p: IconProps) => (
+  <svg {...base({size: 20, ...p})}>
+    <path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h11m4 0h1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
+    <circle cx="15" cy="6" r="2" /><circle cx="9" cy="12" r="2" /><circle cx="17" cy="18" r="2" />
+  </svg>
+);
+export const ChevronDownIcon = (p: IconProps) => (
+  <svg {...base({size: 16, ...p})}>
+    <path d="M4.5 8.5 12 16l7.5-7.5-1.4-1.4L12 13.2 5.9 7.1 4.5 8.5Z" />
+  </svg>
+);
+export const ChevronUpIcon = (p: IconProps) => (
+  <svg {...base({size: 16, ...p})}>
+    <path d="M4.5 15.5 12 8l7.5 7.5-1.4 1.4L12 10.8l-6.1 6.1-1.4-1.4Z" />
+  </svg>
+);
+export const PersonIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9Zm0 2c-4.42 0-8 2.24-8 5v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1c0-2.76-3.58-5-8-5Z" />
+  </svg>
+);
+export const PeopleIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm7 1a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 18.5C2 15.46 5.13 13 9 13s7 2.46 7 5.5V20H2v-1.5Zm15.5 1.5v-1.5c0-1.6-.6-3.05-1.6-4.2.7-.2 1.4-.3 2.1-.3 2.76 0 5 1.79 5 4v2h-5.5Z" />
+  </svg>
+);
+export const VideoCamIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M3 7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2.5l3.5-2.3A1 1 0 0 1 21 8v8a1 1 0 0 1-1.5.8L16 14.5V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z" />
+  </svg>
+);
+export const HistoryIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M13 3a9 9 0 0 0-9 9H1l3.9 3.9L8.8 12H6a7 7 0 1 1 2.05 4.95l-1.42 1.42A9 9 0 1 0 13 3Zm-1 5v5l4.25 2.52.75-1.23-3.5-2.08V8H12Z" />
+  </svg>
+);
+export const CalendarXIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M7 2v2H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-2V2h-2v2H9V2H7Zm-2 7h14v10H5V9Zm4.2 1.8L8 12l2.3 2.3L8 16.6l1.2 1.2 2.3-2.3 2.3 2.3 1.2-1.2-2.3-2.3 2.3-2.3-1.2-1.2-2.3 2.3-2.3-2.3Z" />
+  </svg>
+);
+export const WifiIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <path d="M12 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm-4.95-5.05 1.41 1.41a5 5 0 0 1 7.08 0l1.41-1.41a7 7 0 0 0-9.9 0ZM4.22 12.22l1.42 1.42a9 9 0 0 1 12.72 0l1.42-1.42a11 11 0 0 0-15.56 0ZM1.39 9.39l1.42 1.42a13 13 0 0 1 18.38 0l1.42-1.42a15 15 0 0 0-21.22 0Z" />
+  </svg>
+);

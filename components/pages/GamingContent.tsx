@@ -15,7 +15,7 @@ export function GamingContent({games}: {games: Game[]}) {
   return (
     <div className={styles.wrap}>
       <section>
-        <SectionHead title="Play games" link="/gaming?tab=browse" />
+        <SectionHead title="Suggested Live Now" link="/gaming?tab=browse" />
         <div className={styles.carousel}>
           <button type="button" className={styles.arrowLeft} onClick={() => scroll(-1)} aria-label="Previous">
             <ChevronLeftIcon />
@@ -45,7 +45,7 @@ export function GamingContent({games}: {games: Game[]}) {
         </div>
       </section>
       <section>
-        <SectionHead title="Instant games" link="/gaming?tab=browse" />
+        <SectionHead title="New and Rising Games" link="/gaming?tab=browse" />
         <div className={styles.grid}>
           {instant.map(g => (
             <article key={g.id} className={styles.tile}>

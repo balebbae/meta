@@ -6,7 +6,7 @@ import {listSavedListings, listSavedPosts} from '@/lib/secondary-queries';
 import {formatPrice} from '@/lib/secondary-data';
 import {PanelDivider, PanelHeader, PanelRow, PanelSection, SecondaryLayout} from '@/components/pages/SecondaryLayout';
 import {SavedItemCard} from '@/components/pages/SavedItemCard';
-import {BookmarkIcon, PlusIcon, StoreIcon} from '@/components/pages/icons';
+import {BookmarkIcon, LockIcon, PlusIcon, SlidersIcon, StoreIcon} from '@/components/pages/icons';
 import panel from '@/components/pages/secondary.module.css';
 import styles from '@/components/pages/saved.module.css';
 
@@ -27,12 +27,20 @@ export default async function SavedPage({searchParams}: {searchParams: Promise<{
       panel={
         <>
           <PanelHeader title="Saved" />
-          <PanelRow icon={<BookmarkIcon />} label="Saved items" href="/saved" active={!showListings && !collection} />
+          <PanelRow icon={<BookmarkIcon />} label="Saved Items" href="/saved" active={!showListings && !collection} />
           <PanelRow icon={<StoreIcon />} label="Marketplace listings" href="/saved?tab=marketplace" active={showListings} />
           <PanelDivider />
           <PanelSection title="My collections" />
           {collections.map(c => (
-            <PanelRow key={c} icon={<BookmarkIcon />} label={c} href={`/saved?collection=${encodeURIComponent(c)}`} active={collection === c} />
+            <Link key={c} href={`/saved?collection=${encodeURIComponent(c)}`} className={styles.collectionRow} aria-current={collection === c ? 'page' : undefined}>
+              <span className={styles.collectionTile}>{c[0]}</span>
+              <span>
+                <span className={styles.collectionName}>{c}</span>
+                <span className={styles.collectionPriv}>
+                  <LockIcon size={10} /> Only me
+                </span>
+              </span>
+            </Link>
           ))}
           <button type="button" className={panel.panelButton}>
             <PlusIcon size={16} />
@@ -41,7 +49,12 @@ export default async function SavedPage({searchParams}: {searchParams: Promise<{
         </>
       }>
       <div className={styles.list}>
-        <h2 className={styles.head}>{showListings ? 'Saved listings' : (collection ?? 'All')}</h2>
+        <div className={styles.headRow}>
+          <h2 className={styles.head}>{showListings ? 'Saved listings' : (collection ?? 'All')}</h2>
+          <button type="button" className={styles.filterBtn} aria-label="Filter">
+            <SlidersIcon />
+          </button>
+        </div>
         {showListings ? (
           listings.length === 0 ? (
             <div className={styles.empty}>No saved listings yet.</div>

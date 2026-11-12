@@ -143,6 +143,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.rowSub {
+  display: block;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--fb-text-secondary);
+  line-height: 16px;
+}
 .rowChevron {
   color: var(--fb-text-secondary);
   display: inline-flex;
@@ -164,6 +171,14 @@
 }
 .panelButton:hover {
   background: color-mix(in srgb, var(--fb-blue) 18%, var(--fb-card));
+}
+.panelButtonPrimary {
+  composes: panelButton;
+  background: var(--fb-blue);
+  color: #fff;
+}
+.panelButtonPrimary:hover {
+  background: var(--fb-blue-hover);
 }
 .panelButtonSecondary {
   composes: panelButton;
@@ -188,7 +203,7 @@
 }
 .panelSectionTitle {
   font-size: 17px;
-  font-weight: 600;
+  font-weight: 700;
   margin: 0;
 }
 .panelSectionLink {

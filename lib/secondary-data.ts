@@ -116,3 +116,21 @@ export function formatEventDateLong(iso: string) {
   const d = new Date(iso);
   return `${d.toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'})} at ${d.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit'})}`;
 }
+
+export const EVENT_CATEGORIES = [
+  {name: 'Classics', emoji: '🎭'},
+  {name: 'Comedy', emoji: '😂'},
+  {name: 'Crafts', emoji: '🧶'},
+  {name: 'Dance', emoji: '💃'},
+  {name: 'Drinks', emoji: '🍸'},
+  {name: 'Fitness & Workouts', emoji: '🏋️'},
+  {name: 'Foods', emoji: '🍽️'},
+  {name: 'Games', emoji: '🎮'},
+  {name: 'Gardening', emoji: '🌱'},
+  {name: 'Health & Medical', emoji: '🩺'},
+  {name: 'Home & Garden', emoji: '🏡'},
+  {name: 'Music', emoji: '🎵'},
+  {name: 'Networking', emoji: '🤝'},
+  {name: 'Party', emoji: '🎉'},
+  {name: 'Sports', emoji: '⚽'},
+];

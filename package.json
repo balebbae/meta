@@ -1,33 +1,29 @@
 {
   "name": "meta",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
-    "lint": "oxlint",
-    "preview": "vite preview",
-    "astryx": "node node_modules/@astryxdesign/cli/clients/cli/bin/astryx.mjs",
-    "check": "astryx doctor --built dist"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:setup": "node scripts/db-setup.mjs"
   },
   "dependencies": {
-    "@astryxdesign/core": "^0.7.13",
-    "@astryxdesign/theme-neutral": "^0.7.13",
-    "@heroicons/react": "^2.2.0",
-    "@stylexjs/stylex": "^0.19.1",
+    "@neondatabase/serverless": "^1.2.0",
+    "next": "^16.4.6",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "supertokens-auth-react": "^0.51.3",
+    "supertokens-node": "^24.1.0",
+    "supertokens-web-js": "^0.16.0"
   },
   "devDependencies": {
-    "@astryxdesign/cli": "^0.7.13",
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^6.1.2",
-    "oxlint": "^1.90.0",
-    "typescript": "~7.0.2",
-    "vite": "^8.3.6",
-    "vite-plugin-pwa": "^2.0.0"
+    "dotenv": "^17.2.3",
+    "typescript": "^5.9.3"
   }
 }

@@ -1,7 +1,7 @@
 /* ---- "Turn on notifications" prompt (Facebook's blue-bell card) ---- */
 .prompt {
   position: fixed;
-  top: calc(var(--fb-header-h) + 8px);
+  bottom: 24px;
   left: 16px;
   z-index: 60;
   width: 360px;

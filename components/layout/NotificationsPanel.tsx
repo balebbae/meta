@@ -54,7 +54,7 @@ export function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (
   const row = (n: Notification) => (
     <Link key={n.id} href={n.postId ? `/?post=${n.postId}` : n.actor ? `/profile/${n.actor.id}` : '/'} className={styles.notif} onClick={() => !n.isRead && markRead([n.id])}>
       <span className={styles.notifAvatar}>
-        <Avatar src={n.actor?.avatarUrl ?? '/icon.svg'} alt="" size={56} />
+        <Avatar src={n.actor?.avatarUrl ?? '/favicon.svg'} alt="" size={56} />
         <span className={styles.notifType} style={{background: n.type === 'reaction' ? 'var(--fb-blue)' : n.type === 'comment' ? '#31a24c' : n.type === 'friend_request' ? 'var(--fb-blue)' : '#65676b'}}>
           {n.type === 'comment' ? <CommentIcon size={14} /> : n.type === 'friend_request' ? <UsersIcon size={14} /> : n.type === 'reaction' ? <LikeFilledIcon size={14} /> : <BellIcon size={14} />}
         </span>

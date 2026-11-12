@@ -1,9 +1,10 @@
 'use client';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {MessengerIcon, SearchIcon} from '@/components/icons';
 import {COMPOSE_EVENT} from '@/components/layout/ComposeFab';
+import {useVisiblePolling} from '@/components/messages/hooks';
 import {FacebookWordmark} from './Wordmark';
 import styles from './mobile.module.css';
 
@@ -23,23 +24,17 @@ export function CreatePlusIcon({size = 28}: {size?: number}) {
   );
 }
 
-/** Polls the Messenger unread count; 0 when the messaging API is unavailable. */
+/** Polls the Messenger unread count while the tab is visible; 0 when the messaging API is unavailable. */
 export function useChatUnread(intervalMs = 15000) {
   const [n, setN] = useState(0);
-  useEffect(() => {
-    let alive = true;
-    const tick = () =>
+  useVisiblePolling(
+    () =>
       fetch('/api/conversations/unread-count', {cache: 'no-store'})
         .then(r => (r.ok ? r.json() : null))
-        .then((d: {unreadCount?: number} | null) => alive && setN(Number(d?.unreadCount) || 0))
-        .catch(() => alive && setN(0));
-    tick();
-    const t = setInterval(tick, intervalMs);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, [intervalMs]);
+        .then((d: {unreadCount?: number} | null) => setN(Number(d?.unreadCount) || 0))
+        .catch(() => setN(0)),
+    intervalMs,
+  );
   return n;
 }
 

@@ -111,12 +111,6 @@ export function formatEventDate(iso: string) {
   return `${day}, ${month} ${d.getDate()} AT ${time}`;
 }
 
-/** "Saturday, November 15, 2026 at 7:00 PM" */
-export function formatEventDateLong(iso: string) {
-  const d = new Date(iso);
-  return `${d.toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'})} at ${d.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit'})}`;
-}
-
 export const EVENT_CATEGORIES = [
   {name: 'Classics', emoji: '🎭'},
   {name: 'Comedy', emoji: '😂'},

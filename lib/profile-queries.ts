@@ -1,3 +1,4 @@
+import {cache} from 'react';
 import {sql} from '@/lib/db';
 import {mapUser} from '@/lib/auth';
 import {mapPost} from '@/lib/queries';
@@ -163,8 +164,8 @@ export async function listUserPhotos(id: number, limit = 60): Promise<Photo[]> {
   return rows.map(r => ({postId: r.id as number, imageUrl: r.image_url as string, createdAt: String(r.created_at)}));
 }
 
-/** Incoming pending requests for the viewer. */
-export async function listFriendRequests(viewerId: number): Promise<FriendSummary[]> {
+/** Incoming pending requests for the viewer. Memoised per request (the layout and the home page both need it). */
+export const listFriendRequests = cache(async (viewerId: number): Promise<FriendSummary[]> => {
   const rows = await sql`
     select u.id, u.name, u.avatar_url, u.is_online,
            (select count(*)::int from friendships a
@@ -175,7 +176,7 @@ export async function listFriendRequests(viewerId: number): Promise<FriendSummar
     where f.friend_id = ${viewerId} and f.status = 'pending'
     order by f.created_at desc`;
   return rows.map(mapFriend);
-}
+});
 
 /** Users with no friendship row in either direction with the viewer, most mutual friends first. */
 /**

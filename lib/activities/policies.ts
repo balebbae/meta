@@ -30,6 +30,3 @@ export async function setPolicy(userId: number, category: Category, audience: Au
     on conflict (user_id, category, audience) do update set level = excluded.level, updated_at = now()`;
 }
 
-export function effectiveLevel(matrix: PolicyMatrix, category: Category, audience: Audience): ShareLevel {
-  return matrix[category]?.[audience] ?? 'none';
-}

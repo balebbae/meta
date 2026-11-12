@@ -13,12 +13,6 @@ const POST_SELECT = (viewerId: number) => sql`
   from posts p
   join users u on u.id = p.author_id`;
 
-/** Feed for a viewer: newest first, with reaction/comment counts and the viewer's own reaction. */
-export async function listFeed(viewerId: number, limit = 20, offset = 0): Promise<Post[]> {
-  const rows = await sql`${POST_SELECT(viewerId)} order by p.created_at desc, p.id desc limit ${limit} offset ${offset}`;
-  return rows.map(mapPost);
-}
-
 export type FeedPage = {posts: Post[]; nextCursor: string | null};
 
 /** Cursor-paginated feed. `cursor` is the created_at ISO string of the last post seen. */
@@ -29,11 +23,6 @@ export async function listFeedPage(viewerId: number, cursor: string | null, limi
   const hasMore = rows.length > limit;
   const posts = rows.slice(0, limit).map(mapPost);
   return {posts, nextCursor: hasMore ? posts[posts.length - 1].createdAt : null};
-}
-
-export async function listPostsByAuthor(authorId: number, viewerId: number, limit = 20): Promise<Post[]> {
-  const rows = await sql`${POST_SELECT(viewerId)} where p.author_id = ${authorId} order by p.created_at desc, p.id desc limit ${limit}`;
-  return rows.map(mapPost);
 }
 
 export async function getPost(id: number, viewerId: number): Promise<Post | null> {

@@ -1,7 +1,10 @@
 // Creates tables and seeds demo data. Usage: DATABASE_URL=... node scripts/db-setup.mjs [--reset]
 import {readFileSync} from 'node:fs';
 import {neon} from '@neondatabase/serverless';
-import 'dotenv/config';
+
+try {
+  process.loadEnvFile('.env.local');
+} catch {}
 
 const url = process.env.DATABASE_URL;
 if (!url) throw new Error('DATABASE_URL is not set');

@@ -1,5 +1,4 @@
 import type {Metadata} from 'next';
-import {getSessionUser} from '@/lib/auth';
 import {listVideos} from '@/lib/secondary-queries';
 import {PanelDivider, PanelHeader, PanelRow, PanelSearch, SecondaryLayout} from '@/components/pages/SecondaryLayout';
 import {VideoCard} from '@/components/pages/VideoCard';
@@ -10,7 +9,6 @@ export const metadata: Metadata = {title: 'Video | Facebook'};
 export const dynamic = 'force-dynamic';
 
 export default async function VideoPage() {
-  await getSessionUser();
   const videos = await listVideos();
   return (
     <SecondaryLayout

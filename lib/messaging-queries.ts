@@ -148,7 +148,7 @@ export async function updateConversation(conversationId: number, patch: {name?: 
   if (patch.imageUrl !== undefined) await sql`update conversations set image_url = ${patch.imageUrl}, updated_at = now() where id = ${conversationId}`;
 }
 
-const MESSAGE_SELECT = sql`
+const MESSAGE_SELECT = () => sql`
   select m.id, m.conversation_id, m.sender_id, m.body, m.image_url, m.kind, m.payload, m.created_at, s.name as sender_name, s.avatar_url as sender_avatar
   from messages m left join users s on s.id = m.sender_id`;
 
@@ -168,14 +168,14 @@ export async function listMessages(conversationId: number, opts: {after?: number
 async function listAllMessages(conversationId: number, opts: {after?: number; before?: number; limit?: number} = {}): Promise<Message[]> {
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   if (opts.after != null) {
-    const rows = await sql`${MESSAGE_SELECT} where m.conversation_id = ${conversationId} and m.id > ${opts.after} order by m.id asc limit ${limit}`;
+    const rows = await sql`${MESSAGE_SELECT()} where m.conversation_id = ${conversationId} and m.id > ${opts.after} order by m.id asc limit ${limit}`;
     return rows.map(mapMessage);
   }
   if (opts.before != null) {
-    const rows = await sql`${MESSAGE_SELECT} where m.conversation_id = ${conversationId} and m.id < ${opts.before} order by m.id desc limit ${limit}`;
+    const rows = await sql`${MESSAGE_SELECT()} where m.conversation_id = ${conversationId} and m.id < ${opts.before} order by m.id desc limit ${limit}`;
     return rows.map(mapMessage).reverse();
   }
-  const rows = await sql`${MESSAGE_SELECT} where m.conversation_id = ${conversationId} order by m.id desc limit ${limit}`;
+  const rows = await sql`${MESSAGE_SELECT()} where m.conversation_id = ${conversationId} order by m.id desc limit ${limit}`;
   return rows.map(mapMessage).reverse();
 }
 
@@ -188,20 +188,23 @@ export type SendOptions = {kind?: MessageKind; payload?: Record<string, unknown>
 export async function sendMessage(conversationId: number, sender: {id: number; name: string}, body: string, imageUrl: string | null, opts: SendOptions = {}): Promise<Message> {
   const kind = opts.kind ?? 'text';
   const payload = opts.payload == null ? null : JSON.stringify(opts.payload);
+  // one round trip: insert, bump the conversation, and mark the sender as having read their own message
   const [row] = await sql`
     with ins as (
       insert into messages (conversation_id, sender_id, body, image_url, kind, payload) values (${conversationId}, ${sender.id}, ${body}, ${imageUrl}, ${kind}, ${payload})
-      returning id, conversation_id, sender_id, body, image_url, kind, payload, created_at)
+      returning id, conversation_id, sender_id, body, image_url, kind, payload, created_at),
+    touched as (update conversations set updated_at = now() where id = ${conversationId}),
+    seen as (update conversation_members set last_read_message_id = (select id from ins) where conversation_id = ${conversationId} and user_id = ${sender.id})
     select ins.*, s.name as sender_name, s.avatar_url as sender_avatar from ins join users s on s.id = ins.sender_id`;
   const message = mapMessage(row);
-  await sql`update conversations set updated_at = now() where id = ${conversationId}`;
-  // the sender has seen their own message
-  await sql`update conversation_members set last_read_message_id = ${message.id} where conversation_id = ${conversationId} and user_id = ${sender.id}`;
 
-  const conv = await sql`select is_group, name from conversations where id = ${conversationId}`;
-  const isGroup = Boolean(conv[0]?.is_group);
-  const groupName = (conv[0]?.name as string | null) || null;
-  const others = await sql`select user_id from conversation_members where conversation_id = ${conversationId} and user_id <> ${sender.id}`;
+  const [conv] = await sql`
+    select is_group, name,
+      (select coalesce(json_agg(user_id), '[]'::json) from conversation_members where conversation_id = ${conversationId} and user_id <> ${sender.id}) as others
+    from conversations where id = ${conversationId}`;
+  const isGroup = Boolean(conv?.is_group);
+  const groupName = (conv?.name as string | null) || null;
+  const others = ((conv?.others as number[] | null) ?? []).map(id => ({user_id: id}));
   const preview = body.trim() || (imageUrl ? 'Sent a photo.' : '');
   const notifText = isGroup ? `${sender.name} in ${groupName ?? 'your group chat'}: ${preview}` : `${sender.name} sent you a message: ${preview}`;
   if (others.length) {

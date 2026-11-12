@@ -47,6 +47,8 @@ def run(args) -> dict:
         kw = {"model": args.model, "messages": _to_openai(r["messages"]), "max_completion_tokens": args.max_tokens}
         if args.effort:
             kw["reasoning_effort"] = args.effort
+        if args.reasoning_strength:  # local Glimmer servers (vLLM/SGLang): match the strength used in training
+            kw["extra_body"] = {"chat_template_kwargs": {"reasoning_strength": args.reasoning_strength}}
         if args.schema:
             kw["response_format"] = {
                 "type": "json_schema",
@@ -89,6 +91,7 @@ def main() -> None:
     p.add_argument("--base-url", default="https://api.meta.ai/v1")
     p.add_argument("--api-key-env", default="META_API_KEY")
     p.add_argument("--effort", default="minimal", help="reasoning_effort; pass '' to omit (local servers)")
+    p.add_argument("--reasoning-strength", default="", help="local Glimmer only, e.g. 'low' (matches train/sft.py)")
     p.add_argument("--no-schema", dest="schema", action="store_false", help="skip json_schema response_format")
     p.add_argument("--n", type=int, default=50)
     p.add_argument("--workers", type=int, default=6)

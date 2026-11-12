@@ -16,6 +16,20 @@ from pathlib import Path
 # Glimmer chat-format markers used to train on the reply only (from Unsloth's notebooks).
 INSTRUCTION_PART = "<|start|>user<|message|>"
 RESPONSE_PART = "<|start|>assistant to=user<|message|>"
+# Glimmer's template defaults to "Reasoning strength: high" unless the system text names one. Targets are
+# reply-only (no reasoning), so train at a fixed low strength; serve with the same line or
+# chat_template_kwargs={"reasoning_strength": "low"} so prompts match.
+REASONING_LINE = "Reasoning strength: {}."
+
+
+def with_reasoning(messages: list[dict], strength: str) -> list[dict]:
+    line = REASONING_LINE.format(strength)
+    out = []
+    for m in messages:
+        if m["role"] == "system" and isinstance(m["content"], str) and "reasoning strength" not in m["content"].lower():
+            m = {**m, "content": f"{m['content']}\n\n{line}"}
+        out.append(m)
+    return out
 
 
 def load_rows(path: Path) -> list[dict]:
@@ -29,7 +43,10 @@ def main() -> None:
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--qlora", action="store_true", help="4-bit base (unsloth bnb) instead of bf16")
     p.add_argument("--rank", type=int, default=16)
+    p.add_argument("--reasoning", default="low", help="reasoning strength baked into the system prompt")
     p.add_argument("--epochs", type=float, default=1.0)
+    p.add_argument("--max-steps", type=int, default=-1, help="cap optimizer steps (smoke tests)")
+    p.add_argument("--limit", type=int, default=0, help="use only the first N training rows")
     p.add_argument("--max-seq", type=int, default=2048)
     p.add_argument("--lr", type=float, default=2e-4)
     p.add_argument("--batch", type=int, default=2)
@@ -56,11 +73,14 @@ def main() -> None:
         random_state=3407,
     )
     rows = load_rows(a.data / a.task / "train.jsonl")
+    if a.limit:
+        rows = rows[: a.limit]
     common = dict(
         per_device_train_batch_size=a.batch,
         gradient_accumulation_steps=a.grad_accum,
         warmup_steps=10,
         num_train_epochs=a.epochs,
+        max_steps=a.max_steps,
         learning_rate=a.lr,
         logging_steps=5,
         optim="adamw_8bit",
@@ -79,7 +99,7 @@ def main() -> None:
 
         def to_conv(r):
             msgs = []
-            for m in r["sft_messages"]:
+            for m in with_reasoning(r["sft_messages"], a.reasoning):
                 c = m["content"]
                 if isinstance(c, list):
                     c = [
@@ -115,9 +135,9 @@ def main() -> None:
 
         tok = processor
         texts = [
-            tok.apply_chat_template(r["sft_messages"], tokenize=False, add_generation_prompt=False).removeprefix(
-                getattr(tok, "bos_token", "") or ""
-            )
+            tok.apply_chat_template(
+                with_reasoning(r["sft_messages"], a.reasoning), tokenize=False, add_generation_prompt=False
+            ).removeprefix(getattr(tok, "bos_token", "") or "")
             for r in rows
         ]
         trainer = SFTTrainer(

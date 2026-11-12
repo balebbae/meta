@@ -37,7 +37,7 @@ python train/sft.py --task proof --out outputs/proof-lora               # vision
 python train/sft.py --task private_muse --out outputs/private_muse-lora
 python train/grpo_private_muse.py --init outputs/private_muse-lora --out outputs/private_muse-grpo
 # Serve (e.g. vLLM with the LoRA), then compare against the baseline:
-python -m rally_ft.eval --task mapper --base-url http://localhost:8000/v1 --model <served-name> --effort '' --no-schema
+python -m rally_ft.eval --task mapper --base-url http://localhost:8000/v1 --model <served-name> --effort '' --reasoning-strength low --no-schema
 ```
 Add `--qlora` to `train/sft.py` to use the 4-bit Unsloth checkpoint if memory is tight. None of the training scripts have been run yet: this VM has no GPU.
 

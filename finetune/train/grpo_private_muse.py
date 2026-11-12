@@ -52,6 +52,14 @@ def main() -> None:
             use_gradient_checkpointing="unsloth",
             random_state=3407,
         )
+    if Path(a.init).exists():  # resuming from the SFT adapter: make sure its LoRA weights train
+        for name, param in model.named_parameters():
+            if "lora_" in name:
+                param.requires_grad_(True)
+    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"trainable params: {trainable:,}")
+    if not trainable:
+        raise SystemExit("no trainable parameters; check --init")
     rows = [json.loads(line) for line in (a.data / "private_muse" / "train.jsonl").open()]
     ds = Dataset.from_list(
         [

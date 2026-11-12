@@ -25,6 +25,14 @@ python -m rally_ft.build --task all --train 3000 --val 200 --test 200
 ```
 This writes `data/<task>/{train,val,test}.jsonl`, plus `data/proof/images/`. It's deterministic (fixed seeds).
 
+## 2b. Setup check (no training)
+```sh
+python train/check_setup.py        # downloads only the tokenizer; exits non-zero and lists problems if anything is off
+```
+- Confirms CUDA, versions, disk, the datasets, and that Glimmer's chat template renders the exact markers `train/sft.py` masks on. If the markers are missing, loss masking would hide every token, so training would learn nothing.
+- Prints token lengths per task against `--max-seq`.
+- Training bakes `Reasoning strength: low.` into the system prompt. The template otherwise defaults to high. Serve and eval with the same strength (see step 6).
+
 ## 3. (Optional) Cloud baseline
 ```sh
 for t in mapper private_muse proof; do python -m rally_ft.eval --task $t --model muse-ember-1.0 --n 100; done
@@ -34,7 +42,7 @@ Reports go to `reports/`. The README's baseline table used n=40.
 ## 4. Smoke test (~minutes)
 Prove the pipeline end to end before long runs:
 ```sh
-python train/sft.py --task mapper --out outputs/smoke --epochs 0.02
+python train/sft.py --task mapper --out outputs/smoke --limit 64 --max-steps 5
 ```
 - **If memory is short:** add `--qlora` (4-bit base) and/or `--batch 1 --grad-accum 16`.
 - **If the run stalls on download:** run `hf download meta-models/Muse-Glimmer-30B` first (or `unsloth/Muse-Glimmer-30B-unsloth-bnb-4bit` for `--qlora`).
@@ -58,12 +66,13 @@ vllm serve meta-models/Muse-Glimmer-30B --enable-lora --lora-modules mapper=outp
 Then compare base vs fine-tuned:
 ```sh
 for t in mapper private_muse proof; do
-  python -m rally_ft.eval --task $t --base-url http://localhost:8000/v1 --api-key-env NONE --model meta-models/Muse-Glimmer-30B --effort '' --no-schema --n 200
-  python -m rally_ft.eval --task $t --base-url http://localhost:8000/v1 --api-key-env NONE --model $t --effort '' --no-schema --n 200
+  python -m rally_ft.eval --task $t --base-url http://localhost:8000/v1 --api-key-env NONE --model meta-models/Muse-Glimmer-30B --effort '' --reasoning-strength low --no-schema --n 200
+  python -m rally_ft.eval --task $t --base-url http://localhost:8000/v1 --api-key-env NONE --model $t --effort '' --reasoning-strength low --no-schema --n 200
 done
 ```
 - If vLLM won't serve Glimmer + LoRA on this box, merge the adapter instead (`model.save_pretrained_merged(...)` with Unsloth) and serve the merged model, or use llama.cpp after exporting to GGUF.
 - If the base model doesn't support `reasoning_effort`, keep `--effort ''`.
+- App callers must match training too: send `chat_template_kwargs: {"reasoning_strength": "low"}` (vLLM/SGLang `extra_body`), or put `Reasoning strength: low.` in the system prompt.
 
 ## 7. Report back
 - Copy the `summary` blocks from `reports/*.json` into a table: task × {Ember baseline, Glimmer base, Glimmer fine-tuned}, plus median latency.

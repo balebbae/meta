@@ -228,3 +228,15 @@ create table if not exists message_reads (
 );
 
 alter table notifications add column if not exists conversation_id integer references conversations(id) on delete cascade;
+
+-- push agent: Web Push subscriptions (one row per browser/device)
+create table if not exists push_subscriptions (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  user_agent text,
+  created_at timestamptz not null default now()
+);
+create index if not exists push_subscriptions_user_idx on push_subscriptions (user_id);

@@ -5,6 +5,7 @@ import {useEffect, useRef, useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import {Popover} from '@/components/ui/Popover';
 import {Tooltip} from '@/components/ui/Tooltip';
+import {PushToggle} from '@/components/push/PushToggle';
 import {
   ArrowLeftIcon,
   BellIcon,
@@ -582,6 +583,7 @@ function AccountPanel({user}: {user: User}) {
               <span>On</span>
               <span className={`${styles.radio} ${theme === 'dark' ? styles.radioOn : ''}`} />
             </button>
+            <PushToggle />
           </>
         )}
         {view === 'settings' &&

@@ -1,0 +1,185 @@
+/* ---- "Turn on notifications" prompt (Facebook's blue-bell card) ---- */
+.prompt {
+  position: fixed;
+  top: calc(var(--fb-header-h) + 8px);
+  left: 16px;
+  z-index: 60;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: var(--fb-card);
+  border-radius: var(--fb-radius);
+  box-shadow: var(--fb-shadow-popover);
+  padding: 12px 12px 12px 16px;
+  color: var(--fb-text);
+  animation: promptIn 0.2s ease-out;
+}
+@keyframes promptIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.promptRow {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.bell {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--fb-blue);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.bellMuted {
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+}
+.promptText {
+  flex: 1;
+  min-width: 0;
+}
+.promptTitle {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.promptBody {
+  margin-top: 2px;
+  font-size: 15px;
+  color: var(--fb-text-secondary);
+  line-height: 1.33;
+}
+.closeBtn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fb-text-secondary);
+  flex-shrink: 0;
+  margin: -4px -4px 0 0;
+}
+.closeBtn:hover {
+  background: var(--fb-hover);
+}
+.promptActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.btn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.btnPrimary {
+  background: var(--fb-blue);
+  color: #fff;
+}
+.btnPrimary:hover:not(:disabled) {
+  background: var(--fb-blue-hover);
+}
+.btnSecondary {
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+}
+.btnSecondary:hover:not(:disabled) {
+  background: var(--fb-icon-bg-hover);
+}
+
+/* ---- Settings row with a switch ---- */
+.toggleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  text-align: left;
+}
+.toggleIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--fb-icon-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.toggleText {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+.toggleHint {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--fb-text-secondary);
+  padding-top: 2px;
+}
+.toggleLinks {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+.toggleLink {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fb-blue);
+}
+.toggleLink:hover {
+  text-decoration: underline;
+}
+.switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border-radius: 12px;
+  background: var(--fb-icon-bg-hover);
+  flex-shrink: 0;
+  margin-top: 6px;
+  transition: background 0.15s;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform 0.15s;
+}
+.switchOn {
+  background: var(--fb-blue);
+}
+.switchOn::after {
+  transform: translateX(20px);
+}
+.switch:disabled {
+  opacity: 0.6;
+}

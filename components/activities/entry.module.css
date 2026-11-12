@@ -75,7 +75,7 @@
   color: var(--fb-text-secondary);
   margin-left: 6px;
 }
-.chip {
+.chip.chip {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -89,8 +89,9 @@
   text-decoration: none;
   vertical-align: middle;
 }
-.chip:hover {
+.chip.chip:hover {
   background: var(--fb-blue-hover);
+  color: #fff;
 }
 .card {
   background: var(--fb-card);

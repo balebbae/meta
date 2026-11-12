@@ -170,7 +170,6 @@ create table if not exists saved_posts (
   created_at timestamptz not null default now(),
   unique (user_id, post_id)
 );
-||||||| parent of 3d118bb (profile: user_details table, non-friend users with pending requests, photo posts for Caleb)
 
 -- profile agent: About tab details (work, education, places, contact)
 create table if not exists user_details (

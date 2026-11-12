@@ -46,7 +46,8 @@ function bandCount(n: number): string {
 /** Filter events for an audience: owner_only data (Strava, WHOOP detail) never leaves only_me. */
 function visibleEvents(events: VaultEvent[], audience: Audience): VaultEvent[] {
   if (audience === 'only_me') return events;
-  return events.filter(e => e.displayScope !== 'owner_only');
+  // WHOOP avg_hr/strain are owner-only detail fields (§5.3) even when the workout itself is shareable.
+  return events.filter(e => e.displayScope !== 'owner_only').map(e => (e.source === 'whoop' ? {...e, avgHr: undefined} : e));
 }
 
 const WORKOUT_KINDS = new Set(['run', 'walk', 'ride', 'strength', 'yoga', 'swim', 'other']);

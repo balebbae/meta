@@ -187,3 +187,58 @@ create table if not exists user_details (
   gender text,
   languages text
 );
+
+-- Closeness / Muse gamification
+create table if not exists xp_events (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  friend_id integer references users(id) on delete set null,
+  source_type text not null,
+  source_id integer,
+  xp integer not null check (xp > 0),
+  reason text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists xp_events_user_week_idx on xp_events (user_id, created_at desc);
+
+create table if not exists quests (
+  id serial primary key,
+  title text not null,
+  description text not null,
+  xp_reward integer not null,
+  goal_type text not null,
+  goal_count integer not null default 1,
+  week_start date not null,
+  muse_meta jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists quests_week_idx on quests (week_start desc);
+
+create table if not exists quest_progress (
+  id serial primary key,
+  quest_id integer not null references quests(id) on delete cascade,
+  user_id integer not null references users(id) on delete cascade,
+  status text not null default 'active' check (status in ('active', 'completed', 'expired')),
+  progress jsonb,
+  updated_at timestamptz not null default now(),
+  unique (quest_id, user_id)
+);
+
+create table if not exists badges (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  slug text not null,
+  title text not null,
+  image_url text not null,
+  earned_at timestamptz not null default now(),
+  unique (user_id, slug)
+);
+
+create table if not exists voice_notes (
+  id serial primary key,
+  author_id integer not null references users(id) on delete cascade,
+  post_id integer references posts(id) on delete cascade,
+  audio_url text,
+  transcript text not null,
+  created_at timestamptz not null default now()
+);

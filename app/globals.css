@@ -183,3 +183,12 @@ img {
 .fb-text-secondary {
   color: var(--fb-text-secondary);
 }
+
+/* Secondary pages (Video, Marketplace, Groups, Gaming, Events, Saved, Memories) bring their own
+   left panel, so they span the whole grid and hide the global rails. */
+main:has([data-layout='wide']) {
+  grid-column: 1 / -1;
+}
+div:has(> main [data-layout='wide']) > :not(main) {
+  display: none;
+}

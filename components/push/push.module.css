@@ -1,7 +1,7 @@
 /* ---- "Turn on notifications" prompt (Facebook's blue-bell card) ---- */
 .prompt {
   position: fixed;
-  top: calc(var(--fb-header-h) + 8px);
+  bottom: 24px;
   left: 16px;
   z-index: 60;
   width: 360px;
@@ -182,4 +182,14 @@
 }
 .switch:disabled {
   opacity: 0.6;
+}
+
+/* Mobile: sit above the floating tab bar instead of covering it */
+@media (max-width: 700px) {
+  .prompt {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+  }
 }

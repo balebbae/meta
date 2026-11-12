@@ -832,7 +832,7 @@
   padding: 16px 0 80px;
 }
 /* Full-height surfaces (Messenger) own their own scrolling: no shell padding, no page scroll. */
-.main:has([data-layout='wide']) {
+.main:has([data-layout='full']) {
   padding: 0;
 }
 .feedCol {
@@ -1080,7 +1080,7 @@
     padding: 0 0 calc(96px + env(safe-area-inset-bottom));
     background: var(--fb-divider);
   }
-  .main:has([data-layout='wide']) {
+  .main:has([data-layout='full']) {
     padding: 0;
   }
   .feedCol {

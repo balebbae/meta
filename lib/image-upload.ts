@@ -10,10 +10,6 @@ export function isImageDataUrl(v: unknown): v is string {
   return typeof v === 'string' && v.length <= MAX_DATA_URL_LENGTH && DATA_URL.test(v);
 }
 
-export function isDataUrl(v: string | null | undefined): v is string {
-  return typeof v === 'string' && v.startsWith('data:');
-}
-
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);

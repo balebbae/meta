@@ -70,8 +70,6 @@ export type Audience = 'only_me' | 'game_participants' | 'friends' | 'mentor_mat
 export const AUDIENCES: Audience[] = ['only_me', 'game_participants', 'friends', 'mentor_match', 'public'];
 
 export type ShareLevel = 'exact' | 'rounded' | 'boolean' | 'muse_only' | 'none';
-export const LEVEL_RANK: Record<ShareLevel, number> = {exact: 4, rounded: 3, boolean: 2, muse_only: 1, none: 0};
-
 export type Answer = {
   question: QuestionType;
   value: number | boolean | string | null;

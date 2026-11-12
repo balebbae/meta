@@ -138,6 +138,7 @@ export default function ChallengeDialog({reel, onClose, onSent, onError}: Props)
                 </span>
               </button>
             </div>
+            {busy !== null && <div className={styles.dlgRowSub} style={{padding: '8px 16px 0'}}>Building the quest with Muse… this can take up to a minute.</div>}
             {error && <div className={styles.dlgError}>{error}</div>}
           </>
         ) : (

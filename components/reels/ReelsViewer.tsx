@@ -284,40 +284,40 @@ function ReelItem({
           </div>
         </div>
 
-        <div className={styles.rail}>
-          <button type="button" className={styles.railBtn} onClick={() => setLiked(l => !l)} aria-pressed={liked}>
-            <span className={`${styles.railIcon} ${liked ? styles.railIconOn : ''}`}>
-              <LikeIcon size={24} />
-            </span>
-            {liked ? 'Liked' : 'Like'}
-          </button>
-          <button type="button" className={styles.railBtn} onClick={() => onToast({text: 'Comments on Reels are coming soon'})}>
-            <span className={styles.railIcon}>
-              <CommentIcon size={24} />
-            </span>
-            Comment
-          </button>
-          <button type="button" className={styles.railBtn} onClick={share}>
-            <span className={styles.railIcon}>
-              <ShareIcon size={24} />
-            </span>
-            Share
-          </button>
-          <button type="button" className={styles.railBtn} onClick={() => setSaved(s => !s)} aria-pressed={saved}>
-            <span className={`${styles.railIcon} ${saved ? styles.railIconOn : ''}`}>
-              <BookmarkIcon size={24} />
-            </span>
-            {saved ? 'Saved' : 'Save'}
-          </button>
-          <button type="button" className={styles.railBtn} onClick={onChallenge}>
-            <span className={`${styles.railIcon} ${styles.railChallenge}`}>
-              <SwordsGlyph />
-            </span>
-            Challenge
-            <br />
-            the GC
-          </button>
-        </div>
+      </div>
+      <div className={styles.rail}>
+        <button type="button" className={styles.railBtn} onClick={() => setLiked(l => !l)} aria-pressed={liked}>
+          <span className={`${styles.railIcon} ${liked ? styles.railIconOn : ''}`}>
+            <LikeIcon size={24} />
+          </span>
+          {liked ? 'Liked' : 'Like'}
+        </button>
+        <button type="button" className={styles.railBtn} onClick={() => onToast({text: 'Comments on Reels are coming soon'})}>
+          <span className={styles.railIcon}>
+            <CommentIcon size={24} />
+          </span>
+          Comment
+        </button>
+        <button type="button" className={styles.railBtn} onClick={share}>
+          <span className={styles.railIcon}>
+            <ShareIcon size={24} />
+          </span>
+          Share
+        </button>
+        <button type="button" className={styles.railBtn} onClick={() => setSaved(s => !s)} aria-pressed={saved}>
+          <span className={`${styles.railIcon} ${saved ? styles.railIconOn : ''}`}>
+            <BookmarkIcon size={24} />
+          </span>
+          {saved ? 'Saved' : 'Save'}
+        </button>
+        <button type="button" className={styles.railBtn} onClick={onChallenge}>
+          <span className={`${styles.railIcon} ${styles.railChallenge}`}>
+            <SwordsGlyph />
+          </span>
+          Challenge
+          <br />
+          the GC
+        </button>
       </div>
     </section>
   );

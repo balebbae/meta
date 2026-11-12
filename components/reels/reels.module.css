@@ -125,7 +125,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 72px 72px 20px 16px;
+  padding: 72px 16px 20px 16px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.35) 60%, transparent);
   display: flex;
   flex-direction: column;
@@ -212,7 +212,7 @@
 }
 .rail {
   position: absolute;
-  right: 8px;
+  left: calc(50% + var(--reel-h) * 9 / 32 + 8px);
   bottom: 16px;
   display: flex;
   flex-direction: column;
@@ -459,6 +459,7 @@
   }
   .rail {
     bottom: calc(92px + env(safe-area-inset-bottom));
+    left: auto;
     right: 6px;
   }
   .toast {

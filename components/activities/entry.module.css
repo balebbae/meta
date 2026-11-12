@@ -1,7 +1,8 @@
 .banner {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px 10px;
   margin-top: 8px;
   padding: 8px 10px;
   border-radius: var(--fb-radius);
@@ -21,13 +22,14 @@
   color: #fff;
 }
 .bannerText {
-  flex: 1;
+  flex: 1 1 160px;
   min-width: 0;
 }
 .bannerActions {
   display: flex;
   gap: 6px;
-  flex: 0 0 auto;
+  flex: 1 0 auto;
+  justify-content: flex-end;
 }
 .primary,
 .ghost {
@@ -130,13 +132,4 @@
   border-color: var(--fb-blue);
   color: var(--fb-blue);
   font-weight: 600;
-}
-@media (max-width: 699px) {
-  .banner {
-    flex-wrap: wrap;
-  }
-  .bannerActions {
-    width: 100%;
-    justify-content: flex-end;
-  }
 }

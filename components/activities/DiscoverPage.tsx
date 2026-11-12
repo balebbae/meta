@@ -5,7 +5,7 @@ import {useRouter} from 'next/navigation';
 import {useCallback, useEffect, useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import {Dialog} from '@/components/ui/Dialog';
-import {PanelHeader, SecondaryLayout} from '@/components/pages/SecondaryLayout';
+import {PanelHeader} from '@/components/pages/SecondaryLayout';
 import type {DiscoverCard, DiscoverPayload, DiscoverSection} from '@/lib/activities/discover';
 import type {InterestSuggestion} from '@/lib/activities/interests';
 import sec from '@/components/pages/secondary.module.css';
@@ -189,7 +189,9 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
   );
 
   return (
-    <SecondaryLayout panel={panel}>
+    <div data-layout="wide" className={styles.wide}>
+      <aside className={styles.panel}>{panel}</aside>
+      <section className={styles.content}>
       <div className={styles.status}>
         <span>
           Ranked for you from your tags, friends and what&apos;s coming up. Other people appear only through privacy-safe answers they chose to share.
@@ -269,7 +271,8 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
           </div>
         </div>
       </Dialog>
-    </SecondaryLayout>
+      </section>
+    </div>
   );
 }
 

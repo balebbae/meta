@@ -318,3 +318,46 @@
     font-size: 17px;
   }
 }
+
+.wide {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  min-height: calc(100vh - var(--fb-header-h));
+}
+.panel {
+  position: sticky;
+  top: var(--fb-header-h);
+  width: var(--fb-sidebar-w);
+  flex: 0 0 var(--fb-sidebar-w);
+  height: calc(100vh - var(--fb-header-h));
+  overflow-y: auto;
+  background: var(--fb-card);
+  box-shadow: var(--fb-shadow-card);
+  padding: 8px;
+  box-sizing: border-box;
+}
+.content {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 16px;
+}
+@media (max-width: 900px) {
+  .wide {
+    flex-direction: column;
+  }
+  .panel {
+    order: 2;
+    position: static;
+    width: 100%;
+    flex: none;
+    height: auto;
+    overflow: visible;
+  }
+  .content {
+    order: 1;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px;
+  }
+}

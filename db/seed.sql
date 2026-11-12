@@ -750,7 +750,6 @@ select g.conversation_id, 1, 'Caleb invited you to Turf: Katy Trail', 'rally_inv
 from games g
 where g.settings ->> 'seed' = 'katy-trail'
   and not exists (select 1 from messages m where m.kind = 'rally_invite' and (m.payload ->> 'gameId')::int = g.id);
-||||||| parent of fe028c3 (Activities E: Discover mobile order (content first), event banner wrap fix, group weekly Rally seed)
 
 
 -- a group that runs a weekly Rally (group header chip + Discover "Groups & clubs")

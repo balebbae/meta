@@ -1,0 +1,34 @@
+/* Facebook sprite icons (public/fb/*.webp are the 2x sprites from static.xx.fbcdn.net). */
+.sprite {
+  display: inline-block;
+  flex: none;
+  background-repeat: no-repeat;
+  vertical-align: middle;
+}
+/* Filters copied from facebook.com's computed styles for each icon colour. */
+.primary {
+  filter: invert(0.08) sepia(0.1) saturate(2) saturate(2) saturate(1.66) hue-rotate(177deg) brightness(1.04) contrast(0.91);
+}
+.secondary {
+  filter: invert(0.39) sepia(0.21) saturate(2) saturate(1.095) hue-rotate(174deg) brightness(0.94) contrast(0.86);
+}
+.blue {
+  filter: invert(0.19) sepia(0.7) saturate(56.71) hue-rotate(203deg) brightness(0.96) contrast(1.01);
+}
+.white {
+  filter: invert(1);
+}
+.none {
+  filter: none;
+}
+:global([data-theme='dark']) .primary {
+  filter: invert(0.89) sepia(0.06) saturate(0.14) hue-rotate(169deg) brightness(0.98) contrast(0.92);
+}
+:global([data-theme='dark']) .secondary {
+  filter: invert(0.75) sepia(0.04) saturate(0.1) hue-rotate(176deg) brightness(0.95) contrast(0.9);
+}
+.img {
+  display: inline-block;
+  flex: none;
+  vertical-align: middle;
+}

@@ -862,6 +862,17 @@
     width: 80px;
   }
 }
+.bottomBar {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 48px;
+  background: var(--fb-card);
+  border-top: 1px solid var(--fb-divider);
+  z-index: 50;
+}
 @media (max-width: 700px) {
   .tabs,
   .search {
@@ -880,17 +891,6 @@
   .bottomBar {
     display: flex;
   }
-}
-.bottomBar {
-  display: none;
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 48px;
-  background: var(--fb-card);
-  border-top: 1px solid var(--fb-divider);
-  z-index: 50;
 }
 .bottomTab {
   flex: 1;

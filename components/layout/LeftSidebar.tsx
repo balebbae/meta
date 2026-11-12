@@ -47,9 +47,9 @@ const MORE = [
   {label: 'Orders and payments', href: '/orders', Icon: RailOrdersIcon},
 ];
 const SHORTCUTS = [
-  {label: 'Bay Area Hikers', img: 'https://picsum.photos/seed/hikers/72/72'},
-  {label: 'React & Next.js Developers', img: 'https://picsum.photos/seed/reactdev/72/72'},
-  {label: 'Sourdough Bakers Club', img: 'https://picsum.photos/seed/bread/72/72'},
+  {label: 'Bay Area Hikers', img: 'https://images.unsplash.com/photo-1551632811-561732d1e306?w=72&h=72&fit=crop'},
+  {label: 'React & Next.js Developers', img: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=72&h=72&fit=crop'},
+  {label: 'Sourdough Bakers Club', img: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=72&h=72&fit=crop'},
 ];
 
 export function LeftSidebar({user}: {user: User}) {

@@ -46,6 +46,7 @@ const SEE_MORE_LIMIT = 400;
 export function PostCard({post: initial, viewer}: {post: Post; viewer: User}): React.JSX.Element {
   const [post, setPost] = useState<Post>(initial);
   const [deleted, setDeleted] = useState(false);
+  const [imgBroken, setImgBroken] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -182,8 +183,8 @@ export function PostCard({post: initial, viewer}: {post: Post; viewer: User}): R
         )}
       </div>
 
-      {post.imageUrl && (
-        <Image src={post.imageUrl} alt="" width={1200} height={800} sizes="(max-width: 700px) 100vw, 680px" className={styles.image} priority={false} />
+      {post.imageUrl && !imgBroken && (
+        <Image src={post.imageUrl} alt="" width={1200} height={800} sizes="(max-width: 700px) 100vw, 680px" className={styles.image} priority={false} onError={() => setImgBroken(true)} />
       )}
 
       {(post.reactionCount > 0 || post.commentCount > 0 || post.shareCount > 0) && (

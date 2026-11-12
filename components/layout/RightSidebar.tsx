@@ -7,8 +7,8 @@ import type {User} from '@/lib/types';
 import styles from './layout.module.css';
 
 const ADS = [
-  {title: 'Thinking about moving to Austin? Find your next home today.', domain: 'zillow.com', img: 'https://picsum.photos/seed/austinhome/240/240'},
-  {title: 'Ship faster with Neon serverless Postgres. Free tier included.', domain: 'neon.tech', img: 'https://picsum.photos/seed/neonad/240/240'},
+  {title: 'Thinking about moving to Austin? Find your next home today.', domain: 'zillow.com', img: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=240&h=240&fit=crop'},
+  {title: 'Ship faster with Neon serverless Postgres. Free tier included.', domain: 'neon.tech', img: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=240&h=240&fit=crop'},
 ];
 
 export function RightSidebar({user, contacts = [], birthday}: {user: User; contacts?: Contact[]; birthday?: string | null}) {

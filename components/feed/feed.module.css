@@ -425,3 +425,14 @@
 .sentinel {
   height: 1px;
 }
+
+@media (max-width: 700px) {
+  .composerAction {
+    font-size: 13px;
+    gap: 4px;
+  }
+  .story {
+    width: 112px;
+    height: 200px;
+  }
+}

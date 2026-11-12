@@ -159,6 +159,15 @@ select 1, p.id, case when p.image_url is null then 'For later' else 'Inspiration
 from posts p where p.author_id in (3, 5, 11) and p.author_id <> 1
 on conflict do nothing;
 
+insert into saved_posts (user_id, post_id, collection)
+select 2, p.id, case when p.image_url is null then 'For later' else 'Inspiration' end
+from posts p where p.author_id in (1, 4, 8)
+on conflict do nothing;
+
+insert into marketplace_saved (listing_id, user_id)
+select m.id, 2 from marketplace_listings m where m.title in ('Mid-century accent chair', 'Monstera deliciosa, 3ft')
+on conflict do nothing;
+
 insert into marketplace_saved (listing_id, user_id)
 select m.id, 1 from marketplace_listings m where m.title in ('Canon AE-1 film camera + 50mm', '27in LG 4K monitor')
 on conflict do nothing;

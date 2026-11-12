@@ -1,0 +1,9 @@
+.venv/
+data/
+outputs/
+reports/
+*.safetensors
+*.gguf
+__pycache__/
+.pytest_cache/
+.ruff_cache/

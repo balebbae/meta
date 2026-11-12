@@ -1,0 +1,38 @@
+[project]
+name = "rally-finetune"
+version = "0.1.0"
+description = "Synthetic datasets, graders, training and eval scripts for fine-tuning Muse Glimmer 30B for Activities/Rally"
+requires-python = ">=3.10"
+dependencies = [
+  "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+eval = ["openai>=1.40"]
+# Install on the DGX Spark only (see README); versions follow Unsloth's Muse Glimmer notebooks.
+train = [
+  "unsloth",
+  "transformers==5.15.0",
+  "trl>=0.22.2",
+  "datasets",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["rally_ft"]

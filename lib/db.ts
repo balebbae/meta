@@ -1,7 +1,23 @@
-import {neon} from '@neondatabase/serverless';
+import {neon, type NeonQueryFunction} from '@neondatabase/serverless';
 
-const url = process.env.DATABASE_URL;
-if (!url) throw new Error('DATABASE_URL is not set');
+type Sql = NeonQueryFunction<false, false>;
 
-/** Tagged-template SQL client. Usage: const rows = await sql`select * from users where id = ${id}`; */
-export const sql = neon(url);
+let _sql: Sql | null = null;
+
+function getSql(): Sql {
+  if (_sql) return _sql;
+  const url = process.env.DATABASE_URL?.trim();
+  if (!url) {
+    throw new Error('DATABASE_URL is not set');
+  }
+  _sql = neon(url);
+  return _sql;
+}
+
+/**
+ * Tagged-template SQL client.
+ * Lazily connects so `next build` / deploys can succeed before DATABASE_URL is set.
+ * Usage: const rows = await sql`select * from users where id = ${id}`;
+ */
+export const sql: Sql = ((strings: TemplateStringsArray, ...values: unknown[]) =>
+  getSql()(strings, ...(values as never[]))) as Sql;

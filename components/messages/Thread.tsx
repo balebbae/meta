@@ -9,6 +9,7 @@ import {Composer} from './Composer';
 import {ConversationAvatar} from './ConversationRow';
 import {InfoCircleIcon, PhoneIcon, VideoCallIcon} from './icons';
 import styles from './messages.module.css';
+import {MessageCard} from '@/components/messages/cards';
 
 const ONE_MIN = 60_000;
 const GAP = 60 * ONE_MIN;
@@ -139,11 +140,12 @@ export function Thread({
               <div className={`${styles.msgRow} ${mine ? styles.msgRowMine : styles.msgRowOther} ${!sameAsPrev && !showDivider ? styles.msgRowGap : ''}`}>
                 {!mine && <span className={styles.msgAvatarSlot}>{!sameAsNext && m.sender && <ChatAvatar src={m.sender.avatarUrl} size={28} />}</span>}
                 <div className={styles.bubbleWrap}>
+                  {m.kind !== 'text' && <MessageCard message={m} viewerId={viewerId} conversation={conversation} />}
                   {m.imageUrl && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={m.imageUrl} alt="" className={styles.bubbleImg} style={m.body ? {marginBottom: 4} : undefined} />
                   )}
-                  {m.body && (
+                  {m.body && m.kind === 'text' && (
                     <div
                       className={`${styles.bubble} ${styles[pos]} ${mine ? styles.bubbleMine : ''} ${emoji ? styles.bubbleEmoji : ''} ${m.pending ? styles.bubblePending : ''} ${m.failed ? styles.bubbleFailed : ''}`}
                       title={formatFullDate(m.createdAt)}>

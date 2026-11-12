@@ -1,3 +1,5 @@
+import type {MessageKind} from '@/lib/activities/types';
+
 export type ChatUser = {
   id: number;
   name: string;
@@ -14,8 +16,12 @@ export type Message = {
   id: number;
   conversationId: number;
   sender: Pick<ChatUser, 'id' | 'name' | 'avatarUrl'> | null;
+  /** Plain text, or the preview line for a card (what the chat list and push show). */
   body: string;
   imageUrl: string | null;
+  /** 'text' or a card kind rendered by components/messages/cards. */
+  kind: MessageKind;
+  payload: Record<string, unknown> | null;
   createdAt: string;
   /** Client only: temp id while an optimistic send is in flight. */
   pending?: boolean;

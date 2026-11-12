@@ -3,7 +3,7 @@
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import type {Profile} from '@/lib/profile-queries';
-import {BriefcaseIcon, GraduationIcon, HeartIcon, HomeIcon, PinIcon, RssIcon, ClockIcon} from './icons';
+import {BriefcaseIcon, CakeIcon, GraduationIcon, HeartIcon, HomeIcon, PencilIcon, PinIcon, RssIcon, ClockIcon, UserIcon} from './icons';
 import {EditDialog} from './EditDialog';
 import {profileApi} from './api';
 import styles from './profile.module.css';
@@ -18,6 +18,11 @@ export function IntroCard({profile, isOwn}: {profile: Profile; isOwn: boolean}) 
     <section className={styles.card} aria-labelledby="intro-title">
       <div className={styles.cardHead}>
         <h2 id="intro-title" className={styles.cardTitle}>Intro</h2>
+        {isOwn && (
+          <button type="button" className={styles.cardHeadIcon} aria-label="Edit bio" onClick={() => setEditing(true)}>
+            <PencilIcon size={20} />
+          </button>
+        )}
       </div>
       {user.bio && <p className={styles.bio}>{user.bio}</p>}
       {isOwn && (
@@ -64,6 +69,18 @@ export function IntroCard({profile, isOwn}: {profile: Profile; isOwn: boolean}) 
             <span>{details.relationship}</span>
           </div>
         )}
+        {details.birthday && (
+          <div className={styles.detail}>
+            <CakeIcon size={20} />
+            <span><b>{details.birthday}</b></span>
+          </div>
+        )}
+        {details.gender && (
+          <div className={styles.detail}>
+            <UserIcon size={20} />
+            <span>{details.gender}</span>
+          </div>
+        )}
         <div className={styles.detail}>
           <ClockIcon size={20} />
           <span>Joined {joined.toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</span>
@@ -77,7 +94,7 @@ export function IntroCard({profile, isOwn}: {profile: Profile; isOwn: boolean}) 
         <>
           <button type="button" className={styles.fullBtn}>Edit details</button>
           <div style={{height: 8}} />
-          <button type="button" className={styles.fullBtn}>Add featured</button>
+          <button type="button" className={styles.fullBtn}>Add highlights</button>
         </>
       )}
       {editing && (

@@ -192,3 +192,9 @@ export const ImagePlusIcon = ({size = 20, ...p}: P) => (
     <path d="M4 5a2 2 0 0 1 2-2h8v2H6v14h12v-8h2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5zm15-3v2h2v2h-2v2h-2V6h-2V4h2V2h2zM7 17l3.5-4.5 2.5 3 1.5-2 3 3.5H7z" />
   </svg>
 );
+
+export const ChevronUpIcon = ({size = 20, ...p}: P) => (
+  <svg {...base(size, p)}>
+    <path d="M5.3 15.7a1 1 0 0 1 0-1.4l6-6a1 1 0 0 1 1.4 0l6 6a1 1 0 0 1-1.4 1.4L12 10.4l-5.3 5.3a1 1 0 0 1-1.4 0z" />
+  </svg>
+);

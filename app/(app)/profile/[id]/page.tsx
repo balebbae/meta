@@ -1,7 +1,7 @@
 import type {Metadata} from 'next';
 import {notFound, redirect} from 'next/navigation';
 import {getSessionUser} from '@/lib/auth';
-import {getProfile, getUserById, listUserFriends, listUserPhotos, listUserPosts} from '@/lib/profile-queries';
+import {getProfile, getUserById, listSuggestions, listUserFriends, listUserPhotos, listUserPosts} from '@/lib/profile-queries';
 import {ProfileHeader, type ProfileTab} from '@/components/profile/ProfileHeader';
 import {IntroCard} from '@/components/profile/IntroCard';
 import {PhotosCard} from '@/components/profile/PhotosCard';
@@ -36,15 +36,16 @@ export default async function ProfilePage({params, searchParams}: Props) {
   const tab: ProfileTab = TABS.includes(sp.tab as ProfileTab) ? (sp.tab as ProfileTab) : 'posts';
   const section: AboutSection = SECTIONS.includes(sp.section as AboutSection) ? (sp.section as AboutSection) : 'overview';
 
-  const [posts, photos, friends] = await Promise.all([
+  const [posts, photos, friends, suggestions] = await Promise.all([
     tab === 'posts' ? listUserPosts(id, viewer.id) : Promise.resolve([]),
     tab === 'posts' || tab === 'photos' ? listUserPhotos(id) : Promise.resolve([]),
     tab === 'friends' ? listUserFriends(id, viewer.id) : Promise.resolve(profile.friendPreview),
+    isOwn ? listSuggestions(viewer.id, 10) : Promise.resolve([]),
   ]);
 
   return (
     <div className={styles.page}>
-      <ProfileHeader profile={profile} isOwn={isOwn} tab={tab} />
+      <ProfileHeader profile={profile} isOwn={isOwn} tab={tab} suggestions={suggestions} />
       <div className={styles.body}>
         {tab === 'posts' && (
           <div className={styles.columns}>

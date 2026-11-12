@@ -5,10 +5,10 @@ import styles from './profile.module.css';
 
 export type AboutSection = 'overview' | 'work' | 'places' | 'contact' | 'family' | 'details' | 'events';
 const SECTIONS: {key: AboutSection; label: string}[] = [
-  {key: 'overview', label: 'Overview'},
+  {key: 'overview', label: 'Intro'},
   {key: 'work', label: 'Work and education'},
   {key: 'places', label: 'Places lived'},
-  {key: 'contact', label: 'Contact and basic info'},
+  {key: 'contact', label: 'Contact info'},
   {key: 'family', label: 'Family and relationships'},
   {key: 'details', label: 'Details about you'},
   {key: 'events', label: 'Life events'},

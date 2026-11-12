@@ -4,8 +4,9 @@ import {useState} from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import type {Profile} from '@/lib/profile-queries';
-import {CameraIcon, ChevronDownIcon, EllipsisIcon, MessengerIcon, PencilIcon, PlusIcon} from './icons';
+import type {FriendSummary, Profile} from '@/lib/profile-queries';
+import {PeopleYouMayKnow} from './PeopleYouMayKnow';
+import {CameraIcon, ChevronDownIcon, ChevronUpIcon, EllipsisIcon, MessengerIcon, PencilIcon, PlusIcon} from './icons';
 import {EditDialog} from './EditDialog';
 import {FriendButton} from './FriendButton';
 import {profileApi} from './api';
@@ -13,19 +14,19 @@ import styles from './profile.module.css';
 
 export type ProfileTab = 'posts' | 'about' | 'friends' | 'photos' | 'videos' | 'reels';
 const TABS: {key: ProfileTab; label: string}[] = [
-  {key: 'posts', label: 'Posts'},
+  {key: 'posts', label: 'All'},
   {key: 'about', label: 'About'},
   {key: 'friends', label: 'Friends'},
   {key: 'photos', label: 'Photos'},
-  {key: 'videos', label: 'Videos'},
   {key: 'reels', label: 'Reels'},
 ];
 
 type Dialog = 'cover' | 'avatar' | null;
 
-export function ProfileHeader({profile, isOwn, tab}: {profile: Profile; isOwn: boolean; tab: ProfileTab}) {
+export function ProfileHeader({profile, isOwn, tab, suggestions = []}: {profile: Profile; isOwn: boolean; tab: ProfileTab; suggestions?: FriendSummary[]}) {
   const {user} = profile;
   const [dialog, setDialog] = useState<Dialog>(null);
+  const [pymkOpen, setPymkOpen] = useState(true);
   const router = useRouter();
   const base = `/profile/${user.id}`;
 
@@ -52,6 +53,11 @@ export function ProfileHeader({profile, isOwn, tab}: {profile: Profile; isOwn: b
 
       <div className={styles.info}>
         <div className={styles.infoRow}>
+          {isOwn && (
+            <button type="button" className={styles.thought}>
+              Share a thought...
+            </button>
+          )}
           <div className={styles.avatarWrap}>
             <div className={styles.avatarRing}>
               <Image src={user.avatarUrl} alt={user.name} width={168} height={168} className={styles.avatarImg} priority />
@@ -89,8 +95,8 @@ export function ProfileHeader({profile, isOwn, tab}: {profile: Profile; isOwn: b
                 <Link href={`${base}?tab=about`} className="fb-btn-secondary">
                   <PencilIcon size={16} /> Edit profile
                 </Link>
-                <button type="button" className={`fb-btn-secondary ${styles.iconOnly}`} aria-label="More">
-                  <ChevronDownIcon size={20} />
+                <button type="button" className={`fb-btn-secondary ${styles.iconOnly}`} aria-label={pymkOpen ? 'Hide people you may know' : 'Show people you may know'} onClick={() => setPymkOpen(o => !o)}>
+                  {pymkOpen ? <ChevronUpIcon size={20} /> : <ChevronDownIcon size={20} />}
                 </button>
               </>
             ) : (
@@ -106,6 +112,8 @@ export function ProfileHeader({profile, isOwn, tab}: {profile: Profile; isOwn: b
             )}
           </div>
         </div>
+
+        {isOwn && pymkOpen && suggestions.length > 0 && <PeopleYouMayKnow suggestions={suggestions} />}
 
         <div className={styles.divider} />
 

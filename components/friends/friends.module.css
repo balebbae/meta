@@ -2,6 +2,11 @@
 :global(body):has(.page) :global(main) {
   grid-column: 1 / -1;
   display: block !important;
+  padding: 0 !important;
+}
+:global(body):has(.page) :global(main) > * {
+  width: 100% !important;
+  max-width: none !important;
 }
 :global(body):has(.page) :global(main) ~ *,
 :global(body):has(.page) *:has(+ :global(main)) {
@@ -29,7 +34,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 8px 8px;
+  padding: 8px 8px 12px;
 }
 .railHead h1 {
   font-size: 24px;
@@ -87,7 +92,7 @@
 
 /* ---- main ---- */
 .main {
-  padding: 16px 24px 24px 24px;
+  padding: 16px 36px 24px;
   min-width: 0;
 }
 .sectionHead {
@@ -112,18 +117,18 @@
 }
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px 10px;
+  grid-template-columns: repeat(auto-fill, 192px);
+  gap: 8px;
   margin-bottom: 20px;
 }
 .card {
   background: var(--fb-card);
+  border: 1px solid var(--fb-divider-soft);
   border-radius: var(--fb-radius);
   box-shadow: var(--fb-shadow-card);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  max-width: 240px;
 }
 .cardImg {
   position: relative;
@@ -135,7 +140,7 @@
   object-fit: cover;
 }
 .cardBody {
-  padding: 10px 12px 12px;
+  padding: 8px 12px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -192,5 +197,8 @@
   }
   .grid {
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  .card {
+    max-width: none;
   }
 }

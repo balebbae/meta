@@ -175,6 +175,8 @@ export function useConversationLive(
         sender: {id: viewer.id, name: viewer.name, avatarUrl: viewer.avatarUrl},
         body,
         imageUrl,
+        kind: 'text',
+        payload: null,
         createdAt: new Date().toISOString(),
         pending: true,
       };

@@ -1,16 +1,16 @@
 insert into users (name, email, avatar_url, cover_url, bio, is_online) values
-  ('Caleb Bae', 'caleb@example.com', 'https://i.pravatar.cc/300?img=12', 'https://picsum.photos/seed/cover-caleb/1200/450', 'HackUTD organizer. Building things at UT Dallas.', true),
-  ('Priya Sharma', 'priya@example.com', 'https://i.pravatar.cc/300?img=47', 'https://picsum.photos/seed/cover-priya/1200/450', 'CS @ UTD. Coffee first.', true),
-  ('Marcus Lee', 'marcus@example.com', 'https://i.pravatar.cc/300?img=33', 'https://picsum.photos/seed/cover-marcus/1200/450', 'Shipping side projects on weekends.', true),
-  ('Sofia Alvarez', 'sofia@example.com', 'https://i.pravatar.cc/300?img=45', 'https://picsum.photos/seed/cover-sofia/1200/450', 'Photographer. Dallas, TX.', false),
-  ('Daniel Kim', 'daniel@example.com', 'https://i.pravatar.cc/300?img=14', 'https://picsum.photos/seed/cover-daniel/1200/450', 'Runs on sunsets and tacos.', true),
-  ('Amara Okafor', 'amara@example.com', 'https://i.pravatar.cc/300?img=26', 'https://picsum.photos/seed/cover-amara/1200/450', 'Product designer.', false),
-  ('Noah Patel', 'noah@example.com', 'https://i.pravatar.cc/300?img=59', 'https://picsum.photos/seed/cover-noah/1200/450', 'Hackathon addict.', true),
-  ('Hannah Nguyen', 'hannah@example.com', 'https://i.pravatar.cc/300?img=32', 'https://picsum.photos/seed/cover-hannah/1200/450', 'Plants, pottery, Python.', false),
-  ('Liam Carter', 'liam@example.com', 'https://i.pravatar.cc/300?img=68', 'https://picsum.photos/seed/cover-liam/1200/450', 'Mechanical engineer. Climber.', false),
-  ('Zoe Martin', 'zoe@example.com', 'https://i.pravatar.cc/300?img=23', 'https://picsum.photos/seed/cover-zoe/1200/450', 'Figma all day.', true),
-  ('Ethan Brooks', 'ethan@example.com', 'https://i.pravatar.cc/300?img=52', 'https://picsum.photos/seed/cover-ethan/1200/450', 'Backend guy. Go + Postgres.', false),
-  ('Maya Robinson', 'maya@example.com', 'https://i.pravatar.cc/300?img=38', 'https://picsum.photos/seed/cover-maya/1200/450', 'Med student. Dog mom.', true)
+  ('Caleb Bae', 'caleb@example.com', 'https://i.pravatar.cc/300?img=12', 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200&h=450&fit=crop&q=80', 'HackUTD organizer. Building things at UT Dallas.', true),
+  ('Priya Sharma', 'priya@example.com', 'https://i.pravatar.cc/300?img=47', 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1200&h=450&fit=crop&q=80', 'CS @ UTD. Coffee first.', true),
+  ('Marcus Lee', 'marcus@example.com', 'https://i.pravatar.cc/300?img=33', 'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=1200&h=450&fit=crop&q=80', 'Shipping side projects on weekends.', true),
+  ('Sofia Alvarez', 'sofia@example.com', 'https://i.pravatar.cc/300?img=45', 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1200&h=450&fit=crop&q=80', 'Photographer. Dallas, TX.', false),
+  ('Daniel Kim', 'daniel@example.com', 'https://i.pravatar.cc/300?img=14', 'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1200&h=450&fit=crop&q=80', 'Runs on sunsets and tacos.', true),
+  ('Amara Okafor', 'amara@example.com', 'https://i.pravatar.cc/300?img=26', 'https://images.unsplash.com/photo-1433086966358-54859d0ed716?w=1200&h=450&fit=crop&q=80', 'Product designer.', false),
+  ('Noah Patel', 'noah@example.com', 'https://i.pravatar.cc/300?img=59', 'https://images.unsplash.com/photo-1476231682828-37e571bc172f?w=1200&h=450&fit=crop&q=80', 'Hackathon addict.', true),
+  ('Hannah Nguyen', 'hannah@example.com', 'https://i.pravatar.cc/300?img=32', 'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=1200&h=450&fit=crop&q=80', 'Plants, pottery, Python.', false),
+  ('Liam Carter', 'liam@example.com', 'https://i.pravatar.cc/300?img=68', 'https://images.unsplash.com/photo-1454496522488-7a8e488e8606?w=1200&h=450&fit=crop&q=80', 'Mechanical engineer. Climber.', false),
+  ('Zoe Martin', 'zoe@example.com', 'https://i.pravatar.cc/300?img=23', 'https://images.unsplash.com/photo-1486299267070-83823f5448dd?w=1200&h=450&fit=crop&q=80', 'Figma all day.', true),
+  ('Ethan Brooks', 'ethan@example.com', 'https://i.pravatar.cc/300?img=52', 'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=1200&h=450&fit=crop&q=80', 'Backend guy. Go + Postgres.', false),
+  ('Maya Robinson', 'maya@example.com', 'https://i.pravatar.cc/300?img=38', 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1200&h=450&fit=crop&q=80', 'Med student. Dog mom.', true)
 on conflict (email) do nothing;
 
 -- everyone is friends with Caleb (id 1); a few other pairs
@@ -26,17 +26,17 @@ insert into friendships (user_id, friend_id, status) values
 on conflict do nothing;
 
 insert into posts (author_id, content, image_url, audience, share_count, created_at) values
-  (2, 'HackUTD weekend recap: 1,200 hackers, 48 hours, zero sleep. Thank you to every volunteer who made it run so smoothly. See you all next year!', 'https://picsum.photos/seed/hackathon/1200/800', 'public', 17, now() - interval '2 hours'),
+  (2, 'HackUTD weekend recap: 1,200 hackers, 48 hours, zero sleep. Thank you to every volunteer who made it run so smoothly. See you all next year!', 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=1200&h=800&fit=crop&q=80', 'public', 17, now() - interval '2 hours'),
   (3, 'Finally shipped the thing I have been teasing for months. Small team, big dreams. Link in the comments.', null, 'friends', 4, now() - interval '5 hours'),
-  (5, 'Dallas sunsets do not miss.', 'https://picsum.photos/seed/sunset-dallas/1200/900', 'public', 61, now() - interval '8 hours'),
+  (5, 'Dallas sunsets do not miss.', 'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200&h=900&fit=crop&q=80', 'public', 61, now() - interval '8 hours'),
   (6, 'Looking for a roommate near Richardson starting January. DM me if you know anyone!', null, 'public', 2, now() - interval '1 day'),
-  (4, 'Golden hour at White Rock Lake. Shot on film.', 'https://picsum.photos/seed/whiterock/1200/800', 'public', 23, now() - interval '1 day 3 hours'),
-  (7, 'Won best beginner hack at HackTX with a team I met 10 minutes before the deadline to form teams. Absolutely unreal weekend.', 'https://picsum.photos/seed/hacktx/1200/700', 'public', 9, now() - interval '2 days'),
-  (8, 'My monstera finally put out a fenestrated leaf. Proud plant parent moment.', 'https://picsum.photos/seed/monstera/1200/1200', 'friends', 1, now() - interval '2 days 6 hours'),
+  (4, 'Golden hour at White Rock Lake. Shot on film.', 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=1200&h=800&fit=crop&q=80', 'public', 23, now() - interval '1 day 3 hours'),
+  (7, 'Won best beginner hack at HackTX with a team I met 10 minutes before the deadline to form teams. Absolutely unreal weekend.', 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=700&fit=crop&q=80', 'public', 9, now() - interval '2 days'),
+  (8, 'My monstera finally put out a fenestrated leaf. Proud plant parent moment.', 'https://images.unsplash.com/photo-1463936575829-25148e1db1b8?w=1200&h=1200&fit=crop&q=80', 'friends', 1, now() - interval '2 days 6 hours'),
   (10, 'Hot take: the best design system is the one your team actually uses.', null, 'public', 12, now() - interval '3 days'),
-  (9, 'First outdoor lead climb of the season. Forearms are gone.', 'https://picsum.photos/seed/climb/1200/800', 'public', 3, now() - interval '3 days 4 hours'),
+  (9, 'First outdoor lead climb of the season. Forearms are gone.', 'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=1200&h=800&fit=crop&q=80', 'public', 3, now() - interval '3 days 4 hours'),
   (11, 'Migrated our API from REST to gRPC over the weekend. P99 latency dropped 40%. Writeup coming soon.', null, 'public', 28, now() - interval '4 days'),
-  (12, 'Match day! Heading to Dallas for residency. Could not be more excited.', 'https://picsum.photos/seed/matchday/1200/800', 'public', 44, now() - interval '5 days'),
+  (12, 'Match day! Heading to Dallas for residency. Could not be more excited.', 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&h=800&fit=crop&q=80', 'public', 44, now() - interval '5 days'),
   (1, 'Trying out a new Facebook clone we built in a day. What do you think?', null, 'friends', 0, now() - interval '30 minutes');
 
 insert into comments (post_id, author_id, content, created_at) values
@@ -62,13 +62,13 @@ where (p.id + u.id) % 3 <> 0 and u.id <> p.author_id
 on conflict do nothing;
 
 insert into stories (user_id, image_url, created_at) values
-  (2, 'https://picsum.photos/seed/story-priya/600/1000', now() - interval '1 hour'),
-  (3, 'https://picsum.photos/seed/story-marcus/600/1000', now() - interval '2 hours'),
-  (4, 'https://picsum.photos/seed/story-sofia/600/1000', now() - interval '3 hours'),
-  (5, 'https://picsum.photos/seed/story-daniel/600/1000', now() - interval '4 hours'),
-  (7, 'https://picsum.photos/seed/story-noah/600/1000', now() - interval '6 hours'),
-  (10, 'https://picsum.photos/seed/story-zoe/600/1000', now() - interval '9 hours'),
-  (12, 'https://picsum.photos/seed/story-maya/600/1000', now() - interval '12 hours');
+  (2, 'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=600&h=1000&fit=crop&q=80', now() - interval '1 hour'),
+  (3, 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=600&h=1000&fit=crop&q=80', now() - interval '2 hours'),
+  (4, 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600&h=1000&fit=crop&q=80', now() - interval '3 hours'),
+  (5, 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=1000&fit=crop&q=80', now() - interval '4 hours'),
+  (7, 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&h=1000&fit=crop&q=80', now() - interval '6 hours'),
+  (10, 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=600&h=1000&fit=crop&q=80', now() - interval '9 hours'),
+  (12, 'https://images.unsplash.com/photo-1543269865-cbf427effbad?w=600&h=1000&fit=crop&q=80', now() - interval '12 hours');
 
 insert into notifications (user_id, actor_id, type, post_id, message, is_read, created_at) values
   (1, 3, 'comment', 1, 'Marcus Lee commented on a post you are following.', false, now() - interval '1 hour 50 minutes'),

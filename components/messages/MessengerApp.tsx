@@ -76,7 +76,7 @@ export function MessengerApp({
   const notFound = mode === 'thread' && activeId != null && conversations && !active;
 
   return (
-    <div data-layout="wide" className={styles.app} data-active={String(mode === 'new' || activeId != null)}>
+    <div data-layout="full" className={styles.app} data-active={String(mode === 'new' || activeId != null)}>
       <ChatList conversations={conversations} viewerId={viewer.id} activeId={activeId} />
       {mode === 'new' ? (
         <NewChat contacts={contacts} />

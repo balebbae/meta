@@ -1,6 +1,9 @@
 import type {Metadata, Viewport} from 'next';
 import './globals.css';
 import {AuthProvider} from '@/components/auth/AuthProvider';
+import {Providers} from './providers';
+
+const THEME_SCRIPT = `try{var t=localStorage.getItem('fb.theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.dataset.theme='dark';else document.documentElement.dataset.theme='light';}catch(e){}`;
 
 export const metadata: Metadata = {
   title: 'Facebook',
@@ -19,9 +22,14 @@ export const viewport: Viewport = {
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{__html: THEME_SCRIPT}} />
+      </head>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <Providers>
+          <AuthProvider>{children}</AuthProvider>
+        </Providers>
       </body>
     </html>
   );

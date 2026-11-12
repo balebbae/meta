@@ -1,3 +1,7 @@
+@import '@astryxdesign/core/reset.css';
+@import '@astryxdesign/core/astryx.css';
+@import '@astryxdesign/theme-neutral/theme.css';
+
 /* Facebook design tokens (measured against facebook.com desktop, Nov 2026) */
 :root {
   --fb-blue: #0866ff;
@@ -36,7 +40,12 @@
   --fb-shimmer-highlight: #f0f2f5;
 }
 
+html {
+  scrollbar-gutter: stable;
+  color-scheme: light;
+}
 [data-theme='dark'] {
+  color-scheme: dark;
   --fb-bg: #1c1c1d;
   --fb-card: #252728;
   --fb-text: #e2e5e9;
@@ -186,14 +195,17 @@ img {
 
 /* Secondary pages (Video, Marketplace, Groups, Gaming, Events, Saved, Memories) bring their own
    left panel, so they span the whole grid and hide the global rails. */
-main:has([data-layout='wide']) {
+main:has([data-layout='wide']),
+main:has([data-layout='full']) {
   grid-column: 1 / -1;
   padding: 0;
 }
-main:has([data-layout='wide']) > div {
+main:has([data-layout='wide']) > div,
+main:has([data-layout='full']) > div {
   width: 100%;
   max-width: none;
 }
-div:has(> main [data-layout='wide']) > :not(main) {
+div:has(> main [data-layout='wide']) > :not(main),
+div:has(> main [data-layout='full']) > :not(main) {
   display: none;
 }

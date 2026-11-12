@@ -423,7 +423,7 @@ function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (n: numb
 type AcctView = 'root' | 'settings' | 'help' | 'display' | 'feedback';
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<'light' | 'dark'>('light');
+  const [theme, setThemeState] = useState<'light' | 'dark'>(() => (typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light'));
   useEffect(() => {
     setThemeState(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
   }, []);

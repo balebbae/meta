@@ -188,6 +188,11 @@ img {
    left panel, so they span the whole grid and hide the global rails. */
 main:has([data-layout='wide']) {
   grid-column: 1 / -1;
+  padding: 0;
+}
+main:has([data-layout='wide']) > div {
+  width: 100%;
+  max-width: none;
 }
 div:has(> main [data-layout='wide']) > :not(main) {
   display: none;

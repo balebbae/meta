@@ -1,6 +1,6 @@
 'use client';
 import {gridDisk, latLngToCell} from 'h3-js';
-import {useMemo, type MouseEvent} from 'react';
+import {useMemo, type MouseEvent, useId} from 'react';
 import {arenaCells, cellCenter, inArena, type Arena, type LatLng} from '@/lib/turf/engine';
 import {cellsPath, project, unproject, viewBox} from './geo';
 import styles from './turf.module.css';
@@ -46,6 +46,7 @@ export function HexMap({arena, cells = [], colors = {}, trail = [], trailColor, 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const trailPath = useMemo(() => (trail.length ? cellsPath(arena, trail) : ''), [trail, key]);
   const r = arena.radiusKm * 1000;
+  const clip = useId();
   const dot = me && inArena(me, arena) ? project(arena, me) : null;
 
   const pick = (e: MouseEvent<SVGSVGElement>) => {
@@ -57,8 +58,11 @@ export function HexMap({arena, cells = [], colors = {}, trail = [], trailColor, 
 
   return (
     <svg viewBox={viewBox(arena)} className={`${styles.map} ${onPick ? styles.mapPick : ''} ${className ?? ''}`} role="img" aria-label={label ?? 'Turf arena'} onClick={pick}>
+      <clipPath id={clip}>
+        <circle cx={0} cy={0} r={r} />
+      </clipPath>
       <circle cx={0} cy={0} r={r} className={styles.arena} />
-      <path d={gridPath} className={grid === 'full' ? styles.grid : styles.gridCoarse} />
+      <path d={gridPath} className={grid === 'full' ? styles.grid : styles.gridCoarse} clipPath={grid === 'full' ? undefined : `url(#${clip})`} />
       {owned.map(o => (
         <path key={o.owner} d={o.d} fill={colors[o.owner] ?? 'var(--fb-text-secondary)'} className={styles.owned} />
       ))}

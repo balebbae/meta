@@ -235,7 +235,7 @@ export async function respondInvite(game: Game, user: Actor, status: 'accepted' 
     const text = `${first(user.name)} passed on Turf: ${game.settings.arenaLabel}`;
     if (game.conversationId) {
       const payload: SystemPayload & {gameId: number} = {text, visibleTo: [game.hostId], gameId: game.id};
-      await sql`insert into messages (conversation_id, sender_id, body, kind, payload) values (${game.conversationId}, ${user.id}, '', 'system', ${JSON.stringify(payload)}::jsonb)`;
+      await sql`insert into messages (conversation_id, sender_id, body, kind, payload) values (${game.conversationId}, ${user.id}, ${text}, 'system', ${JSON.stringify(payload)}::jsonb)`;
     }
     await sql`insert into notifications (user_id, actor_id, type, message, conversation_id) values (${game.hostId}, ${user.id}, 'turf', ${text}, ${game.conversationId})`.catch(() => {});
   }

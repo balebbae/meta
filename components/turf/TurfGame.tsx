@@ -97,7 +97,7 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
 
       <aside className={styles.side}>
         {me.canAccept && (
-          <section className={styles.panel}>
+          <section className={`${styles.panel} ${styles.span}`}>
             <h2 className={styles.panelTitle}>{me.status === 'declined' ? 'You passed on this game' : 'You are invited'}</h2>
             <div className={styles.consent} style={{padding: 0}}>
               <ConsentCopy title={state.title} />
@@ -116,9 +116,9 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
           </section>
         )}
 
-        {accepted && state.status !== 'cancelled' && (
+        {accepted && (state.status === 'pending' || live) && (
           <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>{state.status === 'ended' ? 'Game over' : live ? 'Your outing' : 'Waiting to start'}</h2>
+            <h2 className={styles.panelTitle}>{live ? 'Your outing' : 'Waiting to start'}</h2>
             <div className={styles.actions}>
               {state.status === 'pending' && <p className={styles.muted}>{me.isHost ? 'Start once at least two players are in.' : 'The host starts the game once enough players are in.'}</p>}
               {me.canStart && (
@@ -176,7 +176,7 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
             </div>
           </section>
         )}
-        {!accepted && error && <p className={styles.error}>{error}</p>}
+        {!accepted && error && <p className={`${styles.error} ${styles.span}`}>{error}</p>}
 
         <section className={styles.panel}>
           <h2 className={styles.panelTitle}>{state.status === 'ended' ? 'Final standings' : 'Players'}</h2>
@@ -216,7 +216,7 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
         </section>
 
         {accepted && live && (
-          <details className={styles.panel}>
+          <details className={`${styles.panel} ${styles.span}`}>
             <summary className={styles.panelTitle} style={{cursor: 'pointer', marginBottom: 0}}>
               Stage demo
             </summary>
@@ -244,7 +244,7 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
         {accepted && state.status !== 'ended' && state.status !== 'cancelled' && (
           <button
             type="button"
-            className={styles.btnDanger}
+            className={`${styles.btnDanger} ${styles.span}`}
             disabled={busy != null}
             onClick={() => {
               if (window.confirm('Leave this Turf game? Your cells turn neutral.')) void run('leave', () => turfApi.leave(gameId));

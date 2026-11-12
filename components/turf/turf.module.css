@@ -65,13 +65,10 @@
 
 /* Page */
 .page {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 16px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  align-items: start;
 }
 .card {
   background: var(--fb-card);
@@ -83,7 +80,7 @@
   padding: 12px;
 }
 .mapWrap {
-  max-width: 720px;
+  max-width: 500px;
   margin: 0 auto;
 }
 .head {
@@ -139,9 +136,13 @@
   color: #fff;
 }
 .side {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
+  align-items: start;
+}
+.span {
+  grid-column: 1 / -1;
 }
 .panel {
   composes: card;
@@ -473,13 +474,14 @@
   accent-color: var(--fb-blue);
 }
 
-@media (max-width: 899px) {
+@media (max-width: 699px) {
   .page {
-    grid-template-columns: minmax(0, 1fr);
-    padding: 8px 8px 24px;
     gap: 8px;
+    padding: 8px 8px 24px;
+    background: var(--fb-bg);
   }
   .side {
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
 }

@@ -30,9 +30,9 @@ export default function RallyInviteCard({message}: CardProps) {
   const me = state?.me;
 
   const accept = () => {
-    // Activities onboarding (scope A) owns /activities?invite=<id>; it sends people back to the game page,
-    // where the same consent screen is shown. Onboarded players get the consent sheet right here.
-    if (me && !me.onboarded) router.push(`/games/${gameId}?accept=1`);
+    // Not onboarded yet: Activities onboarding (scope A) takes over and returns to /games/<id>?consent=1,
+    // which shows the same consent screen. Onboarded players get the consent sheet right here.
+    if (me && !me.onboarded) router.push(`/activities?invite=${gameId}`);
     else setConsent(true);
   };
   const decline = async () => {
@@ -58,7 +58,8 @@ export default function RallyInviteCard({message}: CardProps) {
           <HexMap arena={state.arena} cells={state.cells} colors={colors} grid="preview" label={`Arena preview: ${title}`} />
         </Link>
       ) : (
-        <div className={styles.cardBody}>
+        // same footprint as the loaded card, so the thread does not jump once the state arrives
+        <div className={styles.cardBody} style={{aspectRatio: '1', margin: '0 12px', display: 'grid', placeItems: 'center'}}>
           <span className={styles.cardMeta}>{error ?? 'Loading the arena…'}</span>
         </div>
       )}
@@ -67,8 +68,9 @@ export default function RallyInviteCard({message}: CardProps) {
           {state?.status === 'ended' ? 'Game over' : endsAt ? `Ends ${endsLabel(endsAt)} · ${timeLeft(endsAt)}` : ''}
           {state ? ` · ${(state.arena.radiusKm * 2).toFixed(1)} km wide` : ''}
         </div>
+        {!state && !error && <div style={{height: 36, marginTop: 8}} />}
         {players.length > 0 && (
-          <div style={{display: 'flex', alignItems: 'center', gap: 8, marginTop: 8}}>
+          <div style={{display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, minHeight: 36}}>
             <div className={turf.avatars}>
               {[...inSoFar, ...waiting].slice(0, 6).map(p => (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -84,6 +86,9 @@ export default function RallyInviteCard({message}: CardProps) {
       <div className={styles.cardActions}>
         {me?.canAccept ? (
           <>
+            <Link href={`/games/${gameId}`} className={styles.btn} style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none'}}>
+              Open map
+            </Link>
             <button type="button" className={styles.btn} onClick={() => void decline()} disabled={busy || me.status === 'declined'}>
               {me.status === 'declined' ? 'Declined' : 'Decline'}
             </button>

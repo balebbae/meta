@@ -34,7 +34,7 @@ export function PrivacyZones({arena, position}: {arena: Arena; position: LatLng 
   };
 
   return (
-    <details className={styles.panel}>
+    <details className={`${styles.panel} ${styles.span}`}>
       <summary className={styles.panelTitle} style={{cursor: 'pointer', marginBottom: 0}}>
         Privacy zones{zones?.length ? ` (${zones.length})` : ''}
       </summary>

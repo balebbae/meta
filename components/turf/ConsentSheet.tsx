@@ -32,8 +32,8 @@ export function ConsentCopy({title}: {title: string}) {
           </div>
         </li>
         <li>
-          <i className={styles.no} aria-hidden>
-            ✕
+          <i className={styles.yes} aria-hidden>
+            ✓
           </i>
           <div>
             <strong>You stay in control</strong>
@@ -61,7 +61,7 @@ export function ConsentSheet({gameId, title, open, onClose, onAccepted}: {gameId
     }
   };
   return (
-    <Dialog open={open} onClose={onClose} title="Share location for this game?" width={460}>
+    <Dialog open={open} onClose={onClose} title="Share your location?" width={460}>
       <div className={styles.consent}>
         <ConsentCopy title={title} />
         {error && <p className={styles.error}>{error}</p>}

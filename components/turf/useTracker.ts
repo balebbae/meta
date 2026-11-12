@@ -64,6 +64,7 @@ export function useTracker(gameId: number, openOuting: MyOuting | null, onResult
         pos => {
           const p = {lat: pos.coords.latitude, lng: pos.coords.longitude};
           setPosition(p);
+          setError(null);
           // Skip very poor fixes; the engine drops impossible jumps anyway.
           if (pos.coords.accuracy == null || pos.coords.accuracy <= 60) buffer.current.push({...p, t: pos.timestamp || Date.now()});
         },

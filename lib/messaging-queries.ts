@@ -1,6 +1,7 @@
 import {sql} from '@/lib/db';
 import {sendPushToUser} from '@/lib/push';
 import type {Conversation, ConversationMember, Message} from '@/lib/messaging-types';
+import type {MessageKind} from '@/lib/activities/types';
 
 function mapMember(r: Record<string, unknown>): ConversationMember {
   return {
@@ -20,6 +21,8 @@ export function mapMessage(r: Record<string, unknown>): Message {
     sender: r.sender_id ? {id: Number(r.sender_id), name: String(r.sender_name), avatarUrl: String(r.sender_avatar)} : null,
     body: String(r.body ?? ''),
     imageUrl: (r.image_url as string | null) ?? null,
+    kind: ((r.kind as MessageKind | null) ?? 'text'),
+    payload: (r.payload as Record<string, unknown> | null) ?? null,
     createdAt: String(r.created_at),
   };
 }
@@ -58,11 +61,12 @@ const CONVERSATION_SELECT = (viewerId: number) => sql`
         'role', cm.role, 'last_read_message_id', cm.last_read_message_id) order by cm.joined_at, u.id), '[]'::json)
       from conversation_members cm join users u on u.id = cm.user_id where cm.conversation_id = c.id) as members,
     (select row_to_json(m) from (
-        select m.id, m.conversation_id, m.sender_id, m.body, m.image_url, m.created_at, s.name as sender_name, s.avatar_url as sender_avatar
+        select m.id, m.conversation_id, m.sender_id, m.body, m.image_url, m.kind, m.payload, m.created_at, s.name as sender_name, s.avatar_url as sender_avatar
         from messages m left join users s on s.id = m.sender_id
-        where m.conversation_id = c.id order by m.id desc limit 1) m) as last_message,
+        where m.conversation_id = c.id and (m.payload -> 'visibleTo' is null or m.payload -> 'visibleTo' @> to_jsonb(${viewerId}::int)) order by m.id desc limit 1) m) as last_message,
     (select count(*)::int from messages m
-      where m.conversation_id = c.id and m.id > coalesce(me.last_read_message_id, 0) and m.sender_id is distinct from ${viewerId}) as unread_count
+      where m.conversation_id = c.id and m.id > coalesce(me.last_read_message_id, 0) and m.sender_id is distinct from ${viewerId}
+        and (m.payload -> 'visibleTo' is null or m.payload -> 'visibleTo' @> to_jsonb(${viewerId}::int))) as unread_count
   from conversations c
   join conversation_members me on me.conversation_id = c.id and me.user_id = ${viewerId}`;
 
@@ -145,11 +149,23 @@ export async function updateConversation(conversationId: number, patch: {name?: 
 }
 
 const MESSAGE_SELECT = sql`
-  select m.id, m.conversation_id, m.sender_id, m.body, m.image_url, m.created_at, s.name as sender_name, s.avatar_url as sender_avatar
+  select m.id, m.conversation_id, m.sender_id, m.body, m.image_url, m.kind, m.payload, m.created_at, s.name as sender_name, s.avatar_url as sender_avatar
   from messages m left join users s on s.id = m.sender_id`;
 
 /** Messages in ascending id order. `after` returns newer rows than that id; `before` pages back. */
-export async function listMessages(conversationId: number, opts: {after?: number; before?: number; limit?: number} = {}): Promise<Message[]> {
+/** Host-only lines (payload.visibleTo, e.g. "Sam passed" on a Turf invite) are dropped for everyone else. */
+function visibleTo(viewerId: number | undefined) {
+  return (m: Message) => {
+    const only = (m.payload as {visibleTo?: unknown} | null)?.visibleTo;
+    return !Array.isArray(only) || (viewerId != null && only.map(Number).includes(viewerId));
+  };
+}
+
+export async function listMessages(conversationId: number, opts: {after?: number; before?: number; limit?: number; viewerId?: number} = {}): Promise<Message[]> {
+  return (await listAllMessages(conversationId, opts)).filter(visibleTo(opts.viewerId));
+}
+
+async function listAllMessages(conversationId: number, opts: {after?: number; before?: number; limit?: number} = {}): Promise<Message[]> {
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   if (opts.after != null) {
     const rows = await sql`${MESSAGE_SELECT} where m.conversation_id = ${conversationId} and m.id > ${opts.after} order by m.id asc limit ${limit}`;
@@ -163,11 +179,19 @@ export async function listMessages(conversationId: number, opts: {after?: number
   return rows.map(mapMessage).reverse();
 }
 
-export async function sendMessage(conversationId: number, sender: {id: number; name: string}, body: string, imageUrl: string | null): Promise<Message> {
+export type SendOptions = {kind?: MessageKind; payload?: Record<string, unknown> | null};
+
+/**
+ * Send a text message or a card. For cards pass `kind` + `payload`; `body` is the preview line
+ * shown in the chat list, notifications and push ("Priya invited you to Turf: Katy Trail").
+ */
+export async function sendMessage(conversationId: number, sender: {id: number; name: string}, body: string, imageUrl: string | null, opts: SendOptions = {}): Promise<Message> {
+  const kind = opts.kind ?? 'text';
+  const payload = opts.payload == null ? null : JSON.stringify(opts.payload);
   const [row] = await sql`
     with ins as (
-      insert into messages (conversation_id, sender_id, body, image_url) values (${conversationId}, ${sender.id}, ${body}, ${imageUrl})
-      returning id, conversation_id, sender_id, body, image_url, created_at)
+      insert into messages (conversation_id, sender_id, body, image_url, kind, payload) values (${conversationId}, ${sender.id}, ${body}, ${imageUrl}, ${kind}, ${payload})
+      returning id, conversation_id, sender_id, body, image_url, kind, payload, created_at)
     select ins.*, s.name as sender_name, s.avatar_url as sender_avatar from ins join users s on s.id = ins.sender_id`;
   const message = mapMessage(row);
   await sql`update conversations set updated_at = now() where id = ${conversationId}`;

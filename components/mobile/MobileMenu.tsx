@@ -34,6 +34,8 @@ import styles from './mobile.module.css';
 
 const SHORTCUTS = [
   {label: 'Friends', Icon: RailFriendsIcon, href: '/friends'},
+  {label: 'Activities', Icon: RailGamingIcon, href: '/activities'},
+  {label: 'Log a workout', Icon: RailGamingIcon, href: '/activities/log'},
   {label: 'Memories', Icon: RailMemoriesIcon, href: '/memories'},
   {label: 'Groups', Icon: RailGroupsIcon, href: '/groups'},
   {label: 'Saved', Icon: RailSavedIcon, href: '/saved'},
@@ -41,7 +43,7 @@ const SHORTCUTS = [
   {label: 'Video', Icon: RailVideoIcon, href: '/video'},
   {label: 'Events', Icon: RailEventsIcon, href: '/events'},
   {label: 'Feeds', Icon: RailFeedsIcon, href: '/feeds'},
-  {label: 'Reels', Icon: RailReelsIcon, href: '/video'},
+  {label: 'Reels', Icon: RailReelsIcon, href: '/reels'},
   {label: 'Gaming', Icon: RailGamingIcon, href: '/gaming'},
   {label: 'Ads Manager', Icon: RailAdsIcon, href: '/ads'},
   {label: 'Pages', Icon: RailPagesIcon, href: '/pages'},

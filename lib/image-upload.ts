@@ -61,3 +61,25 @@ export async function fileToDataUrl(file: File, box: {maxWidth: number; maxHeigh
   }
   throw new Error(TOO_BIG_MESSAGE);
 }
+
+/** Scales a photo to fit `maxSide` without cropping (Photo Proof screens must stay whole). JPEG data URL. */
+export async function fileToDataUrlFit(file: File, maxSide = 1280, maxLength = 1_500_000): Promise<string> {
+  if (!file.type.startsWith('image/')) throw new Error('Please choose an image file.');
+  const img = await loadImage(file);
+  const w = img.naturalWidth;
+  const h = img.naturalHeight;
+  if (!w || !h) throw new Error('That file could not be read as an image. Please choose a JPG or PNG.');
+  const scale = Math.min(1, maxSide / Math.max(w, h));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(w * scale));
+  canvas.height = Math.max(1, Math.round(h * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Your browser could not process this image.');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  for (const quality of [0.85, 0.75, 0.6, 0.45]) {
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    if (dataUrl.length <= maxLength) return dataUrl;
+  }
+  throw new Error('This photo is too large even after resizing. Try a smaller image.');
+}

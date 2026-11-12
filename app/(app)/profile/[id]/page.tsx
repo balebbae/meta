@@ -10,11 +10,12 @@ import {ProfilePosts} from '@/components/profile/ProfilePosts';
 import {AboutTab, type AboutSection} from '@/components/profile/AboutTab';
 import {FriendsTab} from '@/components/profile/FriendsTab';
 import {PhotosTab} from '@/components/profile/PhotosTab';
+import {ActivitiesTab} from '@/components/profile/ActivitiesTab';
 import styles from '@/components/profile/profile.module.css';
 
 type Props = {params: Promise<{id: string}>; searchParams: Promise<{tab?: string; section?: string}>};
 
-const TABS: ProfileTab[] = ['posts', 'about', 'friends', 'photos', 'videos', 'reels'];
+const TABS: ProfileTab[] = ['posts', 'about', 'friends', 'photos', 'activities', 'videos', 'reels'];
 const SECTIONS: AboutSection[] = ['overview', 'work', 'places', 'contact', 'family', 'details', 'events'];
 
 export async function generateMetadata({params}: Props): Promise<Metadata> {
@@ -62,6 +63,7 @@ export default async function ProfilePage({params, searchParams}: Props) {
         {tab === 'about' && <AboutTab profile={profile} isOwn={isOwn} section={section} />}
         {tab === 'friends' && <FriendsTab friends={friends} isOwn={isOwn} ownerName={profile.user.name} />}
         {tab === 'photos' && <PhotosTab photos={photos} isOwn={isOwn} />}
+        {tab === 'activities' && <ActivitiesTab userId={id} name={profile.user.name} avatarUrl={profile.user.avatarUrl} isOwn={isOwn} />}
         {(tab === 'videos' || tab === 'reels') && (
           <section className={styles.card} aria-label={tab}>
             <h2 className={styles.cardTitle}>{tab === 'videos' ? 'Videos' : 'Reels'}</h2>

@@ -4,6 +4,7 @@ import {useState} from 'react';
 import type {FbEvent} from '@/lib/secondary-queries';
 import {formatCount, formatEventDate} from '@/lib/secondary-data';
 import {BookmarkOutlineIcon, MoreIcon, StarIcon, StarOutlineIcon} from './icons';
+import {EventActivityBanner} from '@/components/activities/EventActivityBanner';
 import styles from './events.module.css';
 
 export function EventCard({event}: {event: FbEvent}) {
@@ -41,6 +42,7 @@ export function EventCard({event}: {event: FbEvent}) {
         <div className={styles.count}>
           {formatCount(count)} interested · {formatCount(going)} going
         </div>
+        <EventActivityBanner eventId={event.id} />
         <div className={styles.actions}>
           <button type="button" className={on ? styles.interestedOn : styles.interested} onClick={toggle} aria-pressed={on}>
             {on ? <StarIcon size={16} /> : <StarOutlineIcon size={16} />}

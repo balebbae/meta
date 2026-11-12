@@ -298,3 +298,270 @@ create table if not exists voice_notes (
   transcript text not null,
   created_at timestamptz not null default now()
 );
+
+-- ============================================================
+-- Activities: Muse vault, privacy, Rally quests, Turf, Reels, mentors
+-- (spec §12 + §19.2, with the §21.1 schema fixes)
+-- ============================================================
+
+-- Messenger cards: kind = 'text' | 'rally_invite' | 'rally_game' | 'quest_card' | 'turf_recap' | 'proof' | 'system'
+alter table messages add column if not exists kind text not null default 'text';
+alter table messages add column if not exists payload jsonb;
+
+create table if not exists activity_profiles (
+  user_id integer primary key references users(id) on delete cascade,
+  weekly_active_days text,
+  primary_goal text,
+  schedule text[],
+  with_whom text,
+  go_easy_note text,
+  interest_suggestions_enabled boolean not null default false,
+  onboarding_step text not null default 'intro',
+  modal_snoozed_until timestamptz,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists user_tags (
+  user_id integer not null references users(id) on delete cascade,
+  tag text not null,
+  kind text not null check (kind in ('activity', 'goal', 'style', 'constraint')),
+  origin text not null default 'selected' check (origin in ('selected', 'derived', 'suggested')),
+  visibility text not null default 'friends' check (visibility in ('public', 'friends', 'only_me', 'muse_only')),
+  confirmed boolean not null default true,
+  reason text,
+  created_at timestamptz not null default now(),
+  primary key (user_id, kind, tag)
+);
+
+create table if not exists connections (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  source text not null,
+  status text not null default 'pending' check (status in ('connected', 'pending', 'revoked', 'error')),
+  tokens jsonb,
+  external_user_id text,
+  refresh_lock_until timestamptz,
+  connected_at timestamptz default now(),
+  unique (user_id, source)
+);
+
+create table if not exists vault_events (
+  id bigserial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  source text not null,
+  external_id text,
+  kind text not null check (kind in ('run', 'walk', 'ride', 'strength', 'yoga', 'swim', 'steps', 'sleep', 'recovery', 'other')),
+  started_at timestamptz not null,
+  ended_at timestamptz,
+  distance_km numeric,
+  duration_min numeric,
+  steps integer,
+  avg_hr integer,
+  trust text not null default 'self_reported' check (trust in ('self_reported', 'photo', 'device', 'verified')),
+  display_scope text not null default 'normal' check (display_scope in ('normal', 'owner_only')),
+  duplicate_of bigint references vault_events(id) on delete set null,
+  raw jsonb,
+  created_at timestamptz not null default now(),
+  unique (source, external_id)
+);
+create index if not exists vault_events_user_idx on vault_events (user_id, started_at desc);
+
+create table if not exists share_policies (
+  user_id integer not null references users(id) on delete cascade,
+  category text not null check (category in ('workouts', 'steps', 'heart', 'sleep', 'body', 'location')),
+  audience text not null check (audience in ('only_me', 'game_participants', 'friends', 'mentor_match', 'public')),
+  level text not null check (level in ('exact', 'rounded', 'boolean', 'muse_only', 'none')),
+  updated_at timestamptz not null default now(),
+  primary key (user_id, category, audience)
+);
+
+create table if not exists answers_log (
+  id bigserial primary key,
+  owner_id integer not null references users(id) on delete cascade,
+  asker text not null,
+  audience text not null,
+  question text not null,
+  answer jsonb,
+  level text,
+  created_at timestamptz not null default now()
+);
+create index if not exists answers_log_owner_idx on answers_log (owner_id, id desc);
+
+create table if not exists games (
+  id serial primary key,
+  conversation_id integer references conversations(id) on delete set null,
+  game_type text not null default 'turf',
+  settings jsonb not null default '{}'::jsonb,
+  state jsonb not null default '{}'::jsonb,
+  status text not null default 'pending' check (status in ('pending', 'live', 'ended', 'cancelled')),
+  host_id integer references users(id) on delete set null,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists game_invites (
+  game_id integer not null references games(id) on delete cascade,
+  user_id integer not null references users(id) on delete cascade,
+  invited_by integer references users(id) on delete set null,
+  status text not null default 'invited' check (status in ('invited', 'accepted', 'declined', 'expired', 'left')),
+  color text,
+  location_consent_at timestamptz,
+  responded_at timestamptz,
+  primary key (game_id, user_id)
+);
+
+create table if not exists turf_outings (
+  id bigserial primary key,
+  game_id integer not null references games(id) on delete cascade,
+  user_id integer not null references users(id) on delete cascade,
+  started_at timestamptz not null default now(),
+  ended_at timestamptz,
+  trail_cells text[] not null default '{}',
+  status text not null default 'open' check (status in ('open', 'claimed', 'cut', 'discarded')),
+  cells_claimed integer not null default 0
+);
+create index if not exists turf_outings_game_idx on turf_outings (game_id, status);
+
+create table if not exists turf_cells (
+  game_id integer not null references games(id) on delete cascade,
+  cell text not null,
+  owner_id integer references users(id) on delete set null,
+  claimed_at timestamptz not null default now(),
+  primary key (game_id, cell)
+);
+
+create table if not exists mentor_offers (
+  user_id integer primary key references users(id) on delete cascade,
+  metric text not null,
+  from_value text,
+  to_value text,
+  weeks integer,
+  consent jsonb not null default '{}'::jsonb,
+  anonymous boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists mentor_requests (
+  id serial primary key,
+  seeker_id integer not null references users(id) on delete cascade,
+  mentor_id integer not null references users(id) on delete cascade,
+  status text not null default 'pending' check (status in ('pending', 'accepted', 'declined', 'completed', 'revoked')),
+  consent jsonb not null default '{}'::jsonb,
+  transcript jsonb not null default '[]'::jsonb,
+  plan jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists reels (
+  id serial primary key,
+  pexels_id bigint unique,
+  video_url text not null,
+  poster_url text,
+  duration_sec integer,
+  width integer,
+  height integer,
+  creator_name text,
+  creator_url text,
+  source_url text,
+  slug text,
+  caption text,
+  transcript text,
+  synthetic boolean not null default true,
+  is_fitness boolean not null default true,
+  exercises jsonb not null default '[]'::jsonb,
+  difficulty text,
+  equipment text[] not null default '{}',
+  setting text,
+  tags text[] not null default '{}',
+  confidence numeric,
+  plays integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+-- Rally quests reuse the Closeness quests table (§19.1). template null = legacy closeness quest.
+alter table quests add column if not exists template text check (template in ('boss', 'relay', 'streak'));
+alter table quests add column if not exists spec jsonb;
+alter table quests add column if not exists conversation_id integer references conversations(id) on delete set null;
+alter table quests add column if not exists reel_id integer references reels(id) on delete set null;
+alter table quests add column if not exists group_id integer references groups(id) on delete set null;
+alter table quests add column if not exists created_by integer references users(id) on delete set null;
+alter table quests add column if not exists status text not null default 'active';
+alter table quests add column if not exists starts_at timestamptz;
+alter table quests add column if not exists ends_at timestamptz;
+alter table quests add column if not exists boss_hp integer;
+alter table quests add column if not exists boss_hp_left integer;
+alter table quests add column if not exists boss_image_url text;
+
+create table if not exists quest_moves (
+  id bigserial primary key,
+  quest_id integer not null references quests(id) on delete cascade,
+  user_id integer not null references users(id) on delete cascade,
+  vault_event_id bigint references vault_events(id) on delete set null,
+  kind text not null default 'move' check (kind in ('move', 'dare')),
+  dare_id text,
+  damage integer not null default 0,
+  note text,
+  proof_image_url text,
+  proof_status text check (proof_status in ('pending', 'approved', 'rejected')),
+  proof_verdict text,
+  created_at timestamptz not null default now()
+);
+create index if not exists quest_moves_quest_idx on quest_moves (quest_id, id desc);
+
+create table if not exists avatar_gear (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  slug text not null,
+  label text not null,
+  description text,
+  image_url text,
+  quest_id integer references quests(id) on delete set null,
+  earned_at timestamptz not null default now(),
+  unique (user_id, slug)
+);
+
+create table if not exists reward_claims (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  quest_id integer references quests(id) on delete set null,
+  tier text not null check (tier in ('gear', 'discount', 'equipment')),
+  label text not null,
+  sponsor text,
+  code text,
+  status text not null default 'unlocked' check (status in ('unlocked', 'claimed')),
+  claimed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+-- Discover / entry points / mentor exchange (subagent E)
+alter table activity_profiles add column if not exists prompts jsonb not null default '{}'::jsonb;
+alter table events add column if not exists settings jsonb not null default '{}'::jsonb;
+alter table mentor_requests add column if not exists updated_at timestamptz not null default now();
+create table if not exists reel_plays (
+  user_id integer not null references users(id) on delete cascade,
+  reel_id integer not null references reels(id) on delete cascade,
+  played_at timestamptz not null default now(),
+  primary key (user_id, reel_id)
+);
+
+
+-- Turf (scope D): owner-only GPS points and trail bookkeeping; the game state only exposes turf_cells.
+alter table turf_outings add column if not exists raw jsonb not null default '[]'::jsonb;
+alter table turf_outings add column if not exists trail jsonb not null default '[]'::jsonb;
+alter table turf_outings add column if not exists consumed integer not null default 0;
+alter table turf_outings add column if not exists source text not null default 'live';
+alter table turf_outings add column if not exists result jsonb not null default '{}'::jsonb;
+alter table game_invites add column if not exists resent_at timestamptz;
+create index if not exists turf_cells_owner_idx on turf_cells (game_id, owner_id);
+
+create table if not exists turf_privacy_zones (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  label text not null default 'Home',
+  lat double precision not null,
+  lng double precision not null,
+  radius_m integer not null default 200,
+  created_at timestamptz not null default now()
+);
+create index if not exists turf_privacy_zones_user_idx on turf_privacy_zones (user_id);

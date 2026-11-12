@@ -5,7 +5,7 @@ import {fileToDataUrl} from './hooks';
 import {GifSquareIcon, ImageIcon, MicIcon, PlusCircleIcon, SendIcon, StickerSquareIcon, ThumbIcon} from './icons';
 import styles from './messages.module.css';
 
-export function Composer({onSend, disabled, autoFocus}: {onSend: (body: string, imageUrl: string | null) => void | Promise<void>; disabled?: boolean; autoFocus?: boolean}) {
+export function Composer({onSend, disabled, autoFocus, onRally}: {onSend: (body: string, imageUrl: string | null) => void | Promise<void>; disabled?: boolean; autoFocus?: boolean; onRally?: () => void}) {
   const [text, setText] = useState('');
   const [image, setImage] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -58,7 +58,7 @@ export function Composer({onSend, disabled, autoFocus}: {onSend: (body: string, 
       )}
       <div className={styles.composer}>
         <div className={styles.composerIcons}>
-          <button type="button" className={styles.iconBtn} aria-label="Open more actions" onClick={() => fileRef.current?.click()}>
+          <button type="button" className={styles.iconBtn} aria-label={onRally ? 'Rally: start a game' : 'Open more actions'} title={onRally ? 'Rally' : undefined} onClick={() => (onRally ? onRally() : fileRef.current?.click())}>
             <PlusCircleIcon size={20} />
           </button>
           <button type="button" className={styles.iconBtn} aria-label="Attach a photo" onClick={() => fileRef.current?.click()}>

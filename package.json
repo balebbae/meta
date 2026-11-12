@@ -8,10 +8,12 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "db:setup": "node scripts/db-setup.mjs"
+    "db:setup": "node scripts/db-setup.mjs",
+    "test": "node --test \"lib/**/*.test.ts\""
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
+    "h3-js": "^4.5.0",
     "next": "^16.4.6",
     "openai": "^7.55.0",
     "react": "^19.3.1",

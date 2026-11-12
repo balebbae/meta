@@ -1,0 +1,296 @@
+/* Shared Rally styles: sheets, cards, dashboard. Uses --fb-* variables only. */
+.offline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fb-text-secondary);
+  background: var(--fb-icon-bg);
+  border-radius: var(--fb-radius-pill);
+  padding: 2px 8px;
+}
+.error {
+  color: var(--fb-red);
+  font-size: 14px;
+  margin: 0;
+}
+.sheetForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 20px 24px;
+}
+.sheetForm > button {
+  height: 40px;
+  margin-top: 4px;
+}
+.sheetLead {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.4;
+  padding: 12px 14px;
+  background: var(--fb-bg);
+  border-radius: 10px;
+}
+.sheetMeta {
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+}
+.field input,
+.textarea {
+  font: inherit;
+  font-size: 15px;
+  color: var(--fb-text);
+  background: var(--fb-input-bg);
+  border: 1px solid var(--fb-divider);
+  border-radius: 8px;
+  padding: 10px 12px;
+  outline: none;
+}
+.field input:focus,
+.textarea:focus {
+  border-color: var(--fb-blue);
+}
+.textarea {
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+}
+.proofRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+}
+.proofImg {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+.sheetResult {
+  text-align: center;
+  padding: 28px 20px 24px;
+}
+.sheetDamage {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--fb-red);
+}
+.sheetNarration {
+  font-size: 15px;
+  margin: 8px 0;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  border: 0;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+  border-radius: var(--fb-radius-pill);
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.chip:hover {
+  background: var(--fb-icon-bg-hover);
+}
+.library {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px 20px;
+}
+.library > p {
+  margin: 8px 4px 0;
+}
+.libItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--fb-divider);
+  background: none;
+  padding: 14px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--fb-text);
+  font: inherit;
+}
+.libItem:hover {
+  background: var(--fb-hover);
+}
+.libItem strong {
+  display: block;
+  font-size: 15px;
+}
+.libItem small {
+  display: block;
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+}
+.libIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--fb-icon-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* HP bar */
+.hp {
+  position: relative;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--fb-icon-bg);
+  overflow: hidden;
+}
+.hpFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--fb-red), #f5a623);
+  transition: width 0.6s ease;
+}
+.hpLow .hpFill {
+  animation: pulse 1s ease-in-out infinite;
+}
+.hpLabel {
+  font-size: 12px;
+  color: var(--fb-text-secondary);
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+/* avatar strip */
+.strip {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+}
+
+/* ---- Messenger cards ---- */
+.questCard {
+  width: min(340px, 82vw);
+  border: 1px solid var(--fb-divider);
+  border-radius: 16px;
+  background: var(--fb-card);
+  overflow: hidden;
+  box-shadow: var(--fb-shadow-card);
+}
+.questHero {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, #e7f0fd, #fff4e5);
+  align-items: center;
+}
+.questTitle {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--fb-text);
+}
+.questStory {
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+  line-height: 1.3;
+  margin: 4px 0 0;
+}
+.questBody {
+  padding: 10px 12px;
+}
+.cardActions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px 12px;
+}
+.btn {
+  flex: 1;
+  height: 36px;
+  border: 0;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.btnPrimary {
+  composes: btn;
+  background: var(--fb-blue);
+  color: #fff;
+}
+.gameCard {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: min(340px, 82vw);
+}
+.gameCardBig {
+  width: min(420px, 86vw);
+  padding: 12px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff1f0, #fff8e1);
+  border: 1px solid var(--fb-divider);
+  animation: pop 0.5s ease-out;
+}
+.gameCardDown {
+  background: linear-gradient(135deg, #e6f7ec, #e7f0fd);
+}
+.bubbleGm {
+  position: relative;
+  background: var(--fb-bubble);
+  border-radius: 16px;
+  padding: 8px 12px;
+  font-size: 15px;
+  line-height: 1.33;
+  color: var(--fb-text);
+  flex: 1;
+}
+.bubbleGm::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  bottom: 10px;
+  border: 6px solid transparent;
+  border-right-color: var(--fb-bubble);
+  border-left: 0;
+}
+.gmName {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fb-text-secondary);
+  margin-bottom: 2px;
+}
+.bigTitle {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+@keyframes pop {
+  0% { transform: scale(0.92); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}

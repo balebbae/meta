@@ -65,7 +65,7 @@ export function MessengerApp({
       patch(activeId, c => ({
         ...c,
         updatedAt: now,
-        lastMessage: {id: -1, conversationId: activeId, sender: {id: viewer.id, name: viewer.name, avatarUrl: viewer.avatarUrl}, body, imageUrl, createdAt: now},
+        lastMessage: {id: -1, conversationId: activeId, sender: {id: viewer.id, name: viewer.name, avatarUrl: viewer.avatarUrl}, body, imageUrl, kind: 'text', payload: null, createdAt: now},
       }));
       await live.send(body, imageUrl);
       void refresh();

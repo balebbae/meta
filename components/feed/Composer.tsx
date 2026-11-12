@@ -22,11 +22,14 @@ import {
 import {AudienceIcon} from '@/components/feed/PostCard';
 import type {Post, User} from '@/lib/types';
 import styles from './feed.module.css';
+import entry from '@/components/activities/entry.module.css';
+
+const ACTIVITIES = ['Working out', 'Running', 'Feeling happy', 'Feeling grateful'];
 
 const AUDIENCE_LABEL: Record<Post['audience'], string> = {public: 'Public', friends: 'Friends', only_me: 'Only me'};
 const AUDIENCE_SUB: Record<Post['audience'], string> = {public: 'Anyone on or off Facebook', friends: 'Your friends on Facebook', only_me: 'Only you'};
 
-export function Composer({viewer, onCreated}: {viewer: User; onCreated: (post: Post) => void}) {
+export function Composer({viewer, onCreated}: {viewer: User; onCreated: (post: Post, activity?: string | null) => void}) {
   const [open, setOpen] = useState(false);
   const [withPhoto, setWithPhoto] = useState(false);
   const first = viewer.name.split(' ')[0];
@@ -76,10 +79,10 @@ export function Composer({viewer, onCreated}: {viewer: User; onCreated: (post: P
           setOpen(false);
           setWithPhoto(false);
         }}
-        onCreated={p => {
+        onCreated={(p, activity) => {
           setOpen(false);
           setWithPhoto(false);
-          onCreated(p);
+          onCreated(p, activity);
         }}
       />
     </>
@@ -97,9 +100,11 @@ export function CreatePostDialog({
   viewer: User;
   startWithPhoto?: boolean;
   onClose: () => void;
-  onCreated: (post: Post) => void;
+  onCreated: (post: Post, activity?: string | null) => void;
 }) {
   const [text, setText] = useState('');
+  const [activity, setActivity] = useState<string | null>(null);
+  const [showActivity, setShowActivity] = useState(false);
   const [audience, setAudience] = useState<Post['audience']>('friends');
   const [audOpen, setAudOpen] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
@@ -111,6 +116,8 @@ export function CreatePostDialog({
       setText('');
       setImageUrl('');
       setShowPhoto(!!startWithPhoto);
+      setActivity(null);
+      setShowActivity(false);
       setPosting(false);
     }
   }, [open, startWithPhoto]);
@@ -122,12 +129,12 @@ export function CreatePostDialog({
     const res = await fetch('/api/posts', {
       method: 'POST',
       headers: {'content-type': 'application/json'},
-      body: JSON.stringify({content, audience, imageUrl: imageUrl.trim() || null}),
+      body: JSON.stringify({content: activity ? `${content} — ${activity.toLowerCase()}` : content, audience, imageUrl: imageUrl.trim() || null}),
     });
     setPosting(false);
     if (res.ok) {
       const d = (await res.json()) as {post: Post};
-      onCreated(d.post);
+      onCreated(d.post, activity);
     }
   };
 
@@ -205,6 +212,15 @@ export function CreatePostDialog({
             </button>
           </div>
         )}
+        {(showActivity || activity) && (
+          <div className={entry.activityChips} aria-label="Feeling/activity">
+            {ACTIVITIES.map(a => (
+              <button key={a} type="button" className={activity === a ? entry.activityChipOn : entry.activityChip} onClick={() => setActivity(activity === a ? null : a)}>
+                {a}
+              </button>
+            ))}
+          </div>
+        )}
         <div className={styles.addTo}>
           <span className={styles.addToLabel}>Add to your post</span>
           <div className={styles.addToIcons}>
@@ -214,7 +230,7 @@ export function CreatePostDialog({
             <button className={styles.addToIcon} aria-label="Tag people">
               <TagIcon size={24} />
             </button>
-            <button className={styles.addToIcon} aria-label="Feeling/activity">
+            <button className={styles.addToIcon} aria-label="Feeling/activity" onClick={() => setShowActivity(v => !v)}>
               <FeelingIcon size={24} />
             </button>
             <button className={styles.addToIcon} aria-label="Check in">

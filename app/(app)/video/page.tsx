@@ -21,7 +21,7 @@ export default async function VideoPage() {
           <PanelSearch placeholder="Search videos" />
           <PanelRow icon={<HomeIcon />} label="Home" href="/video" active />
           <PanelRow icon={<LiveIcon />} label="Live" href="/video?tab=live" />
-          <PanelRow icon={<ReelsIcon />} label="Reels" href="/video?tab=reels" />
+          <PanelRow icon={<ReelsIcon />} label="Reels" href="/reels" />
           <PanelRow icon={<ShowsIcon />} label="Shows" href="/video?tab=shows" />
           <PanelRow icon={<ExploreIcon />} label="Explore" href="/video?tab=explore" />
           <PanelDivider />

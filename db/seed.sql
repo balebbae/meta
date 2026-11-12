@@ -406,3 +406,47 @@ from (
   from messages m group by m.conversation_id
 ) sub
 where cm.conversation_id = sub.conversation_id and cm.user_id = 1 and cm.last_read_message_id is null;
+
+-- ---------- Activities: Discover / mentors / entry points (idempotent, subagent E) ----------
+insert into activity_profiles (user_id, weekly_active_days, primary_goal, schedule, with_whom, interest_suggestions_enabled, onboarding_step)
+values (1, '1-2', 'Train for an event', '{mornings,weekends}', 'friends', true, 'done')
+on conflict (user_id) do nothing;
+
+insert into user_tags (user_id, tag, kind, origin, visibility) values
+  (1, 'Running', 'activity', 'selected', 'friends'), (1, 'Train for an event', 'goal', 'selected', 'friends'), (1, 'Small group', 'style', 'selected', 'friends'),
+  (2, 'Running', 'activity', 'selected', 'friends'), (2, 'Be consistent', 'goal', 'selected', 'friends'),
+  (3, 'Lifting', 'activity', 'selected', 'friends'), (3, 'Get stronger', 'goal', 'selected', 'friends'),
+  (4, 'Yoga', 'activity', 'selected', 'friends'), (4, 'Be consistent', 'goal', 'selected', 'friends'),
+  (5, 'Running', 'activity', 'selected', 'friends'), (5, 'Get faster', 'goal', 'selected', 'friends'),
+  (9, 'Climbing', 'activity', 'selected', 'friends'), (12, 'Running', 'activity', 'selected', 'friends'), (12, 'Be consistent', 'goal', 'selected', 'friends')
+on conflict do nothing;
+
+-- mentors who opted into the pool (identity hidden until they accept)
+insert into mentor_offers (user_id, metric, from_value, to_value, weeks, consent, anonymous) values
+  (5, '5k time', '29:10', '24:40', 12, '{"workouts":true,"steps":true,"heart":false,"sleep":false,"offerText":"Two easy runs, one tempo, one long run a week. Slowed the easy days way down and raced a parkrun every month."}'::jsonb, true),
+  (3, 'Bench press', '135 lb', '225 lb', 16, '{"workouts":true,"steps":false,"heart":false,"sleep":false,"offerText":"Benched three times a week on a simple linear program, ate enough, and stopped maxing out every session."}'::jsonb, true),
+  (4, 'Workouts per week', '1', '4', 10, '{"workouts":true,"steps":true,"heart":false,"sleep":true,"offerText":"Put yoga on the calendar like a meeting, kept sessions to 25 minutes, and did them with a friend on weekends."}'::jsonb, false)
+on conflict (user_id) do nothing;
+
+-- fitness event this weekend with two friends going, plus a quest boss fight IRL on Sunday
+insert into events (host_id, title, description, location, cover_url, starts_at, ends_at, interested_count, is_online, settings)
+select * from (values
+  (5, 'Katy Trail Saturday 5k Social Run', 'Easy-pace 5k, all levels. Coffee after at the Katy Trail Ice House.', 'Katy Trail, Dallas, TX', 'https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?auto=format&fit=crop&w=1200&h=675&q=80', date_trunc('week', now()) + interval '5 days 8 hours', date_trunc('week', now()) + interval '5 days 9 hours 30 minutes', 86, false, '{"fitness":true}'::jsonb),
+  (2, 'Boss fight IRL: Sunday 9am run', 'Final run of the week for the Rally squad. Every move counts double.', 'White Rock Lake, Dallas, TX', 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?auto=format&fit=crop&w=1200&h=675&q=80', date_trunc('week', now()) + interval '6 days 9 hours', date_trunc('week', now()) + interval '6 days 10 hours 30 minutes', 23, false, '{"fitness":true,"bossFight":true}'::jsonb)
+) v(host_id, title, description, location, cover_url, starts_at, ends_at, interested_count, is_online, settings)
+where not exists (select 1 from events e where e.title = v.title);
+
+insert into event_rsvps (event_id, user_id, status)
+select e.id, u.user_id, 'going' from events e cross join (values (2), (3)) u(user_id)
+where e.title in ('Katy Trail Saturday 5k Social Run', 'Boss fight IRL: Sunday 9am run')
+on conflict do nothing;
+
+-- friends with workouts this week (vault only; Discover reads them through ask(friendId, 'friends', ...))
+insert into vault_events (user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, trust)
+select * from (values
+  (2, 'manual', 'seed-priya-run-1', 'run', now() - interval '1 day 2 hours', now() - interval '1 day 1 hour 25 minutes', 5.2, 35, 'self_reported'),
+  (3, 'manual', 'seed-marcus-lift-1', 'strength', now() - interval '20 hours', now() - interval '19 hours', null, 55, 'self_reported'),
+  (5, 'manual', 'seed-daniel-run-1', 'run', now() - interval '2 days', now() - interval '2 days' + interval '42 minutes', 8.1, 42, 'photo'),
+  (12, 'manual', 'seed-maya-run-1', 'run', now() - interval '6 hours', now() - interval '5 hours 30 minutes', 4.0, 30, 'self_reported')
+) v(user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, trust)
+on conflict (source, external_id) do nothing;

@@ -533,3 +533,14 @@ create table if not exists reward_claims (
   claimed_at timestamptz,
   created_at timestamptz not null default now()
 );
+
+-- Discover / entry points / mentor exchange (subagent E)
+alter table activity_profiles add column if not exists prompts jsonb not null default '{}'::jsonb;
+alter table events add column if not exists settings jsonb not null default '{}'::jsonb;
+alter table mentor_requests add column if not exists updated_at timestamptz not null default now();
+create table if not exists reel_plays (
+  user_id integer not null references users(id) on delete cascade,
+  reel_id integer not null references reels(id) on delete cascade,
+  played_at timestamptz not null default now(),
+  primary key (user_id, reel_id)
+);

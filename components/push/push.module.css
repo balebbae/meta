@@ -183,3 +183,13 @@
 .switch:disabled {
   opacity: 0.6;
 }
+
+/* Mobile: sit above the floating tab bar instead of covering it */
+@media (max-width: 700px) {
+  .prompt {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+}

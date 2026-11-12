@@ -1,0 +1,29 @@
+.page {
+  width: 100%;
+  min-height: calc(100vh - var(--fb-header-h));
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+.card {
+  width: 100%;
+  max-width: 680px;
+  background: var(--fb-card);
+  border-radius: var(--fb-radius);
+  box-shadow: var(--fb-shadow-card);
+  align-self: flex-start;
+}
+.card > div {
+  width: 100%;
+  max-height: none;
+}
+@media (max-width: 700px) {
+  .page {
+    padding: calc(env(safe-area-inset-top) + 4px) 0 calc(110px + env(safe-area-inset-bottom));
+    background: var(--fb-card);
+  }
+  .card {
+    box-shadow: none;
+    border-radius: 0;
+  }
+}

@@ -450,3 +450,77 @@ select * from (values
   (12, 'manual', 'seed-maya-run-1', 'run', now() - interval '6 hours', now() - interval '5 hours 30 minutes', 4.0, 30, 'self_reported')
 ) v(user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, trust)
 on conflict (source, external_id) do nothing;
+
+-- Rally (subagent C): one active boss quest for the HackUTD Organizers group chat (users 1,2,3,7) with a few moves. Idempotent.
+insert into quests (title, description, xp_reward, goal_type, goal_count, week_start, muse_meta, template, spec, conversation_id, created_by, status, starts_at, ends_at, boss_hp, boss_hp_left)
+select 'Plank Goblin Week', 'Plank Goblin has camped out in the group chat. Every plank the squad logs this week chips away its HP; take it down before Sunday night.', 100, 'rally', 7,
+  date_trunc('week', now())::date, '{"museUsed": false, "bossKind": "goblin", "buffed": false}'::jsonb, 'boss',
+  jsonb_build_object(
+    'template', 'boss', 'title', 'Plank Goblin Week',
+    'story', 'Plank Goblin has camped out in the group chat. Every plank the squad logs this week chips away its HP; take it down before Sunday night.',
+    'source', jsonb_build_object('kind', 'sentence', 'text', 'Make us do planks every day this week'),
+    'startsAt', date_trunc('week', now()), 'endsAt', date_trunc('week', now()) + interval '7 days',
+    'levels', jsonb_build_array(
+      jsonb_build_object('day', 1, 'name', 'Warm-up Woods', 'exercises', jsonb_build_array(jsonb_build_object('name', 'Plank', 'seconds', 40))),
+      jsonb_build_object('day', 2, 'name', 'Rep Ridge', 'exercises', jsonb_build_array(jsonb_build_object('name', 'Plank', 'seconds', 44))),
+      jsonb_build_object('day', 3, 'name', 'Burn Bridge', 'exercises', jsonb_build_array(jsonb_build_object('name', 'Plank', 'seconds', 48))),
+      jsonb_build_object('day', 4, 'name', 'Sweat Swamp', 'exercises', jsonb_build_array(jsonb_build_object('name', 'Plank', 'seconds', 52))),
+      jsonb_build_object('day', 5, 'name', 'Grit Gorge', 'exercises', jsonb_build_array(jsonb_build_object('name', 'Plank', 'seconds', 56))),
+      jsonb_build_object('day', 6, 'name', 'Final Climb', 'exercises', jsonb_build_array(jsonb_build_object('name', 'Plank', 'seconds', 60))),
+      jsonb_build_object('day', 7, 'name', 'Boss Gate', 'exercises', jsonb_build_array(jsonb_build_object('name', 'Plank', 'seconds', 64)))),
+    'boss', jsonb_build_object('name', 'Plank Goblin', 'hp', 2400, 'artPrompt', 'A cartoon plank goblin, playful villain, flat colours'),
+    'handicaps', jsonb_build_array(
+      jsonb_build_object('userId', 1, 'targetScale', 1.0, 'damageScale', 1.0, 'note', 'scaled to your recent weeks'),
+      jsonb_build_object('userId', 2, 'targetScale', 0.8, 'damageScale', 1.25, 'note', 'scaled to your recent weeks'),
+      jsonb_build_object('userId', 3, 'targetScale', 1.0, 'damageScale', 1.0, 'note', 'scaled to your recent weeks'),
+      jsonb_build_object('userId', 7, 'targetScale', 1.2, 'damageScale', 0.8, 'note', 'scaled to your recent weeks')),
+    'dares', jsonb_build_array(
+      jsonb_build_object('id', 'somewhere-new', 'text', 'Work out somewhere you have never trained before.', 'bonus', 15, 'needsProof', true),
+      jsonb_build_object('id', 'rain', 'text', 'Get a move in while it rains.', 'bonus', 20, 'needsProof', true),
+      jsonb_build_object('id', 'bring-a-friend', 'text', 'Bring a friend from outside the group to one session.', 'bonus', 15, 'needsProof', false)),
+    'rewards', jsonb_build_array(
+      jsonb_build_object('tier', 'gear', 'label', 'Plank Goblin trophy for every avatar'),
+      jsonb_build_object('tier', 'discount', 'label', '20% off at a partner gym (demo code)'),
+      jsonb_build_object('tier', 'equipment', 'label', 'Sponsored yoga mat for the squad', 'equipmentTags', jsonb_build_array('mat', 'ab roller')))),
+  1, 1, 'active', date_trunc('week', now()), date_trunc('week', now()) + interval '7 days', 2400, 2400
+where not exists (select 1 from quests where title = 'Plank Goblin Week' and conversation_id = 1);
+
+insert into quest_progress (quest_id, user_id, status, progress)
+select q.id, cm.user_id, 'active', '{}'::jsonb from quests q join conversation_members cm on cm.conversation_id = q.conversation_id
+where q.title = 'Plank Goblin Week' and q.conversation_id = 1
+on conflict (quest_id, user_id) do nothing;
+
+insert into quest_moves (quest_id, user_id, kind, damage, note, created_at)
+select q.id, v.user_id, v.kind, v.damage, v.note, now() - v.ago
+from quests q, (values
+  (1, 'move', 33, 'Before coffee', interval '2 days 3 hours'),
+  (2, 'move', 41, 'Kitchen floor plank', interval '2 days 1 hour'),
+  (3, 'move', 49, null, interval '1 day 5 hours'),
+  (1, 'move', 50, 'Held it a bit longer', interval '1 day 2 hours'),
+  (2, 'dare', 56, 'Rooftop!', interval '20 hours'),
+  (7, 'move', 26, null, interval '6 hours'),
+  (2, 'move', 41, null, interval '3 hours')
+) v(user_id, kind, damage, note, ago)
+where q.title = 'Plank Goblin Week' and q.conversation_id = 1
+  and not exists (select 1 from quest_moves m where m.quest_id = q.id);
+
+update quest_moves m set dare_id = 'somewhere-new', proof_status = 'approved', proof_verdict = 'Rooftop plank, looks legit'
+from quests q where m.quest_id = q.id and q.title = 'Plank Goblin Week' and q.conversation_id = 1 and m.kind = 'dare' and m.dare_id is null;
+
+update quests q set boss_hp_left = greatest(0, boss_hp - coalesce((select sum(damage) from quest_moves m where m.quest_id = q.id), 0))
+where q.title = 'Plank Goblin Week' and q.conversation_id = 1 and q.boss_hp_left = q.boss_hp;
+
+insert into messages (conversation_id, sender_id, body, kind, payload, created_at)
+select 1, 1, 'Caleb started Plank Goblin Week', 'quest_card', jsonb_build_object('questId', q.id, 'title', q.title, 'template', 'boss', 'bossName', 'Plank Goblin', 'bossHp', 2400), now() - interval '2 days 4 hours'
+from quests q where q.title = 'Plank Goblin Week' and q.conversation_id = 1
+  and not exists (select 1 from messages m where m.kind = 'quest_card' and (m.payload->>'questId')::int = q.id);
+
+insert into messages (conversation_id, sender_id, body, kind, payload, created_at)
+select 1, v.user_id, v.text, 'rally_game', jsonb_build_object('questId', q.id, 'event', v.event, 'userId', v.user_id, 'text', v.text, 'damage', v.damage), now() - v.ago
+from quests q, (values
+  (1, 'move', 'Caleb hit Plank Goblin for 33. 99% HP left.', 33, interval '2 days 3 hours'),
+  (2, 'dare', 'Priya completed a dare (Work out somewhere you have never trained before.) and hits Plank Goblin for 56.', 56, interval '20 hours'),
+  (2, 'critical', 'CRITICAL HIT! Priya smashes Plank Goblin for 41. 88% HP left.', 41, interval '3 hours')
+) v(user_id, event, text, damage, ago)
+where q.title = 'Plank Goblin Week' and q.conversation_id = 1
+  and not exists (select 1 from messages m where m.kind = 'rally_game' and (m.payload->>'questId')::int = q.id);

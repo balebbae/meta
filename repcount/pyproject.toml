@@ -1,0 +1,18 @@
+[project]
+name = "repcount"
+version = "0.1.0"
+description = "Pose-based rep counter for Activities video Proof (MediaPipe pose + joint-angle signal processing)"
+requires-python = ">=3.10"
+dependencies = ["mediapipe>=0.10.14", "opencv-python-headless>=4.9", "numpy>=1.26"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+include = ["repcount*"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

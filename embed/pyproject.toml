@@ -1,0 +1,21 @@
+[project]
+name = "rally-embed"
+version = "0.1.0"
+description = "Fine-tuned small embedding model that maps feed text (Reels captions, Events, Marketplace, logs) to Activities"
+requires-python = ">=3.10"
+dependencies = ["sentence-transformers>=5.0", "accelerate>=1.1", "datasets", "numpy"]
+
+[project.optional-dependencies]
+onnx = ["optimum[onnxruntime]>=1.20"]
+
+[dependency-groups]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.setuptools.packages.find]
+include = ["rally_embed*"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]

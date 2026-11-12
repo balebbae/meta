@@ -1,0 +1,70 @@
+import type {Metadata} from 'next';
+import Image from 'next/image';
+import Link from 'next/link';
+import {getSessionUser} from '@/lib/auth';
+import {listSavedListings, listSavedPosts} from '@/lib/secondary-queries';
+import {formatPrice} from '@/lib/secondary-data';
+import {PanelDivider, PanelHeader, PanelRow, PanelSection, SecondaryLayout} from '@/components/pages/SecondaryLayout';
+import {SavedItemCard} from '@/components/pages/SavedItemCard';
+import {BookmarkIcon, PlusIcon, StoreIcon} from '@/components/pages/icons';
+import panel from '@/components/pages/secondary.module.css';
+import styles from '@/components/pages/saved.module.css';
+
+export const metadata: Metadata = {title: 'Saved | Facebook'};
+export const dynamic = 'force-dynamic';
+
+export default async function SavedPage({searchParams}: {searchParams: Promise<{tab?: string}>}) {
+  const {tab} = await searchParams;
+  const user = await getSessionUser();
+  const viewerId = user?.id ?? 0;
+  const [posts, listings] = await Promise.all([listSavedPosts(viewerId), listSavedListings(viewerId)]);
+  const collections = Array.from(new Set(posts.map(p => p.collection)));
+  const showListings = tab === 'marketplace';
+  return (
+    <SecondaryLayout
+      center
+      panel={
+        <>
+          <PanelHeader title="Saved" />
+          <PanelRow icon={<BookmarkIcon />} label="Saved items" href="/saved" active={!showListings} />
+          <PanelRow icon={<StoreIcon />} label="Marketplace listings" href="/saved?tab=marketplace" active={showListings} />
+          <PanelDivider />
+          <PanelSection title="My collections" />
+          {collections.map(c => (
+            <PanelRow key={c} icon={<BookmarkIcon />} label={c} href={`/saved?collection=${encodeURIComponent(c)}`} />
+          ))}
+          <button type="button" className={panel.panelButton}>
+            <PlusIcon size={16} />
+            Create new collection
+          </button>
+        </>
+      }>
+      <div className={styles.list}>
+        <h2 className={styles.head}>{showListings ? 'Saved listings' : 'All'}</h2>
+        {showListings ? (
+          listings.length === 0 ? (
+            <div className={styles.empty}>No saved listings yet.</div>
+          ) : (
+            listings.map(l => (
+              <Link key={l.id} href={`/marketplace/item/${l.id}`} className={styles.item} style={{color: 'inherit'}}>
+                <div className={styles.thumb}>
+                  <Image src={l.imageUrl} alt="" fill sizes="150px" />
+                </div>
+                <div className={styles.itemBody}>
+                  <div className={styles.itemTitle}>{l.title}</div>
+                  <div className={styles.itemMeta}>
+                    {formatPrice(l.priceCents)} · {l.location}
+                  </div>
+                </div>
+              </Link>
+            ))
+          )
+        ) : posts.length === 0 ? (
+          <div className={styles.empty}>Nothing saved yet. Save posts to see them here.</div>
+        ) : (
+          posts.map(item => <SavedItemCard key={item.id} item={item} />)
+        )}
+      </div>
+    </SecondaryLayout>
+  );
+}

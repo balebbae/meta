@@ -1,0 +1,179 @@
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.carousel {
+  position: relative;
+}
+.track {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.track::-webkit-scrollbar {
+  display: none;
+}
+.hero {
+  flex: 0 0 320px;
+  scroll-snap-align: start;
+  background: var(--fb-card);
+  border-radius: var(--fb-radius);
+  box-shadow: var(--fb-shadow-card);
+  overflow: hidden;
+}
+.heroImg {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--fb-hover-strong);
+}
+.heroImg img {
+  object-fit: cover;
+}
+.heroBody {
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.heroText {
+  flex: 1;
+  min-width: 0;
+}
+.name {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meta {
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+  line-height: 16px;
+}
+.arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--fb-card);
+  box-shadow: var(--fb-shadow-popover);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fb-text);
+  z-index: 1;
+}
+.arrowLeft {
+  composes: arrow;
+  left: -8px;
+}
+.arrowRight {
+  composes: arrow;
+  right: -8px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+.tile {
+  background: var(--fb-card);
+  border-radius: var(--fb-radius);
+  box-shadow: var(--fb-shadow-card);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+}
+.tileImg {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  flex: 0 0 72px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.tileImg img {
+  object-fit: cover;
+}
+.play {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 6px;
+  background: var(--fb-blue);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.play:hover {
+  background: var(--fb-blue-hover);
+}
+.playSoft {
+  composes: play;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+}
+.playSoft:hover {
+  background: var(--fb-icon-bg-hover);
+}
+.tag {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fb-text-secondary);
+  background: var(--fb-bg);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-top: 4px;
+}
+.dialogBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  text-align: center;
+}
+.dialogImg {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--fb-radius);
+  overflow: hidden;
+  background: #000;
+}
+.dialogImg img {
+  object-fit: cover;
+}
+.loading {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--fb-hover-strong);
+  overflow: hidden;
+}
+.loading > div {
+  height: 100%;
+  width: 0;
+  background: var(--fb-blue);
+  animation: load 1.8s ease-out forwards;
+}
+@keyframes load {
+  to {
+    width: 100%;
+  }
+}

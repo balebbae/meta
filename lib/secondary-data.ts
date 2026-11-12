@@ -11,14 +11,14 @@ export type Game = {
 };
 
 export const GAMES: Game[] = [
-  {id: 'words-with-friends', name: 'Words With Friends 2', publisher: 'Zynga', players: '2.1M monthly players', cover: 'https://picsum.photos/seed/game-words/640/360', tag: 'Word'},
-  {id: 'solitaire', name: 'Solitaire Grand Harvest', publisher: 'Supertreat', players: '1.4M monthly players', cover: 'https://picsum.photos/seed/game-solitaire/640/360', tag: 'Card'},
-  {id: 'uno', name: 'UNO!', publisher: 'Mattel163', players: '3.8M monthly players', cover: 'https://picsum.photos/seed/game-uno/640/360', tag: 'Card'},
+  {id: 'words-with-friends', name: 'Words With Friends 2', publisher: 'Zynga', players: '2.1M monthly players', cover: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=640&h=360&q=80', tag: 'Word'},
+  {id: 'solitaire', name: 'Solitaire Grand Harvest', publisher: 'Supertreat', players: '1.4M monthly players', cover: 'https://images.unsplash.com/photo-1551632811-561732d1e306?auto=format&fit=crop&w=640&h=360&q=80', tag: 'Card'},
+  {id: 'uno', name: 'UNO!', publisher: 'Mattel163', players: '3.8M monthly players', cover: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=640&h=360&q=80', tag: 'Card'},
   {id: '8ball', name: '8 Ball Pool', publisher: 'Miniclip', players: '5.2M monthly players', cover: 'https://picsum.photos/seed/game-8ball/640/360', tag: 'Sports', instant: true},
-  {id: 'basketball', name: 'Basketball FRVR', publisher: 'FRVR', players: '890K monthly players', cover: 'https://picsum.photos/seed/game-bball/640/360', tag: 'Arcade', instant: true},
-  {id: 'ludo', name: 'Ludo Club', publisher: 'Moonfrog', players: '2.7M monthly players', cover: 'https://picsum.photos/seed/game-ludo/640/360', tag: 'Board', instant: true},
-  {id: 'bubble', name: 'Bubble Shooter Legend', publisher: 'Ilyon', players: '640K monthly players', cover: 'https://picsum.photos/seed/game-bubble/640/360', tag: 'Puzzle', instant: true},
-  {id: 'chess', name: 'Chess Royale', publisher: 'Gameloft', players: '1.1M monthly players', cover: 'https://picsum.photos/seed/game-chess/640/360', tag: 'Strategy', instant: true},
+  {id: 'basketball', name: 'Basketball FRVR', publisher: 'FRVR', players: '890K monthly players', cover: 'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=640&h=360&q=80', tag: 'Arcade', instant: true},
+  {id: 'ludo', name: 'Ludo Club', publisher: 'Moonfrog', players: '2.7M monthly players', cover: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=640&h=360&q=80', tag: 'Board', instant: true},
+  {id: 'bubble', name: 'Bubble Shooter Legend', publisher: 'Ilyon', players: '640K monthly players', cover: 'https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=640&h=360&q=80', tag: 'Puzzle', instant: true},
+  {id: 'chess', name: 'Chess Royale', publisher: 'Gameloft', players: '1.1M monthly players', cover: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=640&h=360&q=80', tag: 'Strategy', instant: true},
 ];
 
 export const MARKETPLACE_CATEGORIES = [

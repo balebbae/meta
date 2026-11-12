@@ -1,6 +1,7 @@
 import {NextResponse} from 'next/server';
 import {getSessionUser} from '@/lib/auth';
 import {getProfile, updateProfile} from '@/lib/profile-queries';
+import {MAX_DATA_URL_LENGTH, isImageDataUrl} from '@/lib/image-upload';
 
 type Ctx = {params: Promise<{id: string}>};
 
@@ -16,6 +17,15 @@ export async function GET(_req: Request, {params}: Ctx) {
 }
 
 const isUrl = (v: unknown) => typeof v === 'string' && /^https?:\/\/\S+$/i.test(v) && v.length <= 2000;
+
+/** Photos are either remote http(s) URLs or base64 `data:image/*` URLs produced by the client-side uploader. */
+function imageError(field: string, v: unknown): string | null {
+  if (isUrl(v) || isImageDataUrl(v)) return null;
+  if (typeof v === 'string' && v.startsWith('data:')) {
+    return v.length > MAX_DATA_URL_LENGTH ? `${field} is too large: uploaded photos must be under 400 KB` : `${field} must be a base64 JPEG, PNG, WebP or GIF data URL`;
+  }
+  return `${field} must be an http(s) URL or an image data URL`;
+}
 
 export async function PATCH(req: Request, {params}: Ctx) {
   const viewer = await getSessionUser();
@@ -33,11 +43,15 @@ export async function PATCH(req: Request, {params}: Ctx) {
     patch.bio = bio || null;
   }
   if ('coverUrl' in body) {
-    if (body.coverUrl !== null && body.coverUrl !== '' && !isUrl(body.coverUrl)) return NextResponse.json({error: 'coverUrl must be an http(s) URL'}, {status: 400});
+    if (body.coverUrl !== null && body.coverUrl !== '') {
+      const err = imageError('coverUrl', body.coverUrl);
+      if (err) return NextResponse.json({error: err}, {status: err.includes('too large') ? 413 : 400});
+    }
     patch.coverUrl = (body.coverUrl as string | null) || null;
   }
   if ('avatarUrl' in body) {
-    if (!isUrl(body.avatarUrl)) return NextResponse.json({error: 'avatarUrl must be an http(s) URL'}, {status: 400});
+    const err = imageError('avatarUrl', body.avatarUrl);
+    if (err) return NextResponse.json({error: err}, {status: err.includes('too large') ? 413 : 400});
     patch.avatarUrl = body.avatarUrl as string;
   }
   if (Object.keys(patch).length === 0) return NextResponse.json({error: 'nothing to update'}, {status: 400});

@@ -1,4 +1,5 @@
 'use client';
+import {AlertCircle} from '@/components/auth/logos';
 import styles from '@/components/auth/auth.module.css';
 
 type Props = {
@@ -10,10 +11,11 @@ type Props = {
   autoComplete?: string;
   error?: string | null;
   autoFocus?: boolean;
+  inputMode?: 'text' | 'email' | 'tel';
 };
 
 /** Facebook-style 60px rounded field with a label that floats up on focus / when filled. */
-export function FloatingInput({label, value, onChange, type = 'text', name, autoComplete, error, autoFocus}: Props) {
+export function FloatingInput({label, value, onChange, type = 'text', name, autoComplete, error, autoFocus, inputMode}: Props) {
   return (
     <div className={styles.field}>
       <label className={`${styles.inputBox} ${error ? styles.inputBoxError : ''}`}>
@@ -24,6 +26,7 @@ export function FloatingInput({label, value, onChange, type = 'text', name, auto
           value={value}
           autoFocus={autoFocus}
           autoComplete={autoComplete}
+          inputMode={inputMode}
           placeholder=" "
           aria-label={label}
           aria-invalid={Boolean(error)}
@@ -31,7 +34,12 @@ export function FloatingInput({label, value, onChange, type = 'text', name, auto
         />
         <span className={styles.floatingLabel}>{label}</span>
       </label>
-      {error ? <div className={styles.fieldError}>{error}</div> : null}
+      {error ? (
+        <div className={styles.fieldError} role="alert">
+          <AlertCircle size={16} />
+          <span>{error}</span>
+        </div>
+      ) : null}
     </div>
   );
 }

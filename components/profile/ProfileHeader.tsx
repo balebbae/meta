@@ -1,7 +1,7 @@
 'use client';
 
 import {useState} from 'react';
-import Image from 'next/image';
+import Image from '@/components/ui/SmartImage';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import type {FriendSummary, Profile} from '@/lib/profile-queries';
@@ -139,10 +139,10 @@ export function ProfileHeader({profile, isOwn, tab, suggestions = []}: {profile:
       {dialog === 'cover' && (
         <EditDialog
           title="Edit cover photo"
-          label="Cover photo URL"
+          label="Cover photo"
           kind="cover"
           initial={user.coverUrl ?? ''}
-          hint="Paste a link to an image. Leave it empty to remove your cover photo."
+          hint="Upload a photo from your device. It is resized to fit 1500 x 600 before saving."
           onClose={() => setDialog(null)}
           onSave={v => save('coverUrl', v)}
         />
@@ -150,10 +150,10 @@ export function ProfileHeader({profile, isOwn, tab, suggestions = []}: {profile:
       {dialog === 'avatar' && (
         <EditDialog
           title="Update profile picture"
-          label="Profile picture URL"
+          label="Profile picture"
           kind="avatar"
           initial={user.avatarUrl}
-          hint="Paste a link to a square image."
+          hint="Upload a photo from your device. It is cropped to a square and resized to 320 x 320."
           onClose={() => setDialog(null)}
           onSave={v => save('avatarUrl', v)}
         />

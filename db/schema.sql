@@ -240,3 +240,6 @@ create table if not exists push_subscriptions (
   created_at timestamptz not null default now()
 );
 create index if not exists push_subscriptions_user_idx on push_subscriptions (user_id);
+
+-- sign-up: pronoun picked when Gender = Custom on /auth/reg
+alter table user_details add column if not exists pronouns text;

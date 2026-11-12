@@ -1,17 +1,36 @@
+import {cookies} from 'next/headers';
+import supertokens from 'supertokens-node';
+import {getSSRSession} from 'supertokens-node/nextjs';
+import UserMetadata from 'supertokens-node/recipe/usermetadata';
 import {sql} from '@/lib/db';
+import {ensureSuperTokensInit, ensureUserRow} from '@/lib/supertokens/backend';
 import type {User} from '@/lib/types';
 
 /**
  * Returns the signed-in user, or null.
  *
- * AUTH SUBAGENT: replace the body with a SuperTokens session lookup
- * (supertokens-node getSession on the Next.js cookies), map session.getUserId()
- * to users.supertokens_id (creating the row on first sign-in), and return it.
- * Until then this returns the first seeded user so the UI can be built.
+ * Reads the SuperTokens access-token cookie (cookie-based sessions), verifies it, and maps
+ * the SuperTokens user id to users.supertokens_id. On the first request for a new account
+ * the users row is created (or a seeded row with the same email is linked).
+ * Works in server components and route handlers.
  */
 export async function getSessionUser(): Promise<User | null> {
-  const rows = await sql`select * from users order by id asc limit 1`;
-  return rows[0] ? mapUser(rows[0]) : null;
+  ensureSuperTokensInit();
+  const cookieStore = await cookies();
+  const {accessTokenPayload} = await getSSRSession(cookieStore.getAll());
+  const supertokensId = accessTokenPayload?.sub;
+  if (!supertokensId) return null;
+
+  const rows = await sql`select * from users where supertokens_id = ${supertokensId} limit 1`;
+  if (rows[0]) return mapUser(rows[0]);
+
+  const stUser = await supertokens.getUser(supertokensId);
+  const email = stUser?.emails[0];
+  if (!email) return null;
+  const {metadata} = await UserMetadata.getUserMetadata(supertokensId);
+  const name = [metadata.first_name, metadata.last_name].filter(Boolean).join(' ');
+  const created = await ensureUserRow(supertokensId, email, name);
+  return created ? mapUser(created) : null;
 }
 
 export function mapUser(r: Record<string, unknown>): User {

@@ -33,7 +33,8 @@ function mapConversation(r: Record<string, unknown>, viewerId: number): Conversa
   const title = isGroup
     ? (r.name as string | null) || others.map(m => m.name.split(' ')[0]).join(', ') || 'Group chat'
     : others[0]?.name ?? 'Deleted user';
-  const imageUrl = isGroup ? (r.image_url as string | null) || others[0]?.avatarUrl || GROUP_FALLBACK_IMAGE : others[0]?.avatarUrl ?? GROUP_FALLBACK_IMAGE;
+  // groups without a photo get '' so the client can render stacked member avatars
+  const imageUrl = isGroup ? (r.image_url as string | null) || '' : others[0]?.avatarUrl ?? GROUP_FALLBACK_IMAGE;
   const last = r.last_message as Record<string, unknown> | null;
   return {
     id: Number(r.id),

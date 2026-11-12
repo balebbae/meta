@@ -15,7 +15,6 @@ import {
   CloseIcon,
   CommentIcon,
   FacebookLogo,
-  ExpandIcon,
   FriendsIcon,
   WarningIcon,
   GroupsIcon,
@@ -29,7 +28,6 @@ import {
   MoonIcon,
   MoreHorizontalIcon,
   PencilIcon,
-  ComposeIcon,
   PlusIcon,
   RailAdsIcon,
   RailEventsIcon,
@@ -47,6 +45,7 @@ import {
   VideoIcon,
 } from '@/components/icons';
 import {formatCompactTime} from '@/lib/format';
+import {MessengerPanel, useMessengerUnread} from '@/components/layout/MessengerPanel';
 import type {Contact, Notification} from '@/lib/queries';
 import type {User} from '@/lib/types';
 import styles from './layout.module.css';
@@ -65,6 +64,7 @@ export function Header({user, contacts = []}: {user: User; contacts?: Contact[]}
   const pathname = usePathname();
   const [panel, setPanel] = useState<Panel>(null);
   const [unread, setUnread] = useState(0);
+  const [chatUnread, setChatUnread] = useMessengerUnread();
   const toggle = (p: Panel) => setPanel(cur => (cur === p ? null : p));
 
   useEffect(() => {
@@ -113,10 +113,11 @@ export function Header({user, contacts = []}: {user: User; contacts?: Contact[]}
           <Tooltip label="Messenger">
             <button className={`${styles.iconBtn} ${panel === 'messenger' ? styles.iconBtnActive : ''}`} onClick={() => toggle('messenger')} aria-label="Messenger" aria-expanded={panel === 'messenger'}>
               <MessengerIcon size={20} />
+              {chatUnread > 0 && <span className={styles.badge}>{chatUnread > 9 ? '9+' : chatUnread}</span>}
             </button>
           </Tooltip>
           <Popover open={panel === 'messenger'} onClose={() => setPanel(null)} width={360}>
-            <MessengerPanel contacts={contacts} />
+            <MessengerPanel open={panel === 'messenger'} viewerId={user.id} onUnread={setChatUnread} onNavigate={() => setPanel(null)} />
           </Popover>
         </div>
         <div className={styles.iconBtnWrap}>
@@ -303,110 +304,6 @@ function MenuPanel() {
           {label}
         </button>
       ))}
-    </div>
-  );
-}
-
-/* ---------------- Messenger ---------------- */
-const FAKE_THREAD = (name: string) => [
-  {mine: false, text: `Hey! Did you see the photos from the weekend?`},
-  {mine: true, text: 'Yes!! They turned out great 😄'},
-  {mine: false, text: `We should do it again soon. ${name.split(' ')[0]} says hi btw.`},
-  {mine: true, text: 'Definitely. Free Saturday?'},
-];
-
-function MessengerPanel({contacts}: {contacts: Contact[]}) {
-  const [active, setActive] = useState<Contact | null>(null);
-  const [draft, setDraft] = useState('');
-  const [msgs, setMsgs] = useState<{mine: boolean; text: string}[]>([]);
-
-  const openThread = (c: Contact) => {
-    setActive(c);
-    setMsgs(FAKE_THREAD(c.name));
-  };
-  const send = () => {
-    const t = draft.trim();
-    if (!t) return;
-    setMsgs(m => [...m, {mine: true, text: t}]);
-    setDraft('');
-    const who = active;
-    setTimeout(() => who && setMsgs(m => [...m, {mine: false, text: '👍'}]), 900);
-  };
-
-  if (active) {
-    return (
-      <div className={styles.panel}>
-        <div className={styles.chatHead}>
-          <button className={styles.backBtn} onClick={() => setActive(null)} aria-label="Back">
-            <ArrowLeftIcon size={20} />
-          </button>
-          <Avatar src={active.avatarUrl} alt="" size={36} online={active.isOnline} />
-          <div>
-            <div className={styles.contactName}>{active.name}</div>
-            <div className={styles.contactSub}>{active.isOnline ? 'Active now' : 'Active 2h ago'}</div>
-          </div>
-        </div>
-        <div className={styles.chatBody}>
-          {msgs.map((m, i) => (
-            <div key={i} className={`${styles.bubbleRow} ${m.mine ? styles.bubbleRowMine : ''}`}>
-              {!m.mine && <Avatar src={active.avatarUrl} alt="" size={28} />}
-              <div className={`${styles.bubble} ${m.mine ? styles.bubbleMine : ''}`}>{m.text}</div>
-            </div>
-          ))}
-        </div>
-        <div className={styles.chatInput}>
-          <input placeholder="Aa" aria-label="Message" value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()} />
-          <button aria-label="Send" onClick={send}>
-            {draft.trim() ? <ChevronRightIcon size={22} /> : <LikeFilledIcon size={22} />}
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.panel}>
-      <div className={styles.panelHead}>
-        <div className={styles.panelTitle}>Chats</div>
-        <span className={styles.panelIcons}>
-          <button className={styles.rrIconBtn} aria-label="Options">
-            <MoreHorizontalIcon size={20} />
-          </button>
-          <button className={styles.rrIconBtn} aria-label="See all in Messenger">
-            <ExpandIcon size={18} />
-          </button>
-          <button className={styles.rrIconBtn} aria-label="New message">
-            <ComposeIcon size={20} />
-          </button>
-        </span>
-      </div>
-      <div className={styles.msgSearch}>
-        <SearchIcon size={16} />
-        <input placeholder="Search Messenger" aria-label="Search Messenger" />
-      </div>
-      <div className={styles.chipRow}>
-        <button className={`${styles.chip} ${styles.chipActive}`}>All</button>
-        <button className={styles.chip}>Unread</button>
-        <button className={styles.chip}>Groups</button>
-        <button className={styles.chip}>Communities</button>
-      </div>
-      {contacts.map((c, i) => (
-        <button key={c.id} className={styles.contact} onClick={() => openThread(c)}>
-          <Avatar src={c.avatarUrl} alt="" size={56} online={c.isOnline} />
-          <div style={{minWidth: 0, flex: 1}}>
-            <div className={styles.contactName}>{c.name}</div>
-            <div className={styles.contactSub}>
-              {i % 3 === 0 ? 'You: Definitely. Free Saturday?' : i % 3 === 1 ? 'Sent a photo.' : 'Sounds good!'} · {i + 1}h
-            </div>
-          </div>
-        </button>
-      ))}
-      {contacts.length === 0 && <div className={styles.searchEmpty}>No conversations yet</div>}
-      <div style={{textAlign: 'center', padding: 8}}>
-        <Link href="/messages" className={styles.linkBtn}>
-          See all in Messenger
-        </Link>
-      </div>
     </div>
   );
 }

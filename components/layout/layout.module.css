@@ -735,6 +735,7 @@
   font-size: 17px;
   font-weight: 600;
   color: var(--fb-text-secondary);
+  min-height: 36px;
 }
 .rrIcons {
   display: flex;
@@ -760,7 +761,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 8px 8px 16px;
+  padding: 10px 8px 10px 16px;
   margin: 0 0 0 0;
   border-radius: 8px;
   width: 100%;
@@ -770,8 +771,8 @@
   background: var(--fb-hover);
 }
 .adImg {
-  width: 120px;
-  height: 120px;
+  width: 168px;
+  height: 168px;
   border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
@@ -911,4 +912,142 @@
   right: 8px;
   height: 3px;
   background: var(--fb-blue);
+}
+
+/* ---- Nov 2026 refresh ---- */
+.railItemActive {
+  background: var(--fb-hover-strong);
+}
+.rrSeeAll {
+  color: var(--fb-blue);
+  font-size: 15px;
+  font-weight: 400;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.rrSeeAll:hover {
+  background: var(--fb-hover);
+}
+.frRow {
+  display: flex;
+  gap: 12px;
+  padding: 8px 8px 8px 16px;
+  align-items: flex-start;
+}
+.frBody {
+  flex: 1;
+  min-width: 0;
+}
+.frTop {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 2px 0 10px;
+}
+.frName {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.frName:hover {
+  text-decoration: underline;
+}
+.frTime {
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+  flex-shrink: 0;
+}
+.frBtns {
+  display: flex;
+  gap: 8px;
+}
+.frConfirm,
+.frDelete {
+  flex: 1;
+  height: 36px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.frConfirm {
+  background: var(--fb-blue);
+  color: #fff;
+}
+.frConfirm:hover {
+  filter: brightness(0.95);
+}
+.frDelete {
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+}
+.frDelete:hover {
+  background: var(--fb-icon-bg-hover);
+}
+.fab {
+  position: fixed;
+  right: 32px;
+  bottom: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--fb-card);
+  color: var(--fb-text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.fab:hover {
+  background: var(--fb-hover);
+}
+@media (max-width: 700px) {
+  .fab {
+    bottom: 64px;
+    right: 16px;
+  }
+}
+.notifSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 4px;
+  font-size: 17px;
+  font-weight: 700;
+}
+.notifActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.notifActions .frConfirm,
+.notifActions .frDelete {
+  flex: 0 0 auto;
+  padding: 0 28px;
+}
+.notifMsg {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.panelIcons {
+  display: flex;
+  gap: 4px;
+}
+.chipRow {
+  display: flex;
+  gap: 4px;
+  padding: 0 8px 8px;
+}
+.chipRow .chip {
+  margin: 0;
+}
+.acctHint {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--fb-text-secondary);
 }

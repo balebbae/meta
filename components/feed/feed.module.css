@@ -153,8 +153,67 @@
   background: var(--fb-card);
   border-radius: var(--fb-radius);
   box-shadow: var(--fb-shadow-card);
-  padding: 12px 16px 10px;
+  padding: 12px 16px;
   margin-bottom: 16px;
+}
+.composerIcons {
+  display: flex;
+  gap: 4px;
+  margin-left: 4px;
+}
+.composerIconBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.composerIconBtn:hover {
+  background: var(--fb-hover);
+}
+.storyCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  background: var(--fb-card);
+  border-radius: var(--fb-radius);
+  box-shadow: var(--fb-shadow-card);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.storyCard:hover .storyCardPlus {
+  background: #d0e2ff;
+}
+.storyCardPlus {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #e7f3ff;
+  color: var(--fb-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.storyCardTitle {
+  display: block;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 21px;
+}
+.storyCardSub {
+  display: block;
+  font-size: 15px;
+  color: var(--fb-text-secondary);
+  line-height: 20px;
+}
+.skelFoot {
+  display: flex;
+  gap: 20px;
+  align-items: center;
 }
 .composerTop {
   display: flex;
@@ -412,9 +471,9 @@
 }
 .skelHead {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 .endOfFeed {
   text-align: center;

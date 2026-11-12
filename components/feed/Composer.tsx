@@ -4,6 +4,8 @@ import {useEffect, useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import {Dialog} from '@/components/ui/Dialog';
 import {Popover} from '@/components/ui/Popover';
+import {Tooltip} from '@/components/ui/Tooltip';
+import {COMPOSE_EVENT} from '@/components/layout/ComposeFab';
 import {
   CaretDownSmallIcon,
   CloseIcon,
@@ -28,6 +30,11 @@ export function Composer({viewer, onCreated}: {viewer: User; onCreated: (post: P
   const [open, setOpen] = useState(false);
   const [withPhoto, setWithPhoto] = useState(false);
   const first = viewer.name.split(' ')[0];
+  useEffect(() => {
+    const onCompose = () => setOpen(true);
+    window.addEventListener(COMPOSE_EVENT, onCompose);
+    return () => window.removeEventListener(COMPOSE_EVENT, onCompose);
+  }, []);
   return (
     <>
       <div className={styles.composer}>
@@ -36,23 +43,29 @@ export function Composer({viewer, onCreated}: {viewer: User; onCreated: (post: P
           <button className={styles.composerPill} onClick={() => setOpen(true)}>
             What&apos;s on your mind, {first}?
           </button>
-        </div>
-        <div className={styles.composerDivider} />
-        <div className={styles.composerActions}>
-          <button className={styles.composerAction} onClick={() => setOpen(true)}>
-            <LiveVideoIcon size={24} /> <span>Live video</span>
-          </button>
-          <button
-            className={styles.composerAction}
-            onClick={() => {
-              setWithPhoto(true);
-              setOpen(true);
-            }}>
-            <PhotoIcon size={24} /> <span>Photo/video</span>
-          </button>
-          <button className={styles.composerAction} onClick={() => setOpen(true)}>
-            <FeelingIcon size={24} /> <span>Feeling/activity</span>
-          </button>
+          <div className={styles.composerIcons}>
+            <Tooltip label="Live video">
+              <button className={styles.composerIconBtn} onClick={() => setOpen(true)} aria-label="Live video">
+                <LiveVideoIcon size={24} />
+              </button>
+            </Tooltip>
+            <Tooltip label="Photo/video">
+              <button
+                className={styles.composerIconBtn}
+                aria-label="Photo/video"
+                onClick={() => {
+                  setWithPhoto(true);
+                  setOpen(true);
+                }}>
+                <PhotoIcon size={24} />
+              </button>
+            </Tooltip>
+            <Tooltip label="Feeling/activity">
+              <button className={styles.composerIconBtn} onClick={() => setOpen(true)} aria-label="Feeling/activity">
+                <FeelingIcon size={24} />
+              </button>
+            </Tooltip>
+          </div>
         </div>
       </div>
       <CreatePostDialog

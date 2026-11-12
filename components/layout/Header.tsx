@@ -14,8 +14,9 @@ import {
   CloseIcon,
   CommentIcon,
   FacebookLogo,
-  FeedbackIcon,
-  GamingIcon,
+  ExpandIcon,
+  FriendsIcon,
+  WarningIcon,
   GroupsIcon,
   HelpIcon,
   HomeIcon,
@@ -27,6 +28,7 @@ import {
   MoonIcon,
   MoreHorizontalIcon,
   PencilIcon,
+  ComposeIcon,
   PlusIcon,
   RailAdsIcon,
   RailEventsIcon,
@@ -50,10 +52,10 @@ import styles from './layout.module.css';
 
 const TABS = [
   {href: '/', label: 'Home', Icon: HomeIcon},
+  {href: '/friends', label: 'Friends', Icon: FriendsIcon},
   {href: '/video', label: 'Video', Icon: VideoIcon},
   {href: '/marketplace', label: 'Marketplace', Icon: MarketplaceIcon},
   {href: '/groups', label: 'Groups', Icon: GroupsIcon},
-  {href: '/gaming', label: 'Gaming', Icon: GamingIcon},
 ];
 
 type Panel = 'menu' | 'messenger' | 'notifications' | 'account' | null;
@@ -365,16 +367,28 @@ function MessengerPanel({contacts}: {contacts: Contact[]}) {
     <div className={styles.panel}>
       <div className={styles.panelHead}>
         <div className={styles.panelTitle}>Chats</div>
-        <button className={styles.rrIconBtn} aria-label="Options">
-          <MoreHorizontalIcon size={20} />
-        </button>
+        <span className={styles.panelIcons}>
+          <button className={styles.rrIconBtn} aria-label="Options">
+            <MoreHorizontalIcon size={20} />
+          </button>
+          <button className={styles.rrIconBtn} aria-label="See all in Messenger">
+            <ExpandIcon size={18} />
+          </button>
+          <button className={styles.rrIconBtn} aria-label="New message">
+            <ComposeIcon size={20} />
+          </button>
+        </span>
       </div>
       <div className={styles.msgSearch}>
         <SearchIcon size={16} />
         <input placeholder="Search Messenger" aria-label="Search Messenger" />
       </div>
-      <button className={`${styles.chip} ${styles.chipActive}`}>Inbox</button>
-      <button className={styles.chip}>Communities</button>
+      <div className={styles.chipRow}>
+        <button className={`${styles.chip} ${styles.chipActive}`}>All</button>
+        <button className={styles.chip}>Unread</button>
+        <button className={styles.chip}>Groups</button>
+        <button className={styles.chip}>Communities</button>
+      </div>
       {contacts.map((c, i) => (
         <button key={c.id} className={styles.contact} onClick={() => openThread(c)}>
           <Avatar src={c.avatarUrl} alt="" size={56} online={c.isOnline} />
@@ -427,43 +441,82 @@ function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (n: numb
   };
 
   const shown = (items ?? []).filter(n => filter === 'all' || !n.isRead);
+  const DAY = 24 * 60 * 60 * 1000;
+  const isNew = (n: Notification) => Date.now() - new Date(n.createdAt).getTime() < DAY;
+  const fresh = shown.filter(isNew);
+  const earlier = shown.filter(n => !isNew(n));
+  const respond = async (n: Notification, accept: boolean) => {
+    if (!n.actor) return;
+    setItems(list => list?.filter(x => x.id !== n.id) ?? null);
+    markRead([n.id]);
+    try {
+      if (accept) await fetch('/api/friends/accept', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({userId: n.actor.id})});
+      else await fetch(`/api/friends/${n.actor.id}`, {method: 'DELETE'});
+    } catch {}
+  };
+  const row = (n: Notification) => (
+    <Link key={n.id} href={n.postId ? `/?post=${n.postId}` : n.actor ? `/profile/${n.actor.id}` : '/'} className={styles.notif} onClick={() => !n.isRead && markRead([n.id])}>
+      <span className={styles.notifAvatar}>
+        <Avatar src={n.actor?.avatarUrl ?? '/icon.svg'} alt="" size={56} />
+        <span className={styles.notifType} style={{background: n.type === 'reaction' ? 'var(--fb-blue)' : n.type === 'comment' ? '#31a24c' : n.type === 'friend_request' ? 'var(--fb-blue)' : '#65676b'}}>
+          {n.type === 'comment' ? <CommentIcon size={14} /> : n.type === 'friend_request' ? <UsersIcon size={14} /> : n.type === 'reaction' ? <LikeFilledIcon size={14} /> : <BellIcon size={14} />}
+        </span>
+      </span>
+      <span className={styles.notifBody}>
+        <div className={styles.notifMsg}>{n.message}</div>
+        <div className={`${styles.notifTime} ${!n.isRead ? styles.notifTimeUnread : ''}`}>{formatCompactTime(n.createdAt)}</div>
+        {n.type === 'friend_request' && n.actor && (
+          <div className={styles.notifActions}>
+            <button className={styles.frConfirm} onClick={e => { e.preventDefault(); respond(n, true); }}>
+              Confirm
+            </button>
+            <button className={styles.frDelete} onClick={e => { e.preventDefault(); respond(n, false); }}>
+              Delete
+            </button>
+          </div>
+        )}
+      </span>
+      {!n.isRead && <span className={styles.notifDot} />}
+    </Link>
+  );
   return (
     <div className={styles.panel}>
       <div className={styles.panelHead}>
         <div className={styles.panelTitle}>Notifications</div>
-        <button className={styles.rrIconBtn} aria-label="Options">
+        <button className={styles.rrIconBtn} aria-label="Mark all as read" title="Mark all as read" onClick={() => markRead('all')}>
           <MoreHorizontalIcon size={20} />
         </button>
       </div>
-      <button className={`${styles.chip} ${filter === 'all' ? styles.chipActive : ''}`} onClick={() => setFilter('all')}>
-        All
-      </button>
-      <button className={`${styles.chip} ${filter === 'unread' ? styles.chipActive : ''}`} onClick={() => setFilter('unread')}>
-        Unread
-      </button>
-      <div className={styles.panelSub}>
-        <span>Earlier</span>
-        <button className={styles.linkBtn} onClick={() => markRead('all')}>
-          Mark all as read
+      <div className={styles.chipRow}>
+        <button className={`${styles.chip} ${filter === 'all' ? styles.chipActive : ''}`} onClick={() => setFilter('all')}>
+          All
+        </button>
+        <button className={`${styles.chip} ${filter === 'unread' ? styles.chipActive : ''}`} onClick={() => setFilter('unread')}>
+          Unread
         </button>
       </div>
       {items === null && <div className={styles.searchEmpty}>Loading…</div>}
       {items !== null && shown.length === 0 && <div className={styles.searchEmpty}>You&apos;re all caught up</div>}
-      {shown.map(n => (
-        <Link key={n.id} href={n.postId ? `/?post=${n.postId}` : '/'} className={styles.notif} onClick={() => !n.isRead && markRead([n.id])}>
-          <span className={styles.notifAvatar}>
-            <Avatar src={n.actor?.avatarUrl ?? '/icon.svg'} alt="" size={56} />
-            <span className={styles.notifType} style={{background: n.type === 'reaction' ? 'var(--fb-blue)' : n.type === 'comment' ? '#31a24c' : '#0866ff'}}>
-              {n.type === 'comment' ? <CommentIcon size={14} /> : n.type === 'friend_request' ? <UsersIcon size={14} /> : <LikeFilledIcon size={14} />}
-            </span>
-          </span>
-          <span className={styles.notifBody}>
-            <div>{n.message}</div>
-            <div className={`${styles.notifTime} ${!n.isRead ? styles.notifTimeUnread : ''}`}>{formatCompactTime(n.createdAt)}</div>
-          </span>
-          {!n.isRead && <span className={styles.notifDot} />}
-        </Link>
-      ))}
+      {fresh.length > 0 && (
+        <div className={styles.notifSection}>
+          <span>New</span>
+          <Link href="/friends" className={styles.linkBtn}>
+            See all
+          </Link>
+        </div>
+      )}
+      {fresh.map(row)}
+      {earlier.length > 0 && (
+        <div className={styles.notifSection}>
+          <span>Earlier</span>
+          {fresh.length === 0 && (
+            <Link href="/friends" className={styles.linkBtn}>
+              See all
+            </Link>
+          )}
+        </div>
+      )}
+      {earlier.map(row)}
     </div>
   );
 }
@@ -499,7 +552,7 @@ function AccountPanel({user}: {user: User}) {
   };
 
   if (view !== 'root') {
-    const titles: Record<AcctView, string> = {root: '', settings: 'Settings & privacy', help: 'Help & support', display: 'Display & accessibility', feedback: 'Give feedback'};
+    const titles: Record<AcctView, string> = {root: '', settings: 'Settings & privacy', help: 'Help & support', display: 'Display & accessibility', feedback: 'Report a problem'};
     return (
       <div className={styles.panel}>
         <div className={styles.chatHead} style={{borderBottom: 0}}>
@@ -572,15 +625,18 @@ function AccountPanel({user}: {user: User}) {
         [
           {v: 'settings', label: 'Settings & privacy', Icon: SettingsIcon},
           {v: 'help', label: 'Help & support', Icon: HelpIcon},
+          {v: 'feedback', label: 'Report a problem', Icon: WarningIcon},
           {v: 'display', label: 'Display & accessibility', Icon: MoonIcon},
-          {v: 'feedback', label: 'Give feedback', Icon: FeedbackIcon},
         ] as const
       ).map(({v, label, Icon}) => (
         <button key={v} className={styles.menuRow} onClick={() => setView(v)}>
           <span className={styles.menuIcon}>
             <Icon size={20} />
           </span>
-          <span className={styles.grow}>{label}</span>
+          <span className={styles.grow}>
+            {label}
+            {v === 'feedback' && <div className={styles.acctHint}>CTRL B</div>}
+          </span>
           {v !== 'feedback' && <ChevronRightIcon size={20} />}
         </button>
       ))}
@@ -590,7 +646,7 @@ function AccountPanel({user}: {user: User}) {
         </span>
         Log out
       </button>
-      <div className={styles.footerNote}>Privacy · Terms · Advertising · Ad choices · Cookies · More · Meta © 2026</div>
+      <div className={styles.footerNote}>Privacy · Consumer Health Privacy · Terms · Advertising · Ad Choices ▷ · Cookies · More</div>
     </div>
   );
 }

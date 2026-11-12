@@ -221,19 +221,23 @@ export function PostCard({post: initial, viewer}: {post: Post; viewer: User}): R
           current={post.viewerReaction}
           label={reactionLabel}
           color={reactionColor}
+          count={post.reactionCount}
           onToggle={() => react(post.viewerReaction ? null : 'like')}
           onPick={t => react(t)}
         />
         <button
           className={styles.actionBtn}
+          aria-label="Comment"
           onClick={() => {
             setShowComments(true);
             setFocusComposer(n => n + 1);
           }}>
-          <CommentIcon size={20} /> Comment
+          <CommentIcon size={22} />
+          {post.commentCount > 0 && <span className={styles.actionCount}>{formatCount(post.commentCount)}</span>}
         </button>
-        <button className={styles.actionBtn}>
-          <ShareIcon size={20} /> Share
+        <button className={styles.actionBtn} aria-label="Share">
+          <ShareIcon size={22} />
+          {post.shareCount > 0 && <span className={styles.actionCount}>{formatCount(post.shareCount)}</span>}
         </button>
       </div>
 
@@ -296,12 +300,14 @@ function LikeButton({
   color,
   onToggle,
   onPick,
+  count = 0,
 }: {
   current: ReactionType | null;
   label: string;
   color?: string;
   onToggle: () => void;
   onPick: (t: ReactionType) => void;
+  count?: number;
 }) {
   const [open, setOpen] = useState(false);
   const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -333,8 +339,9 @@ function LikeButton({
           onToggle();
         }}
         aria-pressed={!!current}>
-        {current ? current === 'like' ? <LikeFilledIcon size={20} /> : <ReactionIcon type={current} size={20} /> : <LikeIcon size={20} />}
-        {label}
+        {current ? current === 'like' ? <LikeFilledIcon size={22} /> : <ReactionIcon type={current} size={22} /> : <LikeIcon size={22} />}
+        <span className={styles.srOnly}>{label}</span>
+        {count > 0 && <span className={styles.actionCount}>{formatCount(count)}</span>}
       </button>
       {open && (
         <div className={styles.picker} role="menu" aria-label="Reactions">

@@ -762,3 +762,46 @@ export const REACTIONS: {type: ReactionType; label: string; color: string}[] = [
   {type: 'sad', label: 'Sad', color: '#F7B125'},
   {type: 'angry', label: 'Angry', color: '#E9710F'},
 ];
+
+export function RailMetaAIIcon() {
+  return (
+    <RailBase>
+      <defs>
+        <linearGradient id="mai" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#0866FF" />
+          <stop offset="0.5" stopColor="#A033FF" />
+          <stop offset="1" stopColor="#FF5C87" />
+        </linearGradient>
+      </defs>
+      {[0, 60, 120, 180, 240, 300].map(a => (
+        <ellipse key={a} cx="18" cy="9.5" rx="4.6" ry="8.5" fill="url(#mai)" transform={`rotate(${a} 18 18)`} opacity="0.92" />
+      ))}
+      <circle cx="18" cy="18" r="4" fill="#fff" />
+    </RailBase>
+  );
+}
+
+export function ComposeIcon(p: IconProps) {
+  return (
+    <Svg {...p} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 4.5H6.5A2.5 2.5 0 004 7v10.5A2.5 2.5 0 006.5 20H17a2.5 2.5 0 002.5-2.5V12" />
+      <path d="M17.8 3.7a1.9 1.9 0 012.7 2.7L12 14.9l-3.7.9.9-3.7z" />
+    </Svg>
+  );
+}
+
+export function WarningIcon(p: IconProps) {
+  return (
+    <Svg {...p}>
+      <path d="M12 2a10 10 0 110 20 10 10 0 010-20zm0 13.3a1.3 1.3 0 100 2.6 1.3 1.3 0 000-2.6zM12 6a1.1 1.1 0 00-1.1 1.2l.4 5.6a.7.7 0 001.4 0l.4-5.6A1.1 1.1 0 0012 6z" />
+    </Svg>
+  );
+}
+
+export function ExpandIcon(p: IconProps) {
+  return (
+    <Svg {...p} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" />
+    </Svg>
+  );
+}

@@ -1,13 +1,13 @@
 'use client';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Composer} from '@/components/feed/Composer';
+import {CreateStoryCard} from '@/components/feed/CreateStoryCard';
 import {PostCard} from '@/components/feed/PostCard';
 import {PostSkeleton} from '@/components/feed/PostSkeleton';
-import {Stories} from '@/components/feed/Stories';
 import type {Post, Story, User} from '@/lib/types';
 import styles from './feed.module.css';
 
-export function Feed({viewer, initialPosts, initialCursor, stories}: {viewer: User; initialPosts: Post[]; initialCursor: string | null; stories: Story[]}) {
+export function Feed({viewer, initialPosts, initialCursor}: {viewer: User; initialPosts: Post[]; initialCursor: string | null; stories?: Story[]}) {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [loading, setLoading] = useState(false);
@@ -40,15 +40,15 @@ export function Feed({viewer, initialPosts, initialCursor, stories}: {viewer: Us
 
   return (
     <>
-      <Stories stories={stories} viewer={viewer} />
       <Composer viewer={viewer} onCreated={p => setPosts(list => [p, ...list])} />
+      <CreateStoryCard />
       {posts.map(p => (
         <PostCard key={p.id} post={p} viewer={viewer} />
       ))}
       {(loading || cursor) && (
         <>
           <PostSkeleton />
-          {loading && <PostSkeleton />}
+          <PostSkeleton />
         </>
       )}
       <div ref={sentinel} className={styles.sentinel} />

@@ -1,24 +1,24 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import {Avatar} from '@/components/ui/Avatar';
-import {CakeIcon, MoreHorizontalIcon, PlusIcon, SearchIcon, VideoCameraIcon} from '@/components/icons';
+import {MoreHorizontalIcon, PlusIcon, SearchIcon, VideoCameraIcon} from '@/components/icons';
+import {FriendRequests, type FriendRequestItem} from '@/components/layout/FriendRequests';
 import type {Contact} from '@/lib/queries';
 import type {User} from '@/lib/types';
 import styles from './layout.module.css';
 
 const ADS = [
-  {title: 'Thinking about moving to Austin? Find your next home today.', domain: 'zillow.com', img: 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=240&h=240&fit=crop'},
-  {title: 'Ship faster with Neon serverless Postgres. Free tier included.', domain: 'neon.tech', img: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=240&h=240&fit=crop'},
+  {title: 'Build on Meta Model API', domain: 'dev.meta.ai', img: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=336&h=336&fit=crop'},
+  {title: 'The AI notepad for meetings', domain: 'granola.ai', img: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=336&h=336&fit=crop'},
 ];
 
-export function RightSidebar({user, contacts = [], birthday}: {user: User; contacts?: Contact[]; birthday?: string | null}) {
-  const bday = birthday ?? contacts.find(c => c.name.startsWith('Maya'))?.name ?? contacts[0]?.name;
+export function RightSidebar({user, contacts = [], requests = []}: {user: User; contacts?: Contact[]; requests?: FriendRequestItem[]}) {
   return (
     <aside className={styles.rightRail} aria-label="Complementary">
       <div className={styles.rrHeading}>Sponsored</div>
       {ADS.map(ad => (
         <a key={ad.domain} className={styles.ad} href={`https://${ad.domain}`} target="_blank" rel="noreferrer">
-          <Image src={ad.img} alt="" width={120} height={120} className={styles.adImg} />
+          <Image src={ad.img} alt="" width={168} height={168} className={styles.adImg} />
           <span>
             <div className={styles.adTitle}>{ad.title}</div>
             <div className={styles.adDomain}>{ad.domain}</div>
@@ -26,48 +26,40 @@ export function RightSidebar({user, contacts = [], birthday}: {user: User; conta
         </a>
       ))}
       <div className={styles.rrDivider} />
-      {bday && (
+      <FriendRequests initial={requests} />
+      {contacts.length > 0 && (
         <>
-          <div className={styles.rrHeading}>Birthdays</div>
-          <Link href="/events" className={styles.rrRow}>
-            <span className={styles.rrPlus} style={{background: 'transparent'}}>
-              <CakeIcon size={36} />
-            </span>
-            <span style={{fontSize: 15}}>
-              <b>{bday}</b> has a birthday today.
-            </span>
-          </Link>
           <div className={styles.rrDivider} />
+          <div className={styles.rrHeading}>
+            <span>Contacts</span>
+            <span className={styles.rrIcons}>
+              <button className={styles.rrIconBtn} aria-label="New room">
+                <VideoCameraIcon size={16} />
+              </button>
+              <button className={styles.rrIconBtn} aria-label="Search by name">
+                <SearchIcon size={16} />
+              </button>
+              <button className={styles.rrIconBtn} aria-label="Options">
+                <MoreHorizontalIcon size={16} />
+              </button>
+            </span>
+          </div>
+          {contacts.map(c => (
+            <Link key={c.id} href={`/profile/${c.id}`} className={styles.rrRow}>
+              <Avatar src={c.avatarUrl} alt="" size={36} online={c.isOnline} />
+              <span className={styles.rrContactName}>{c.name}</span>
+            </Link>
+          ))}
+          <div className={styles.rrDivider} />
+          <div className={styles.rrHeading}>Group conversations</div>
+          <button className={styles.rrRow}>
+            <span className={styles.rrPlus}>
+              <PlusIcon size={20} />
+            </span>
+            <span className={styles.rrContactName}>Create new group</span>
+          </button>
         </>
       )}
-      <div className={styles.rrHeading}>
-        <span>Contacts</span>
-        <span className={styles.rrIcons}>
-          <button className={styles.rrIconBtn} aria-label="New room">
-            <VideoCameraIcon size={16} />
-          </button>
-          <button className={styles.rrIconBtn} aria-label="Search by name">
-            <SearchIcon size={16} />
-          </button>
-          <button className={styles.rrIconBtn} aria-label="Options">
-            <MoreHorizontalIcon size={16} />
-          </button>
-        </span>
-      </div>
-      {contacts.map(c => (
-        <Link key={c.id} href={`/profile/${c.id}`} className={styles.rrRow}>
-          <Avatar src={c.avatarUrl} alt="" size={36} online={c.isOnline} />
-          <span className={styles.rrContactName}>{c.name}</span>
-        </Link>
-      ))}
-      <div className={styles.rrDivider} />
-      <div className={styles.rrHeading}>Group conversations</div>
-      <button className={styles.rrRow}>
-        <span className={styles.rrPlus}>
-          <PlusIcon size={20} />
-        </span>
-        <span className={styles.rrContactName}>Create new group</span>
-      </button>
       <span hidden>{user.id}</span>
     </aside>
   );

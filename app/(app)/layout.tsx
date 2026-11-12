@@ -3,8 +3,10 @@ import {Header} from '@/components/layout/Header';
 import {LeftSidebar} from '@/components/layout/LeftSidebar';
 import {MobileTabBar} from '@/components/layout/MobileTabBar';
 import {RightSidebar} from '@/components/layout/RightSidebar';
+import {ComposeFab} from '@/components/layout/ComposeFab';
 import {getSessionUser} from '@/lib/auth';
 import {listContacts} from '@/lib/queries';
+import {listFriendRequests} from '@/lib/profile-queries';
 import styles from '@/components/layout/layout.module.css';
 
 const THEME_SCRIPT = `try{var t=localStorage.getItem('fb.theme');if(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.dataset.theme='dark';}catch(e){}`;
@@ -12,7 +14,7 @@ const THEME_SCRIPT = `try{var t=localStorage.getItem('fb.theme');if(t==='dark'||
 export default async function AppLayout({children}: {children: React.ReactNode}) {
   const user = await getSessionUser();
   if (!user) redirect('/auth');
-  const contacts = await listContacts(user.id).catch(() => []);
+  const [contacts, requests] = await Promise.all([listContacts(user.id).catch(() => []), listFriendRequests(user.id).catch(() => [])]);
   return (
     <>
       <script dangerouslySetInnerHTML={{__html: THEME_SCRIPT}} />
@@ -25,9 +27,10 @@ export default async function AppLayout({children}: {children: React.ReactNode})
           <div className={styles.feedCol}>{children}</div>
         </main>
         <div className={styles.rightCol}>
-          <RightSidebar user={user} contacts={contacts} />
+          <RightSidebar user={user} contacts={contacts} requests={requests} />
         </div>
       </div>
+      <ComposeFab />
       <MobileTabBar />
     </>
   );

@@ -1,0 +1,362 @@
+/* ---------- grid page ---------- */
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.headTitle {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 24px;
+  margin: 0;
+}
+.headLocation {
+  color: var(--fb-blue);
+  font-size: 15px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.headLocation:hover {
+  text-decoration: underline;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px 12px;
+}
+
+.card {
+  display: block;
+  border-radius: var(--fb-radius);
+  color: var(--fb-text);
+}
+.cardImage {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: var(--fb-radius);
+  overflow: hidden;
+  background: var(--fb-hover-strong);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+.cardImage img {
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+.card:hover .cardImage img {
+  transform: scale(1.03);
+}
+.cardBody {
+  padding: 8px 4px 0;
+}
+.price {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 20px;
+}
+.title {
+  font-size: 15px;
+  line-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.loc {
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+  line-height: 16px;
+}
+
+.filterTitle {
+  font-size: 17px;
+  font-weight: 600;
+  padding: 8px 8px 4px;
+}
+.filterLink {
+  display: block;
+  color: var(--fb-blue);
+  font-size: 15px;
+  padding: 2px 8px 8px;
+}
+.filterLink:hover {
+  text-decoration: underline;
+}
+
+.empty {
+  padding: 40px;
+  text-align: center;
+  color: var(--fb-text-secondary);
+}
+
+/* ---------- detail page ---------- */
+.detail {
+  display: flex;
+  width: 100%;
+  min-height: calc(100vh - var(--fb-header-h));
+}
+.media {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.media img {
+  object-fit: contain;
+}
+.mediaBlur {
+  position: absolute;
+  inset: 0;
+  object-fit: cover;
+  filter: blur(40px) brightness(0.55);
+  transform: scale(1.1);
+}
+.closeBtn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--fb-card);
+  color: var(--fb-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--fb-shadow-card);
+  z-index: 2;
+}
+.closeBtn:hover {
+  background: var(--fb-hover);
+}
+.side {
+  flex: 0 0 360px;
+  width: 360px;
+  background: var(--fb-card);
+  padding: 16px;
+  overflow-y: auto;
+  box-shadow: var(--fb-shadow-card);
+}
+.detailTitle {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 28px;
+  margin: 0;
+}
+.detailPrice {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 24px;
+  margin-top: 4px;
+}
+.detailMeta {
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+  margin-top: 4px;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+}
+.primary {
+  flex: 1;
+  height: 36px;
+  border-radius: 6px;
+  background: var(--fb-blue);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.primary:hover {
+  background: var(--fb-blue-hover);
+}
+.iconBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 6px;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.iconBtn:hover {
+  background: var(--fb-icon-bg-hover);
+}
+.iconBtnActive {
+  composes: iconBtn;
+  color: var(--fb-blue);
+}
+.divider {
+  height: 1px;
+  background: var(--fb-divider);
+  margin: 12px 0;
+}
+.sectionTitle {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.kv {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 6px 12px;
+  font-size: 15px;
+  line-height: 20px;
+}
+.kv dt {
+  color: var(--fb-text-secondary);
+}
+.kv dd {
+  margin: 0;
+}
+.desc {
+  font-size: 15px;
+  line-height: 20px;
+  white-space: pre-wrap;
+}
+.seller {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+.sellerName {
+  font-size: 15px;
+  font-weight: 600;
+}
+.sellerSince {
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+}
+.msgForm {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+.msgForm input {
+  flex: 1;
+  height: 36px;
+  border: 0;
+  border-radius: var(--fb-radius-pill);
+  background: var(--fb-input-bg);
+  padding: 0 12px;
+  font-size: 15px;
+  color: var(--fb-text);
+  outline: none;
+}
+.msgSend {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: var(--fb-blue);
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+}
+.msgSend:hover {
+  background: var(--fb-blue-hover);
+}
+.sent {
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+  margin-top: 6px;
+}
+
+/* ---------- create listing dialog ---------- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.field {
+  position: relative;
+}
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  border: 1px solid var(--fb-divider);
+  border-radius: var(--fb-radius);
+  padding: 12px;
+  font-size: 15px;
+  color: var(--fb-text);
+  background: var(--fb-card);
+  outline: none;
+  font-family: inherit;
+}
+.field textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: var(--fb-blue);
+  box-shadow: 0 0 0 1px var(--fb-blue);
+}
+.two {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.photoBox {
+  border: 1px dashed var(--fb-divider);
+  border-radius: var(--fb-radius);
+  padding: 20px;
+  text-align: center;
+  color: var(--fb-text-secondary);
+  font-size: 15px;
+  background: var(--fb-bg);
+}
+.photoBox strong {
+  display: block;
+  color: var(--fb-text);
+  margin-top: 6px;
+}
+.photoPreview {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--fb-radius);
+  overflow: hidden;
+}
+.submit {
+  width: 100%;
+  height: 40px;
+  border-radius: 6px;
+  background: var(--fb-blue);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+}
+.submit:disabled {
+  background: var(--fb-disabled-bg);
+  color: var(--fb-text-disabled);
+}
+.error {
+  color: var(--fb-notif);
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .detail {
+    flex-direction: column;
+  }
+  .media {
+    min-height: 320px;
+  }
+  .side {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}

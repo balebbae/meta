@@ -27,6 +27,13 @@
   --fb-sidebar-w: 360px;
   --fb-feed-w: 680px;
   --fb-feed-w-narrow: 590px;
+  --fb-bubble: #f0f2f5;
+  --fb-input-bg: #f0f2f5;
+  --fb-overlay: rgba(255, 255, 255, 0.8);
+  --fb-disabled-bg: #e4e6eb;
+  --fb-text-disabled: #bcc0c4;
+  --fb-shimmer: #e4e6eb;
+  --fb-shimmer-highlight: #f0f2f5;
 }
 
 [data-theme='dark'] {
@@ -42,6 +49,13 @@
   --fb-icon-bg: #3a3b3c;
   --fb-icon-bg-hover: #4e4f50;
   --fb-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --fb-bubble: #333334;
+  --fb-input-bg: #333334;
+  --fb-overlay: rgba(0, 0, 0, 0.6);
+  --fb-disabled-bg: #3a3b3c;
+  --fb-text-disabled: #65676b;
+  --fb-shimmer: #3a3b3c;
+  --fb-shimmer-highlight: #4e4f50;
 }
 
 *,
@@ -168,4 +182,18 @@ img {
 
 .fb-text-secondary {
   color: var(--fb-text-secondary);
+}
+
+/* Secondary pages (Video, Marketplace, Groups, Gaming, Events, Saved, Memories) bring their own
+   left panel, so they span the whole grid and hide the global rails. */
+main:has([data-layout='wide']) {
+  grid-column: 1 / -1;
+  padding: 0;
+}
+main:has([data-layout='wide']) > div {
+  width: 100%;
+  max-width: none;
+}
+div:has(> main [data-layout='wide']) > :not(main) {
+  display: none;
 }

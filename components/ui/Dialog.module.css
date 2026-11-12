@@ -1,0 +1,68 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--fb-overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+.dialog {
+  background: var(--fb-card);
+  border-radius: 8px;
+  box-shadow: var(--fb-shadow-popover);
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  animation: zoom 0.15s ease-out;
+}
+@keyframes zoom {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.header {
+  position: relative;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 1px solid var(--fb-divider-soft);
+  flex-shrink: 0;
+}
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 24px;
+}
+.circle {
+  position: absolute;
+  top: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.circle:hover {
+  background: var(--fb-icon-bg-hover);
+}
+.body {
+  overflow-y: auto;
+  flex: 1;
+}
+.footer {
+  padding: 16px;
+  flex-shrink: 0;
+}

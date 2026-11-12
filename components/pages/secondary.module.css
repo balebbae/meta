@@ -1,0 +1,272 @@
+/* Two-column layout used by Video, Marketplace, Groups, Gaming, Events, Saved, Memories */
+.wide {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  min-height: calc(100vh - var(--fb-header-h));
+}
+
+.panel {
+  position: sticky;
+  top: var(--fb-header-h);
+  width: var(--fb-sidebar-w);
+  flex: 0 0 var(--fb-sidebar-w);
+  height: calc(100vh - var(--fb-header-h));
+  overflow-y: auto;
+  background: var(--fb-card);
+  box-shadow: var(--fb-shadow-card);
+  padding: 0 8px 16px;
+  z-index: 1;
+}
+
+.panel::-webkit-scrollbar {
+  width: 8px;
+}
+.panel::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 4px;
+}
+.panel:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.content {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 16px;
+}
+
+.contentCenter {
+  composes: content;
+  display: flex;
+  justify-content: center;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 8px 4px;
+}
+
+.panelTitle {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 28px;
+  margin: 0;
+}
+
+.panelSubtitle {
+  font-size: 15px;
+  color: var(--fb-text-secondary);
+  padding: 0 8px 8px;
+}
+
+.gear {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--fb-icon-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.gear:hover {
+  background: var(--fb-icon-bg-hover);
+}
+
+.search {
+  position: relative;
+  margin: 8px 8px 12px;
+}
+.search input {
+  width: 100%;
+  height: 36px;
+  border: 0;
+  border-radius: var(--fb-radius-pill);
+  background: var(--fb-bg);
+  padding: 0 12px 0 36px;
+  font-size: 15px;
+  color: var(--fb-text);
+  outline: none;
+}
+.search input::placeholder {
+  color: var(--fb-text-secondary);
+}
+.search svg {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--fb-text-secondary);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: var(--fb-radius);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 20px;
+  width: 100%;
+  text-align: left;
+  color: var(--fb-text);
+}
+.row:hover {
+  background: var(--fb-hover);
+}
+.rowActive {
+  composes: row;
+  background: var(--fb-hover-strong);
+}
+.rowIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--fb-icon-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 36px;
+  color: var(--fb-text);
+}
+.rowActive .rowIcon {
+  background: var(--fb-blue);
+  color: #fff;
+}
+.rowLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rowSub {
+  display: block;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--fb-text-secondary);
+  line-height: 16px;
+}
+.rowChevron {
+  color: var(--fb-text-secondary);
+  display: inline-flex;
+}
+
+.panelButton {
+  margin: 8px;
+  width: calc(100% - 16px);
+  height: 36px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--fb-blue) 10%, var(--fb-card));
+  color: var(--fb-blue);
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.panelButton:hover {
+  background: color-mix(in srgb, var(--fb-blue) 18%, var(--fb-card));
+}
+.panelButtonPrimary {
+  composes: panelButton;
+  background: var(--fb-blue);
+  color: #fff;
+}
+.panelButtonPrimary:hover {
+  background: var(--fb-blue-hover);
+}
+.panelButtonSecondary {
+  composes: panelButton;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+}
+.panelButtonSecondary:hover {
+  background: var(--fb-icon-bg-hover);
+}
+
+.panelDivider {
+  height: 1px;
+  background: var(--fb-divider);
+  margin: 8px 8px;
+}
+
+.panelSection {
+  padding: 8px 8px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panelSectionTitle {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+}
+.panelSectionLink {
+  color: var(--fb-blue);
+  font-size: 15px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.panelSectionLink:hover {
+  background: var(--fb-hover);
+}
+
+.sectionTitle {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 24px;
+  margin: 0 0 12px;
+}
+.sectionTitleSm {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.sectionHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.sectionHead .sectionTitle,
+.sectionHead .sectionTitleSm {
+  margin: 0;
+}
+.seeAll {
+  color: var(--fb-blue);
+  font-size: 15px;
+  font-weight: 500;
+}
+.seeAll:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: var(--fb-text-secondary);
+  font-size: 13px;
+  line-height: 16px;
+}
+
+@media (max-width: 900px) {
+  .wide {
+    flex-direction: column;
+  }
+  .panel {
+    position: static;
+    width: 100%;
+    flex: none;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+  }
+  .content,
+  .contentCenter {
+    width: 100%;
+    padding: 12px;
+  }
+}

@@ -1,0 +1,19 @@
+.panel {
+  position: absolute;
+  background: var(--fb-card);
+  border-radius: 8px;
+  box-shadow: var(--fb-shadow-popover);
+  z-index: 100;
+  animation: pop 0.12s ease-out;
+  color: var(--fb-text);
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

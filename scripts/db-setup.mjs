@@ -9,9 +9,12 @@ const sql = neon(url);
 
 const reset = process.argv.includes('--reset');
 if (reset) {
-  await sql.query('drop table if exists notifications, stories, friendships, reactions, comments, posts, users cascade');
+  await sql.query('drop table if exists user_details, notifications, stories, friendships, reactions, comments, posts, users cascade');
 }
-for (const file of ['db/schema.sql', 'db/seed.sql']) {
+const [{seeded}] = await sql`select exists(select 1 from information_schema.tables where table_name = 'users') and (select count(*) from users) > 0 as seeded`.catch(() => [{seeded: false}]);
+const files = seeded && !reset ? ['db/schema.sql'] : ['db/schema.sql', 'db/seed.sql'];
+if (seeded && !reset) console.log('database already seeded; applying schema only (use --reset to reseed)');
+for (const file of files) {
   const statements = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')
     .split(/;\s*\n/)
     .map(s => s.trim())

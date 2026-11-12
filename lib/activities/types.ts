@@ -144,5 +144,17 @@ export type MessageKind = 'text' | 'rally_invite' | 'rally_game' | 'quest_card' 
 export type RallyInvitePayload = {gameId: number; gameType: 'turf'; title: string; arenaLabel: string; endsAt: string};
 export type QuestCardPayload = {questId: number; title: string; template: GameTemplate; bossName?: string; bossHp?: number; reelId?: number};
 export type RallyGamePayload = {questId: number; event: 'move' | 'dare' | 'level' | 'boss_low' | 'boss_down' | 'critical'; userId?: number; text: string; damage?: number; hpLeft?: number};
-export type TurfRecapPayload = {gameId: number; text: string; cells?: Record<string, number>};
-export type SystemPayload = {text: string};
+export type TurfRecapPayload = {
+  gameId: number;
+  text: string;
+  /** userId -> cells held after this outing. */
+  cells?: Record<string, number>;
+  title?: string;
+  /** false = deterministic template was used ("Muse offline"). */
+  museUsed?: boolean;
+  /** Final standings card posted when the game ends. */
+  final?: boolean;
+  standings?: {userId: number; name: string; color: string; cells: number}[];
+};
+/** visibleTo: when set, only these user ids see the line ("Sam passed" is for the host only, §10.2). */
+export type SystemPayload = {text: string; visibleTo?: number[]};

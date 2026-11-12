@@ -544,3 +544,24 @@ create table if not exists reel_plays (
   played_at timestamptz not null default now(),
   primary key (user_id, reel_id)
 );
+
+
+-- Turf (scope D): owner-only GPS points and trail bookkeeping; the game state only exposes turf_cells.
+alter table turf_outings add column if not exists raw jsonb not null default '[]'::jsonb;
+alter table turf_outings add column if not exists trail jsonb not null default '[]'::jsonb;
+alter table turf_outings add column if not exists consumed integer not null default 0;
+alter table turf_outings add column if not exists source text not null default 'live';
+alter table turf_outings add column if not exists result jsonb not null default '{}'::jsonb;
+alter table game_invites add column if not exists resent_at timestamptz;
+create index if not exists turf_cells_owner_idx on turf_cells (game_id, owner_id);
+
+create table if not exists turf_privacy_zones (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  label text not null default 'Home',
+  lat double precision not null,
+  lng double precision not null,
+  radius_m integer not null default 200,
+  created_at timestamptz not null default now()
+);
+create index if not exists turf_privacy_zones_user_idx on turf_privacy_zones (user_id);

@@ -18,13 +18,20 @@
 .sheetForm {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 4px 0;
+  gap: 16px;
+  padding: 20px 20px 24px;
+}
+.sheetForm > button {
+  height: 40px;
+  margin-top: 4px;
 }
 .sheetLead {
   margin: 0;
   font-size: 15px;
-  line-height: 1.35;
+  line-height: 1.4;
+  padding: 12px 14px;
+  background: var(--fb-bg);
+  border-radius: 10px;
 }
 .sheetMeta {
   font-size: 13px;
@@ -33,7 +40,7 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   font-size: 13px;
   color: var(--fb-text-secondary);
 }
@@ -60,7 +67,8 @@
 .proofRow {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  padding: 4px 0;
 }
 .proofImg {
   width: 96px;
@@ -70,7 +78,7 @@
 }
 .sheetResult {
   text-align: center;
-  padding: 8px 0;
+  padding: 28px 20px 24px;
 }
 .sheetDamage {
   font-size: 32px;
@@ -101,18 +109,22 @@
 .library {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+  padding: 12px 16px 20px;
+}
+.library > p {
+  margin: 8px 4px 0;
 }
 .libItem {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
   text-align: left;
-  border: 0;
+  border: 1px solid var(--fb-divider);
   background: none;
-  padding: 10px 8px;
-  border-radius: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
   cursor: pointer;
   color: var(--fb-text);
   font: inherit;

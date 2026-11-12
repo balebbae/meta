@@ -243,7 +243,6 @@ create index if not exists push_subscriptions_user_idx on push_subscriptions (us
 
 -- sign-up: pronoun picked when Gender = Custom on /auth/reg
 alter table user_details add column if not exists pronouns text;
-||||||| 7290d5a
 
 -- Closeness / Muse gamification
 create table if not exists xp_events (

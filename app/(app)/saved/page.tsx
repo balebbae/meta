@@ -13,12 +13,13 @@ import styles from '@/components/pages/saved.module.css';
 export const metadata: Metadata = {title: 'Saved | Facebook'};
 export const dynamic = 'force-dynamic';
 
-export default async function SavedPage({searchParams}: {searchParams: Promise<{tab?: string}>}) {
-  const {tab} = await searchParams;
+export default async function SavedPage({searchParams}: {searchParams: Promise<{tab?: string; collection?: string}>}) {
+  const {tab, collection} = await searchParams;
   const user = await getSessionUser();
   const viewerId = user?.id ?? 0;
-  const [posts, listings] = await Promise.all([listSavedPosts(viewerId), listSavedListings(viewerId)]);
-  const collections = Array.from(new Set(posts.map(p => p.collection)));
+  const [allPosts, listings] = await Promise.all([listSavedPosts(viewerId), listSavedListings(viewerId)]);
+  const collections = Array.from(new Set(allPosts.map(p => p.collection)));
+  const posts = collection ? allPosts.filter(p => p.collection === collection) : allPosts;
   const showListings = tab === 'marketplace';
   return (
     <SecondaryLayout
@@ -26,12 +27,12 @@ export default async function SavedPage({searchParams}: {searchParams: Promise<{
       panel={
         <>
           <PanelHeader title="Saved" />
-          <PanelRow icon={<BookmarkIcon />} label="Saved items" href="/saved" active={!showListings} />
+          <PanelRow icon={<BookmarkIcon />} label="Saved items" href="/saved" active={!showListings && !collection} />
           <PanelRow icon={<StoreIcon />} label="Marketplace listings" href="/saved?tab=marketplace" active={showListings} />
           <PanelDivider />
           <PanelSection title="My collections" />
           {collections.map(c => (
-            <PanelRow key={c} icon={<BookmarkIcon />} label={c} href={`/saved?collection=${encodeURIComponent(c)}`} />
+            <PanelRow key={c} icon={<BookmarkIcon />} label={c} href={`/saved?collection=${encodeURIComponent(c)}`} active={collection === c} />
           ))}
           <button type="button" className={panel.panelButton}>
             <PlusIcon size={16} />
@@ -40,7 +41,7 @@ export default async function SavedPage({searchParams}: {searchParams: Promise<{
         </>
       }>
       <div className={styles.list}>
-        <h2 className={styles.head}>{showListings ? 'Saved listings' : 'All'}</h2>
+        <h2 className={styles.head}>{showListings ? 'Saved listings' : (collection ?? 'All')}</h2>
         {showListings ? (
           listings.length === 0 ? (
             <div className={styles.empty}>No saved listings yet.</div>

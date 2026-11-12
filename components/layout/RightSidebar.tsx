@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
+import {Leaderboard} from '@/components/closeness/Leaderboard';
 import {Avatar} from '@/components/ui/Avatar';
 import {MoreHorizontalIcon, PlusIcon, SearchIcon, VideoCameraIcon} from '@/components/icons';
 import {FriendRequests, type FriendRequestItem} from '@/components/layout/FriendRequests';
@@ -26,6 +27,8 @@ export function RightSidebar({user, contacts = [], requests = []}: {user: User; 
           </span>
         </a>
       ))}
+      <div className={styles.rrDivider} />
+      <Leaderboard compact />
       <div className={styles.rrDivider} />
       <FriendRequests initial={requests} />
       {contacts.length > 0 && (

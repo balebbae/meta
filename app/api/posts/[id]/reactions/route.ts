@@ -30,6 +30,44 @@ export async function PUT(req: NextRequest, {params}: Ctx) {
     if (!prev && (post.author_id as number) !== user.id) {
       await sql`insert into notifications (user_id, actor_id, type, post_id, message)
         values (${post.author_id as number}, ${user.id}, 'reaction', ${id}, ${user.name + ' reacted to your post.'})`;
+      // Best-effort Muse closeness XP (never fail the reaction)
+      void import('@/lib/muse/client')
+        .then(({museConfigured}) => {
+          if (!museConfigured() || !process.env.DATABASE_URL) return null;
+          return Promise.all([
+            import('@/lib/muse/score'),
+            import('@/lib/closeness-queries'),
+            import('@/lib/muse/nudge'),
+          ]);
+        })
+        .then(async mods => {
+          if (!mods) return;
+          const [{scoreInteraction}, {insertXpEvent}, {generateNudge}] = mods;
+          const [author] = await sql`select name from users where id = ${post.author_id as number}`;
+          const scored = await scoreInteraction({
+            actorName: user.name,
+            friendName: (author?.name as string) ?? 'friend',
+            eventType: 'reaction',
+            detail: `Reacted with ${type}`,
+          });
+          await insertXpEvent({
+            userId: user.id,
+            friendId: post.author_id as number,
+            sourceType: 'reaction',
+            sourceId: id,
+            xp: scored.xp,
+            reason: scored.reason,
+          });
+          const nudge = await generateNudge({
+            recipientName: (author?.name as string) ?? 'friend',
+            actorName: user.name,
+            context: `reacted ${type} on your post`,
+          });
+          await sql`update notifications set message = ${nudge.message}
+            where user_id = ${post.author_id as number} and actor_id = ${user.id} and post_id = ${id} and type = 'reaction'
+            and created_at > now() - interval '1 minute'`;
+        })
+        .catch(() => undefined);
     }
     return NextResponse.json({post: await getPost(id, user.id)});
   });

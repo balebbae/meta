@@ -1,0 +1,196 @@
+/* /friends takes the full width under the header: hide the app rails (same trick as profile). */
+:global(body):has(.page) :global(main) {
+  grid-column: 1 / -1;
+  display: block !important;
+}
+:global(body):has(.page) :global(main) ~ *,
+:global(body):has(.page) *:has(+ :global(main)) {
+  display: none !important;
+}
+
+.page {
+  display: grid;
+  grid-template-columns: var(--fb-sidebar-w) minmax(0, 1fr);
+  min-height: calc(100vh - var(--fb-header-h));
+  background: var(--fb-bg);
+}
+
+/* ---- left rail ---- */
+.rail {
+  background: var(--fb-card);
+  box-shadow: var(--fb-shadow-card);
+  padding: 0 8px 8px;
+  position: sticky;
+  top: var(--fb-header-h);
+  height: calc(100vh - var(--fb-header-h));
+  overflow-y: auto;
+}
+.railHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 8px 8px;
+}
+.railHead h1 {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 28px;
+}
+.railItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: var(--fb-radius);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--fb-text);
+  width: 100%;
+  text-align: left;
+}
+.railItem:hover {
+  background: var(--fb-hover);
+}
+.railItemActive {
+  background: var(--fb-hover);
+}
+.railIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--fb-icon-bg);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--fb-text);
+  flex-shrink: 0;
+}
+.railIconActive {
+  background: var(--fb-blue);
+  color: #fff;
+}
+.railLabel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.railBadge {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--fb-text-secondary);
+  line-height: 16px;
+}
+.railChevron {
+  color: var(--fb-text-secondary);
+}
+
+/* ---- main ---- */
+.main {
+  padding: 16px 24px 24px 24px;
+  min-width: 0;
+}
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0 12px;
+}
+.sectionHead h2 {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 24px;
+}
+.seeAll {
+  color: var(--fb-blue);
+  font-size: 15px;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+.seeAll:hover {
+  background: var(--fb-hover);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px 10px;
+  margin-bottom: 20px;
+}
+.card {
+  background: var(--fb-card);
+  border-radius: var(--fb-radius);
+  box-shadow: var(--fb-shadow-card);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-width: 240px;
+}
+.cardImg {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--fb-icon-bg);
+  display: block;
+}
+.cardImg img {
+  object-fit: cover;
+}
+.cardBody {
+  padding: 10px 12px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cardName {
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 20px;
+  color: var(--fb-text);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cardMutual {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+  min-height: 16px;
+  line-height: 16px;
+}
+.cardBtn {
+  width: 100%;
+  justify-content: center;
+}
+.cardStatus {
+  font-size: 15px;
+  color: var(--fb-text-secondary);
+  padding: 6px 0;
+  text-align: center;
+}
+.divider {
+  height: 1px;
+  background: var(--fb-divider);
+  margin: 8px 0 16px;
+}
+.empty {
+  color: var(--fb-text-secondary);
+  font-size: 15px;
+  padding: 24px 0;
+}
+
+@media (max-width: 900px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rail {
+    position: static;
+    height: auto;
+  }
+  .main {
+    padding: 12px;
+  }
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}

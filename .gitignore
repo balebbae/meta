@@ -34,3 +34,4 @@ next-env.d.ts
 tsconfig.tsbuildinfo
 mobile/.env
 mobile/package-lock.json
+.env*

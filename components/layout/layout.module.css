@@ -1051,3 +1051,30 @@
   font-weight: 400;
   color: var(--fb-text-secondary);
 }
+
+/* ---- Mobile (< 700px): iOS-app chrome, see components/mobile ---- */
+@media (max-width: 700px) {
+  .header,
+  .fab,
+  .bottomBar {
+    display: none;
+  }
+  .shell {
+    padding-top: 0;
+    grid-template-columns: minmax(0, 1fr);
+    background: var(--fb-card);
+  }
+  .leftCol,
+  .rightCol {
+    display: none;
+  }
+  .main {
+    padding: 0 0 calc(96px + env(safe-area-inset-bottom));
+    background: var(--fb-divider);
+  }
+  .feedCol {
+    width: 100%;
+    max-width: 100%;
+    background: var(--fb-card);
+  }
+}

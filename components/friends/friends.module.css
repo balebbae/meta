@@ -202,3 +202,33 @@
     max-width: none;
   }
 }
+
+/* People search (Suggestions view) */
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 12px;
+  margin: 0 0 12px;
+  max-width: 360px;
+  border-radius: 20px;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text-secondary);
+}
+.search input {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 15px;
+  color: var(--fb-text);
+  min-width: 0;
+}
+
+/* ---- Mobile (< 700px): the iOS-app layout in components/friends/MobileFriends replaces the desktop page ---- */
+@media (max-width: 700px) {
+  .page {
+    display: none;
+  }
+}

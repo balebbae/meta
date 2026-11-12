@@ -4,10 +4,25 @@ import {Composer} from '@/components/feed/Composer';
 import {CreateStoryCard} from '@/components/feed/CreateStoryCard';
 import {PostCard} from '@/components/feed/PostCard';
 import {PostSkeleton} from '@/components/feed/PostSkeleton';
+import {MobileComposer} from '@/components/mobile/MobileComposer';
+import {MobileStories} from '@/components/mobile/MobileStories';
+import type {FriendSummary} from '@/lib/profile-queries';
 import type {Post, Story, User} from '@/lib/types';
 import styles from './feed.module.css';
 
-export function Feed({viewer, initialPosts, initialCursor}: {viewer: User; initialPosts: Post[]; initialCursor: string | null; stories?: Story[]}) {
+export function Feed({
+  viewer,
+  initialPosts,
+  initialCursor,
+  stories = [],
+  requests = [],
+}: {
+  viewer: User;
+  initialPosts: Post[];
+  initialCursor: string | null;
+  stories?: Story[];
+  requests?: FriendSummary[];
+}) {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [cursor, setCursor] = useState<string | null>(initialCursor);
   const [loading, setLoading] = useState(false);
@@ -42,6 +57,8 @@ export function Feed({viewer, initialPosts, initialCursor}: {viewer: User; initi
     <>
       <Composer viewer={viewer} onCreated={p => setPosts(list => [p, ...list])} />
       <CreateStoryCard />
+      <MobileComposer viewer={viewer} />
+      <MobileStories viewer={viewer} requests={requests} stories={stories} />
       {posts.map(p => (
         <PostCard key={p.id} post={p} viewer={viewer} />
       ))}

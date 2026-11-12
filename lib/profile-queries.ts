@@ -20,7 +20,13 @@ export type UserDetails = {
   languages: string | null;
 };
 
-export type FriendSummary = Pick<User, 'id' | 'name' | 'avatarUrl' | 'isOnline'> & {mutualCount: number};
+export type SuggestionRelation = 'none' | 'outgoing' | 'incoming';
+export type FriendSummary = Pick<User, 'id' | 'name' | 'avatarUrl' | 'isOnline'> & {
+  mutualCount: number;
+  /** Only set by listSuggestions: pending request direction between the viewer and this user. */
+  relation?: SuggestionRelation;
+  createdAt?: string;
+};
 
 export type Profile = {
   user: User;
@@ -65,6 +71,8 @@ function mapFriend(r: Record<string, unknown>): FriendSummary {
     avatarUrl: r.avatar_url as string,
     isOnline: Boolean(r.is_online),
     mutualCount: (r.mutual_count as number) ?? 0,
+    ...(r.relation ? {relation: r.relation as SuggestionRelation} : {}),
+    ...(r.created_at ? {createdAt: new Date(r.created_at as string).toISOString()} : {}),
   };
 }
 
@@ -170,16 +178,33 @@ export async function listFriendRequests(viewerId: number): Promise<FriendSummar
 }
 
 /** Users with no friendship row in either direction with the viewer, most mutual friends first. */
-export async function listSuggestions(viewerId: number, limit = 20): Promise<FriendSummary[]> {
+/**
+ * "People You May Know": EVERY registered user except the viewer and accepted friends,
+ * newest sign-ups first. Pending requests are included with their direction so the UI can
+ * show "Cancel request" / "Respond". `q` filters by name or email prefix.
+ */
+export async function listSuggestions(viewerId: number, limit = 200, q = ''): Promise<FriendSummary[]> {
+  const pattern = `%${q.trim().replace(/[%_]/g, '')}%`;
   const rows = await sql`
-    select u.id, u.name, u.avatar_url, u.is_online,
+    select u.id, u.name, u.avatar_url, u.is_online, u.created_at,
            (select count(*)::int from friendships a
               join friendships b on a.friend_id = b.friend_id
-              where a.user_id = u.id and b.user_id = ${viewerId} and a.status = 'accepted' and b.status = 'accepted') as mutual_count
+              where a.user_id = u.id and b.user_id = ${viewerId}
+                and a.status = 'accepted' and b.status = 'accepted') as mutual_count,
+           case
+             when exists (select 1 from friendships f where f.user_id = ${viewerId} and f.friend_id = u.id and f.status = 'pending') then 'outgoing'
+             when exists (select 1 from friendships f where f.user_id = u.id and f.friend_id = ${viewerId} and f.status = 'pending') then 'incoming'
+             else 'none'
+           end as relation
     from users u
     where u.id <> ${viewerId}
-      and not exists (select 1 from friendships f where (f.user_id = ${viewerId} and f.friend_id = u.id) or (f.user_id = u.id and f.friend_id = ${viewerId}))
-    order by mutual_count desc, u.name asc
+      and not exists (
+        select 1 from friendships f
+        where ((f.user_id = ${viewerId} and f.friend_id = u.id) or (f.user_id = u.id and f.friend_id = ${viewerId}))
+          and f.status = 'accepted'
+      )
+      and (${q.trim() === ''} or u.name ilike ${pattern} or u.email ilike ${pattern})
+    order by u.created_at desc, u.id desc
     limit ${limit}`;
   return rows.map(mapFriend);
 }

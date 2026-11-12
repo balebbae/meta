@@ -495,3 +495,15 @@
     height: 200px;
   }
 }
+
+/* ---- Mobile (< 700px): desktop composer + create-story card are replaced by components/mobile ---- */
+@media (max-width: 700px) {
+  .composer,
+  .storyCard {
+    display: none;
+  }
+  .endOfFeed {
+    padding: 16px;
+    background: var(--fb-card);
+  }
+}

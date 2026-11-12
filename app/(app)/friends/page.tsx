@@ -6,6 +6,7 @@ import {listFriendRequests, listSuggestions, listUserFriends} from '@/lib/profil
 import {FriendsRail} from '@/components/friends/FriendsRail';
 import {RequestCards, SuggestionCards} from '@/components/friends/FriendCards';
 import {AllFriendsCards} from '@/components/friends/AllFriendsCards';
+import {MobileFriends} from '@/components/friends/MobileFriends';
 import styles from '@/components/friends/friends.module.css';
 
 export const metadata: Metadata = {title: 'Friends | Facebook'};
@@ -21,11 +22,13 @@ export default async function FriendsPage({searchParams}: {searchParams: Promise
 
   const [requests, suggestions, friends] = await Promise.all([
     listFriendRequests(viewer.id),
-    view === 'home' || view === 'suggestions' ? listSuggestions(viewer.id, view === 'home' ? 10 : 40) : Promise.resolve([]),
-    view === 'all' ? listUserFriends(viewer.id, viewer.id) : Promise.resolve([]),
+    view === 'home' || view === 'suggestions' ? listSuggestions(viewer.id, 200) : Promise.resolve([]),
+    view === 'all' || view === 'home' ? listUserFriends(viewer.id, viewer.id) : Promise.resolve([]),
   ]);
 
   return (
+    <>
+    <MobileFriends viewer={viewer} view={view} requests={requests} suggestions={suggestions} friends={friends} />
     <div className={styles.page}>
       <FriendsRail requestCount={requests.length} active={view} />
       <section className={styles.main} aria-label="Friends">
@@ -45,7 +48,7 @@ export default async function FriendsPage({searchParams}: {searchParams: Promise
               <h2>People You May Know</h2>
               {view === 'home' && <Link href="/friends?view=suggestions" className={styles.seeAll}>See all</Link>}
             </div>
-            <SuggestionCards suggestions={suggestions} />
+            <SuggestionCards suggestions={view === 'home' ? suggestions.slice(0, 10) : suggestions} searchable={view === 'suggestions'} />
           </>
         )}
         {view === 'all' && (
@@ -71,5 +74,6 @@ export default async function FriendsPage({searchParams}: {searchParams: Promise
         )}
       </section>
     </div>
+    </>
   );
 }

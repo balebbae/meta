@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import {Glyph} from '@/components/activities/glyphs';
 import {redirect} from 'next/navigation';
 import {OnboardingGate} from '@/components/activities/OnboardingGate';
 import {SourcesPanel} from '@/components/activities/SourcesPanel';
@@ -35,18 +36,18 @@ export default async function MusePage({searchParams}: {searchParams: Promise<Re
         </div>
         {summary.shares.map(s => (
           <div key={s} className={styles.summaryLine}>
-            <span aria-hidden>🗣️</span>
+            <span className={styles.glyph}>{Glyph.speak(18)}</span>
             <span>{s}</span>
           </div>
         ))}
         {summary.secrets.map(s => (
           <div key={s} className={styles.summaryLine}>
-            <span aria-hidden>🤫</span>
+            <span className={styles.glyph}>{Glyph.secret(18)}</span>
             <span>{s}</span>
           </div>
         ))}
         <div className={styles.summaryLine}>
-          <span aria-hidden>🚫</span>
+          <span className={styles.glyph}>{Glyph.nobody(18)}</span>
           <span>{summary.nobody}</span>
         </div>
         <div className={styles.row} style={{marginTop: 10}}>

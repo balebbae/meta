@@ -1,4 +1,6 @@
 'use client';
+import type {ReactNode} from 'react';
+import {Glyph} from './glyphs';
 import {useState} from 'react';
 import {ChevronDownIcon, ChevronUpIcon} from '@/components/icons';
 import {AUDIENCE_LABEL, CATEGORY_EXAMPLE, CATEGORY_LABEL, LEVEL_HELP, LEVEL_LABEL, categorySummary} from '@/lib/activities/summary';
@@ -7,7 +9,7 @@ import {AUDIENCES, CATEGORIES, type Audience, type Category, type ShareLevel} fr
 import styles from './activities.module.css';
 
 const LEVELS: ShareLevel[] = ['exact', 'rounded', 'boolean', 'muse_only', 'none'];
-const ICON: Record<Category, string> = {workouts: '🏃', steps: '👟', heart: '❤️', sleep: '😴', body: '⚖️', location: '📍'};
+const ICON: Record<Category, ReactNode> = {workouts: Glyph.run(), steps: Glyph.steps(), heart: Glyph.heart(), sleep: Glyph.sleep(), body: Glyph.body(), location: Glyph.location()};
 
 /** Category × audience grid with the five levels (§7.2). Saves each change with PUT /api/privacy/policies. */
 export function PrivacyMatrix({initial, onChange, compact}: {initial: PolicyMatrix; onChange?: (m: PolicyMatrix) => void; compact?: boolean}) {

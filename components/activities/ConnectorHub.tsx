@@ -1,4 +1,6 @@
 'use client';
+import type {ReactNode} from 'react';
+import {Glyph} from './glyphs';
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useState} from 'react';
@@ -9,8 +11,8 @@ import styles from './activities.module.css';
 
 export type PublicConnection = ReturnType<typeof publicConnection>;
 
-export const SOURCE_ICON: Record<ConnectorId, string> = {
-  apple_health: '', health_connect: '🫀', google_health: 'G', strava: 'S', oura: 'O', whoop: 'W', garmin: '▲', aggregator: '∑', phone_steps: '📱', proof_photo: '📷', manual: '✍️', mock: '⌚',
+export const SOURCE_ICON: Record<ConnectorId, ReactNode> = {
+  apple_health: Glyph.apple(), health_connect: Glyph.heart(), google_health: 'G', strava: 'S', oura: 'O', whoop: 'W', garmin: '▲', aggregator: '∑', phone_steps: Glyph.phone(), proof_photo: Glyph.camera(), manual: Glyph.pencil(), mock: Glyph.watch(),
 };
 
 const AVAIL_LABEL = {ready: null, not_configured: 'Not configured for this demo', needs_native: 'Needs the native app', other_platform: 'Open on your iPhone'} as const;

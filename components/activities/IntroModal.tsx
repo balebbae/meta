@@ -1,6 +1,7 @@
 'use client';
 import {useCallback, useEffect, useRef, useState, type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
+import {Glyph} from './glyphs';
 import {useRouter} from 'next/navigation';
 import {CloseIcon} from '@/components/icons';
 import styles from './activities.module.css';
@@ -18,6 +19,8 @@ export function IntroModal({open, invite, onClose}: {open: boolean; invite?: Int
   const [busy, setBusy] = useState<'start' | 'snooze' | null>(null);
   const box = useRef<HTMLDivElement>(null);
   const primary = useRef<HTMLButtonElement>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   useEffect(() => setVisible(open), [open]);
 
   const close = useCallback(() => {
@@ -74,18 +77,18 @@ export function IntroModal({open, invite, onClose}: {open: boolean; invite?: Int
     };
   }, [visible, snooze]);
 
-  if (!visible || typeof document === 'undefined') return null;
+  if (!visible || !mounted) return null;
 
-  const bullets: {icon: string; title: string; body: ReactNode}[] = invite
+  const bullets: {icon: ReactNode; title: string; body: ReactNode}[] = invite
     ? [
-        {icon: '🏁', title: `${invite.gameTitle}`, body: `${invite.inviterName} picked you. Accepting takes two quick steps: what you're into, and what your Muse may share.`},
-        {icon: '🔒', title: 'Your data stays yours', body: 'The game only ever sees what you allow. Routes and heart rate never leave your vault unless you say so.'},
-        {icon: '🧠', title: 'Your Muse keeps score', body: 'It answers the game\u2019s questions at the precision you choose, and logs every question for you to read.'},
+        {icon: Glyph.flag(22), title: `${invite.gameTitle}`, body: `${invite.inviterName} picked you. Accepting takes two quick steps: what you're into, and what your Muse may share.`},
+        {icon: Glyph.lock(22), title: 'Your data stays yours', body: 'The game only ever sees what you allow. Routes and heart rate never leave your vault unless you say so.'},
+        {icon: Glyph.brain(22), title: 'Your Muse keeps score', body: 'It answers the game\u2019s questions at the precision you choose, and logs every question for you to read.'},
       ]
     : [
-        {icon: '🎯', title: 'Rally', body: 'Boss fights, relays and streaks with friends in Messenger. Your Muse scales the targets to each person so nobody is the weak link.'},
-        {icon: '🗺️', title: 'Turf', body: 'Claim ground by walking or running real streets. Teams, arenas, trash talk. Phone in pocket.'},
-        {icon: '🧠', title: 'Your Muse', body: 'A private agent that knows your workouts, keeps the raw data in your vault, and only tells others what you allow.'},
+        {icon: Glyph.target(22), title: 'Rally', body: 'Boss fights, relays and streaks with friends in Messenger. Your Muse scales the targets to each person so nobody is the weak link.'},
+        {icon: Glyph.map(22), title: 'Turf', body: 'Claim ground by walking or running real streets. Teams, arenas, trash talk. Phone in pocket.'},
+        {icon: Glyph.brain(22), title: 'Your Muse', body: 'A private agent that knows your workouts, keeps the raw data in your vault, and only tells others what you allow.'},
       ];
 
   return createPortal(

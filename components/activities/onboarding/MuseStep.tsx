@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import {Glyph} from '../glyphs';
 import {StepShell} from './StepShell';
 import type {MuseSummary} from '@/lib/activities/summary';
 import styles from '../activities.module.css';
@@ -10,7 +11,7 @@ export function MuseStep({summary, invite, name}: {summary: MuseSummary; invite:
       <div className={styles.card} style={{borderTop: '4px solid var(--fb-blue)'}}>
         <div className={styles.row} style={{marginBottom: 8}}>
           <span className={styles.iconBox} aria-hidden style={{background: 'linear-gradient(135deg, var(--fb-blue), #7a3cff)', color: '#fff'}}>
-            🧠
+            {Glyph.brain(24)}
           </span>
           <div>
             <div className={styles.title}>Hi {name.split(' ')[0]}, I&apos;m your Muse.</div>
@@ -22,7 +23,7 @@ export function MuseStep({summary, invite, name}: {summary: MuseSummary; invite:
         </h2>
         {summary.shares.map(s => (
           <div key={s} className={styles.summaryLine}>
-            <span aria-hidden>🗣️</span>
+            <span className={styles.glyph}>{Glyph.speak(18)}</span>
             <span>{s}</span>
           </div>
         ))}
@@ -33,14 +34,14 @@ export function MuseStep({summary, invite, name}: {summary: MuseSummary; invite:
             </h2>
             {summary.secrets.map(s => (
               <div key={s} className={styles.summaryLine}>
-                <span aria-hidden>🤫</span>
+                <span className={styles.glyph}>{Glyph.secret(18)}</span>
                 <span>{s}</span>
               </div>
             ))}
           </>
         )}
         <div className={styles.summaryLine}>
-          <span aria-hidden>🚫</span>
+          <span className={styles.glyph}>{Glyph.nobody(18)}</span>
           <span>{summary.nobody}</span>
         </div>
         <p className={styles.small} style={{marginTop: 12}}>

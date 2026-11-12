@@ -1,4 +1,5 @@
 'use client';
+import {Glyph} from './glyphs';
 import {useEffect, useRef, useState} from 'react';
 import {Dialog} from '@/components/ui/Dialog';
 import {fileToDataUrlFit} from '@/lib/image-upload';
@@ -38,8 +39,8 @@ export function LogWorkoutSheet({open, onClose, initialTab = 'manual', onLogged,
       <div style={{padding: '0 16px 16px'}}>
         {done ? (
           <div style={{textAlign: 'center', padding: '24px 0'}}>
-            <div style={{fontSize: 40}} aria-hidden>
-              ✅
+            <div style={{color: 'var(--fb-green)'}} aria-hidden>
+              {Glyph.check(44)}
             </div>
             <div className={styles.title}>Saved to your vault</div>
             <p className={styles.sub}>
@@ -238,8 +239,8 @@ function PhotoTab({onLogged}: {onLogged: (e: LoggedEvent) => void}) {
         <img src={image} alt="Your proof photo" className={styles.preview} />
       ) : (
         <div className={styles.dropzone} role="button" tabIndex={0} onClick={() => fileRef.current?.click()} onKeyDown={e => e.key === 'Enter' && fileRef.current?.click()}>
-          <div style={{fontSize: 32}} aria-hidden>
-            📷
+          <div style={{color: 'var(--fb-blue)'}} aria-hidden>
+            {Glyph.camera(36)}
           </div>
           Snap your treadmill, watch, bike computer or race bib
         </div>
@@ -339,7 +340,7 @@ function VoiceTab({onLogged}: {onLogged: (e: LoggedEvent) => void}) {
     <div>
       <div style={{textAlign: 'center', padding: '8px 0 12px'}}>
         <button type="button" className={recording ? styles.btnDanger : styles.btnPrimary} onClick={() => void toggle()} disabled={busy} style={{height: 48, borderRadius: 24, padding: '0 20px'}}>
-          {recording ? '■ Stop' : busy ? 'Transcribing…' : '🎤 Tell your Muse what you did'}
+          {recording ? 'Stop' : busy ? 'Transcribing…' : 'Tell your Muse what you did'}
         </button>
       </div>
       <label className={styles.label} htmlFor="lw-voice">

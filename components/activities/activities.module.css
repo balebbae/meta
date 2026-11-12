@@ -505,3 +505,10 @@
     border-radius: 0;
   }
 }
+
+.glyph {
+  display: inline-flex;
+  flex: none;
+  color: var(--fb-text-secondary);
+  margin-top: 1px;
+}

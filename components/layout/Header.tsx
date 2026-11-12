@@ -429,8 +429,10 @@ export function useTheme() {
   }, []);
   const setTheme = (t: 'light' | 'dark') => {
     setThemeState(t);
+    document.documentElement.dataset.fbTheme = t;
     document.documentElement.dataset.theme = t;
     localStorage.setItem('fb.theme', t);
+    document.cookie = `fb.theme=${t};path=/;max-age=31536000;SameSite=Lax`;
   };
   return {theme, setTheme};
 }

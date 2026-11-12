@@ -717,3 +717,36 @@ select v.* from (values
   (6, 'mock', 'mock:6:sleep:d6', 'sleep', now() - interval '10005 minutes', now() - interval '9522 minutes', null, 483, null, null, 'device', 'normal')
 ) as v(user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)
 where not exists (select 1 from vault_events e where e.user_id = v.user_id and e.source = v.source and e.external_id = v.external_id);
+
+-- Turf (scope D): one live game around the Katy Trail in the seeded group chat, so the map is not empty.
+insert into games (conversation_id, game_type, settings, status, host_id, starts_at, ends_at)
+select c.id, 'turf', '{"seed":"katy-trail","center":{"lat":32.8125,"lng":-96.7985},"radiusKm":1.5,"lengthDays":7,"arenaLabel":"Katy Trail"}'::jsonb, 'live', 1, now() - interval '2 hours', now() + interval '7 days'
+from conversations c
+where c.name = 'HackUTD Organizers' and not exists (select 1 from games g where g.settings ->> 'seed' = 'katy-trail')
+order by c.id limit 1;
+
+insert into game_invites (game_id, user_id, invited_by, status, color, location_consent_at, responded_at)
+select g.id, v.user_id, 1, v.status, v.color, case when v.status = 'accepted' then now() - interval '2 hours' end, case when v.status = 'accepted' then now() - interval '2 hours' end
+from games g cross join (values (1, 'accepted', '#1877F2'), (2, 'accepted', '#F02849'), (3, 'invited', '#31A24C')) v(user_id, status, color)
+where g.settings ->> 'seed' = 'katy-trail'
+on conflict do nothing;
+
+insert into turf_cells (game_id, cell, owner_id, claimed_at)
+select g.id, c.cell, 1, now() - interval '90 minutes'
+from games g cross join unnest(array['8b26c864b982fff','8b26c864b995fff','8b26c864b991fff','8b26c864b99cfff','8b26c864b983fff','8b26c864b980fff','8b26c864b986fff','8b26c864b9b3fff','8b26c864b994fff','8b26c864b990fff','8b26c864b993fff','8b26c864b99efff','8b26c864b998fff','8b26c864b99dfff','8b26c864b98efff','8b26c864b981fff','8b26c864b985fff','8b26c864b984fff','8b26c864b9b1fff','8b26c864b9b0fff','8b26c864b9b2fff','8b26c86486c9fff','8b26c864b996fff','8b26c864b992fff','8b26c864bd6cfff','8b26c864bd6dfff','8b26c864b99afff','8b26c864b99bfff','8b26c864b999fff','8b26c864b98afff','8b26c864b988fff','8b26c864b98cfff','8b26c864b9aafff','8b26c864b9aefff','8b26c864b9a3fff','8b26c864b9a2fff','8b26c864b9b5fff','8b26c864bd61fff','8b26c864bd6efff','8b26c864bd68fff']) as c(cell)
+where g.settings ->> 'seed' = 'katy-trail'
+on conflict do nothing;
+
+insert into turf_cells (game_id, cell, owner_id, claimed_at)
+select g.id, c.cell, 2, now() - interval '60 minutes'
+from games g cross join unnest(array['8b26c864ba65fff','8b26c864ba64fff','8b26c864ba60fff','8b26c864ba61fff','8b26c8649692fff','8b26c8649696fff','8b26c864bb4bfff','8b26c864bb4afff','8b26c864bb59fff','8b26c864ba66fff','8b26c864ba62fff','8b26c864ba63fff','8b26c864ba6efff','8b26c864ba6cfff','8b26c8649693fff','8b26c8649690fff','8b26c8649694fff','8b26c864bb49fff','8b26c864bb48fff','8b26c864bb4efff','8b26c864bb5dfff','8b26c864bb58fff','8b26c864bb5bfff','8b26c864ba75fff','8b26c864ba71fff','8b26c864ba44fff','8b26c864ba45fff','8b26c864ba6afff','8b26c864ba68fff','8b26c864ba6dfff','8b26c864969efff','8b26c8649691fff','8b26c8649695fff','8b26c86496b3fff','8b26c86496b2fff','8b26c864bb4dfff','8b26c864bb4cfff']) as c(cell)
+where g.settings ->> 'seed' = 'katy-trail'
+on conflict do nothing;
+
+insert into messages (conversation_id, sender_id, body, kind, payload, created_at)
+select g.conversation_id, 1, 'Caleb invited you to Turf: Katy Trail', 'rally_invite',
+  jsonb_build_object('gameId', g.id, 'gameType', 'turf', 'title', 'Turf: Katy Trail', 'arenaLabel', 'Katy Trail', 'endsAt', to_char(g.ends_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')),
+  now() - interval '2 hours'
+from games g
+where g.settings ->> 'seed' = 'katy-trail'
+  and not exists (select 1 from messages m where m.kind = 'rally_invite' and (m.payload ->> 'gameId')::int = g.id);

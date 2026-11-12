@@ -180,8 +180,8 @@ export function Thread({
           );
         })}
       </div>
-      <Composer onSend={onSend} autoFocus />
-      <RallySheet conversationId={conversation.id} open={rallyOpen} onClose={() => setRallyOpen(false)} />
+      <Composer onSend={onSend} autoFocus onRally={() => setRallyOpen(true)} />
+      <RallySheet conversationId={conversation.id} viewerId={viewerId} open={rallyOpen} onClose={() => setRallyOpen(false)} />
     </section>
   );
 }

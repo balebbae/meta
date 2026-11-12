@@ -1,0 +1,497 @@
+/* Hex map */
+.map {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  user-select: none;
+}
+.mapPick {
+  cursor: crosshair;
+}
+.arena {
+  fill: var(--fb-input-bg);
+}
+.arenaRing {
+  fill: none;
+  stroke: var(--fb-text-secondary);
+  stroke-width: 2;
+  stroke-dasharray: 10 8;
+  vector-effect: non-scaling-stroke;
+  opacity: 0.6;
+}
+.grid {
+  fill: none;
+  stroke: var(--fb-divider);
+  stroke-width: 0.6;
+  vector-effect: non-scaling-stroke;
+}
+.gridCoarse {
+  fill: none;
+  stroke: var(--fb-divider);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.owned {
+  fill-opacity: 0.78;
+  stroke: var(--fb-card);
+  stroke-width: 0.5;
+  vector-effect: non-scaling-stroke;
+}
+.trail {
+  fill-opacity: 0.28;
+  stroke-width: 2;
+  stroke-dasharray: 4 3;
+  vector-effect: non-scaling-stroke;
+  fill: var(--fb-blue);
+  stroke: var(--fb-blue);
+}
+.centerPin {
+  fill: var(--fb-blue);
+  stroke: var(--fb-card);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.meHalo {
+  fill: var(--fb-blue);
+  opacity: 0.2;
+}
+.meDot {
+  fill: var(--fb-blue);
+  stroke: var(--fb-card);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+/* Page */
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+.card {
+  background: var(--fb-card);
+  border-radius: var(--fb-radius, 8px);
+  box-shadow: var(--fb-shadow-card);
+}
+.mapCard {
+  composes: card;
+  padding: 12px;
+}
+.mapWrap {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 4px 12px;
+}
+.back {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+  flex: none;
+}
+.back:hover {
+  background: var(--fb-icon-bg-hover);
+}
+.titleBox {
+  min-width: 0;
+  flex: 1;
+}
+.title {
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--fb-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sub {
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+}
+.pill {
+  flex: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+  white-space: nowrap;
+}
+.pillLive {
+  composes: pill;
+  background: var(--fb-green, #31a24c);
+  color: #fff;
+}
+.side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.panel {
+  composes: card;
+  padding: 12px 16px 16px;
+}
+.panelTitle {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--fb-text);
+  margin-bottom: 8px;
+}
+.legendRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 15px;
+  color: var(--fb-text);
+}
+.legendRow img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+.swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex: none;
+}
+.legendName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.legendName small {
+  display: block;
+  font-size: 12px;
+  color: var(--fb-text-secondary);
+}
+.legendCells {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.legendCells small {
+  font-weight: 400;
+  color: var(--fb-text-secondary);
+  margin-left: 3px;
+}
+.muted {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--fb-text-secondary);
+}
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.row {
+  display: flex;
+  gap: 8px;
+}
+.row > * {
+  flex: 1;
+}
+.btn {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 15px;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn:hover {
+  background: var(--fb-icon-bg-hover);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.btnPrimary {
+  composes: btn;
+  background: var(--fb-blue);
+  color: #fff;
+}
+.btnPrimary:hover {
+  background: var(--fb-blue-hover);
+}
+.btnDanger {
+  composes: btn;
+  color: var(--fb-red, #e41e3f);
+}
+.btnBig {
+  height: 44px;
+  font-size: 17px;
+}
+.tracker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--fb-input-bg);
+  font-size: 14px;
+  color: var(--fb-text);
+}
+.pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--fb-red, #e41e3f);
+  flex: none;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+.toast {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--fb-input-bg);
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--fb-text);
+}
+.error {
+  font-size: 13px;
+  color: var(--fb-red, #e41e3f);
+}
+.hidden {
+  display: none;
+}
+.winner {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fb-text);
+  margin-bottom: 8px;
+}
+.demoRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.demoRow .btn {
+  flex: 1 1 auto;
+  font-size: 13px;
+  height: 32px;
+}
+.center {
+  max-width: 520px;
+  margin: 48px auto;
+  padding: 24px;
+  text-align: center;
+}
+
+/* Consent sheet + invite view */
+.consent {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 16px 16px;
+}
+.consentLead {
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--fb-text);
+}
+.consentList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.consentList li {
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--fb-text);
+}
+.consentList strong {
+  display: block;
+}
+.consentList span {
+  color: var(--fb-text-secondary);
+}
+.yes,
+.no {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+.yes {
+  background: var(--fb-green, #31a24c);
+}
+.no {
+  background: var(--fb-text-secondary);
+}
+.avatars {
+  display: flex;
+  align-items: center;
+}
+.avatars img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--fb-card);
+  margin-left: -8px;
+}
+.avatars img:first-child {
+  margin-left: 0;
+}
+.avatarPending {
+  opacity: 0.45;
+}
+
+/* Create-game form (Rally sheet) */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 16px 16px;
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.pickMap {
+  border-radius: 8px;
+  overflow: hidden;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fb-text-secondary);
+}
+.input {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--fb-divider);
+  background: var(--fb-card);
+  color: var(--fb-text);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 400;
+  min-width: 0;
+  width: 100%;
+}
+.input:focus {
+  outline: 2px solid var(--fb-blue);
+  outline-offset: -1px;
+}
+.seg {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.segBtn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--fb-icon-bg);
+  color: var(--fb-text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.segOn {
+  composes: segBtn;
+  background: var(--fb-blue);
+  color: #fff;
+}
+.invitee {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--fb-text);
+  cursor: pointer;
+  border-radius: 6px;
+}
+.invitee:hover {
+  background: var(--fb-hover);
+}
+.invitee img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.invitee span {
+  flex: 1;
+}
+.invitee input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--fb-blue);
+}
+
+@media (max-width: 899px) {
+  .page {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 8px 8px 24px;
+    gap: 8px;
+  }
+  .side {
+    gap: 8px;
+  }
+}
+@media (max-width: 520px) {
+  .formGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pickMap {
+    max-width: 240px;
+    margin: 0 auto;
+  }
+  .title {
+    font-size: 17px;
+  }
+}

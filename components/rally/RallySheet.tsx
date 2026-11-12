@@ -2,15 +2,16 @@
 import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 import {Dialog} from '@/components/ui/Dialog';
+import {TurfCreateForm} from '@/components/turf/TurfCreateForm';
 import {rallyApi} from './api';
 import styles from './rally.module.css';
 
 const EXAMPLES = ['Make us do planks every day this week', '30 squats a day, loser buys coffee', 'Relay: run 2 km each before Sunday'];
 
 /** Rally library (§16.1): Turf (handled by /api/games, subagent D) and "Quest from a sentence". */
-export function RallySheet({conversationId, open, onClose}: {conversationId: number; open: boolean; onClose: () => void}) {
+export function RallySheet({conversationId, viewerId, open, onClose}: {conversationId: number; viewerId?: number; open: boolean; onClose: () => void}) {
   const router = useRouter();
-  const [mode, setMode] = useState<'library' | 'sentence'>('library');
+  const [mode, setMode] = useState<'library' | 'sentence' | 'turf'>('library');
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +39,7 @@ export function RallySheet({conversationId, open, onClose}: {conversationId: num
   };
 
   return (
-    <Dialog open={open} onClose={close} title={mode === 'library' ? 'Rally' : 'Quest from a sentence'} width={460} onBack={mode === 'sentence' ? () => setMode('library') : undefined}>
+    <Dialog open={open} onClose={close} title={mode === 'library' ? 'Rally' : mode === 'turf' ? 'Start Turf' : 'Quest from a sentence'} width={mode === 'turf' ? 540 : 460} onBack={mode !== 'library' ? () => setMode('library') : undefined}>
       {mode === 'library' ? (
         <div className={styles.library}>
           <button type="button" className={styles.libItem} onClick={() => setMode('sentence')}>
@@ -50,7 +51,7 @@ export function RallySheet({conversationId, open, onClose}: {conversationId: num
               <small>Type what the squad should do; the Muse turns it into a week-long boss fight.</small>
             </span>
           </button>
-          <button type="button" className={styles.libItem} onClick={() => router.push(`/activities?conversationId=${conversationId}#turf`)}>
+          <button type="button" className={styles.libItem} onClick={() => setMode('turf')}>
             <span className={styles.libIcon} aria-hidden>
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 11l18-8-8 18-2-8z" /></svg>
             </span>
@@ -62,6 +63,8 @@ export function RallySheet({conversationId, open, onClose}: {conversationId: num
           <p className={styles.sheetMeta}>Quests from Reels: tap “Rally this” on a fitness Reel.</p>
           {offline && <span className={styles.offline}>Muse offline · template quest</span>}
         </div>
+      ) : mode === 'turf' ? (
+        <TurfCreateForm conversationId={conversationId} viewerId={viewerId} onCreated={close} />
       ) : (
         <div className={styles.sheetForm}>
           <textarea className={styles.textarea} rows={3} maxLength={300} value={text} onChange={e => setText(e.target.value)} placeholder={EXAMPLES[0]} aria-label="Describe the quest" />

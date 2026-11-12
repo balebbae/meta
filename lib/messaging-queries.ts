@@ -63,9 +63,10 @@ const CONVERSATION_SELECT = (viewerId: number) => sql`
     (select row_to_json(m) from (
         select m.id, m.conversation_id, m.sender_id, m.body, m.image_url, m.kind, m.payload, m.created_at, s.name as sender_name, s.avatar_url as sender_avatar
         from messages m left join users s on s.id = m.sender_id
-        where m.conversation_id = c.id order by m.id desc limit 1) m) as last_message,
+        where m.conversation_id = c.id and (m.payload -> 'visibleTo' is null or m.payload -> 'visibleTo' @> to_jsonb(${viewerId}::int)) order by m.id desc limit 1) m) as last_message,
     (select count(*)::int from messages m
-      where m.conversation_id = c.id and m.id > coalesce(me.last_read_message_id, 0) and m.sender_id is distinct from ${viewerId}) as unread_count
+      where m.conversation_id = c.id and m.id > coalesce(me.last_read_message_id, 0) and m.sender_id is distinct from ${viewerId}
+        and (m.payload -> 'visibleTo' is null or m.payload -> 'visibleTo' @> to_jsonb(${viewerId}::int))) as unread_count
   from conversations c
   join conversation_members me on me.conversation_id = c.id and me.user_id = ${viewerId}`;
 
@@ -152,7 +153,19 @@ const MESSAGE_SELECT = sql`
   from messages m left join users s on s.id = m.sender_id`;
 
 /** Messages in ascending id order. `after` returns newer rows than that id; `before` pages back. */
-export async function listMessages(conversationId: number, opts: {after?: number; before?: number; limit?: number} = {}): Promise<Message[]> {
+/** Host-only lines (payload.visibleTo, e.g. "Sam passed" on a Turf invite) are dropped for everyone else. */
+function visibleTo(viewerId: number | undefined) {
+  return (m: Message) => {
+    const only = (m.payload as {visibleTo?: unknown} | null)?.visibleTo;
+    return !Array.isArray(only) || (viewerId != null && only.map(Number).includes(viewerId));
+  };
+}
+
+export async function listMessages(conversationId: number, opts: {after?: number; before?: number; limit?: number; viewerId?: number} = {}): Promise<Message[]> {
+  return (await listAllMessages(conversationId, opts)).filter(visibleTo(opts.viewerId));
+}
+
+async function listAllMessages(conversationId: number, opts: {after?: number; before?: number; limit?: number} = {}): Promise<Message[]> {
   const limit = Math.min(Math.max(opts.limit ?? 50, 1), 200);
   if (opts.after != null) {
     const rows = await sql`${MESSAGE_SELECT} where m.conversation_id = ${conversationId} and m.id > ${opts.after} order by m.id asc limit ${limit}`;

@@ -6,6 +6,8 @@ import type {MessageKind} from '@/lib/activities/types';
 import styles from './cards.module.css';
 import QuestCard from './QuestCard';
 import RallyGameCard from './RallyGameCard';
+import RallyInviteCard from './RallyInviteCard';
+import TurfRecapCard from './TurfRecapCard';
 
 export type CardProps = {message: Message; viewerId: number; conversation: Conversation};
 
@@ -31,6 +33,8 @@ export const CARD_RENDERERS: Partial<Record<MessageKind, ComponentType<CardProps
   system: SystemCard,
   quest_card: QuestCard,
   rally_game: RallyGameCard,
+  rally_invite: RallyInviteCard,
+  turf_recap: TurfRecapCard,
 };
 
 export function registerCard(kind: MessageKind, component: ComponentType<CardProps>) {

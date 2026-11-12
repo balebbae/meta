@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     if (body.type !== 'turf') return badRequest('Unknown game type');
     try {
       const {game, state} = await createGame(user, body);
-      return NextResponse.json({id: game.id, state}, {status: 201});
+      return NextResponse.json({id: game.id, url: `/games/${game.id}`, state}, {status: 201});
     } catch (e) {
       return turfError(e);
     }

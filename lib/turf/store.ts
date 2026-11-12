@@ -133,7 +133,7 @@ async function finishGame(game: Game): Promise<void> {
   const text = finalText(game.settings.arenaLabel, table);
   const host = players.find(p => p.isHost) ?? players[0];
   if (game.conversationId && host) {
-    const payload: TurfRecapPayload = {gameId: game.id, text, title: game.settings.arenaLabel, final: true, museUsed: true, standings: table, cells: Object.fromEntries(table.map(s => [String(s.userId), s.cells]))};
+    const payload: TurfRecapPayload = {gameId: game.id, text, title: game.settings.arenaLabel, final: true, standings: table, cells: Object.fromEntries(table.map(s => [String(s.userId), s.cells]))};
     await sendMessage(game.conversationId, host, text, null, {kind: 'turf_recap', payload});
   }
   const ids = players.filter(p => p.status === 'accepted').map(p => p.id);

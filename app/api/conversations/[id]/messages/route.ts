@@ -17,6 +17,7 @@ export async function GET(req: NextRequest, {params}: Ctx) {
       after: after ? Number(after) : undefined,
       before: before ? Number(before) : undefined,
       limit: limit ? Number(limit) : undefined,
+      viewerId: user.id,
     });
     return NextResponse.json({messages});
   });

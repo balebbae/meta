@@ -25,6 +25,19 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
   const [intro, setIntro] = useState(showIntro);
   const [startMode, setStartMode] = useState<string | null>(start);
   const [sentence, setSentence] = useState('');
+  const [chats, setChats] = useState<{id: number; title: string; isGroup: boolean}[]>([]);
+  const [chatId, setChatId] = useState<number | null>(null);
+  useEffect(() => {
+    if (!startMode || chats.length) return;
+    fetch('/api/conversations')
+      .then(r => (r.ok ? r.json() : {conversations: []}))
+      .then((d: {conversations?: {id: number; title: string; isGroup: boolean}[]}) => {
+        const list = [...(d.conversations ?? [])].sort((a, b) => Number(b.isGroup) - Number(a.isGroup));
+        setChats(list);
+        setChatId(prev => prev ?? list[0]?.id ?? null);
+      })
+      .catch(() => {});
+  }, [startMode, chats.length]);
   const [busy, setBusy] = useState<string | null>(null);
 
   const say = useCallback((t: string) => {
@@ -53,7 +66,14 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
         router.push('/reels');
         return;
       }
-      const res = template === 'turf' ? await fetch('/api/games', json({gameType: 'turf', title: 'Turf with friends'})) : await fetch('/api/games/from-sentence', json({sentence: sentence.trim() || 'Run 3 km three times this week with friends'}));
+      if (chatId == null) {
+        say('Pick a chat to play in first.');
+        return;
+      }
+      const res =
+        template === 'turf'
+          ? await fetch('/api/games', json({type: 'turf', gameType: 'turf', conversationId: chatId, settings: {lengthDays: 7, radiusKm: 1.5, arenaLabel: 'Turf with friends'}, invitees: 'all'}))
+          : await fetch('/api/games/from-sentence', json({text: sentence.trim() || 'Run 3 km three times this week with friends', conversationId: chatId}));
       if (res.status === 404 || res.status === 501) {
         say(`${template === 'turf' ? 'Turf' : 'Quest from a sentence'} is coming soon.`);
         return;
@@ -63,7 +83,7 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
         say(d.error ?? 'Could not start the game yet.');
         return;
       }
-      const url = d.url ?? (template === 'turf' ? `/activities/turf/${d.game?.id ?? d.gameId ?? d.id ?? ''}` : `/activities/quests/${d.quest?.id ?? d.questId ?? d.id ?? ''}`);
+      const url = d.url ?? (template === 'turf' ? `/games/${d.game?.id ?? d.gameId ?? d.id ?? ''}` : `/activities/games/${d.quest?.id ?? d.questId ?? d.id ?? ''}`);
       router.push(url);
     } finally {
       setBusy(null);
@@ -220,6 +240,17 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
       <Dialog open={startMode === 'turf'} onClose={() => setStartMode(null)} title="Start Turf">
         <div className={styles.introBody}>
           Turf turns this week&apos;s runs and walks into a game: every street you cover becomes a cell you own. Friends only see the blocks you claim, never your route or your times.
+          <label style={{display: 'block', margin: '10px 0 2px', fontSize: 13, color: 'var(--fb-text-secondary)'}}>
+            Play in
+            <select className={styles.input} style={{display: 'block', width: '100%', marginTop: 4}} value={chatId ?? ''} onChange={e => setChatId(Number(e.target.value))} aria-label="Chat to play in">
+              {chats.length === 0 && <option value="">Loading chats…</option>}
+              {chats.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.isGroup ? `Group: ${c.title}` : c.title}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className={styles.actions}>
             <button type="button" className={styles.primary} disabled={busy === 'turf'} onClick={() => startGame('turf')}>
               {busy === 'turf' ? 'Starting…' : 'Create game & invite friends'}
@@ -233,6 +264,17 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
       <Dialog open={startMode === 'sentence'} onClose={() => setStartMode(null)} title="Quest from a sentence">
         <div className={styles.introBody}>
           Describe the game in one line and Muse builds the rules, the boss and the weekly drop.
+          <label style={{display: 'block', margin: '10px 0 2px', fontSize: 13, color: 'var(--fb-text-secondary)'}}>
+            Play in
+            <select className={styles.input} style={{display: 'block', width: '100%', marginTop: 4}} value={chatId ?? ''} onChange={e => setChatId(Number(e.target.value))} aria-label="Chat to play in">
+              {chats.length === 0 && <option value="">Loading chats…</option>}
+              {chats.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.isGroup ? `Group: ${c.title}` : c.title}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className={styles.sentenceRow}>
             <input className={styles.input} value={sentence} onChange={e => setSentence(e.target.value)} placeholder="Run 3 km three times this week with friends" aria-label="Game sentence" />
             <button type="button" className={styles.primary} style={{flex: '0 0 auto'}} disabled={busy === 'sentence'} onClick={() => startGame('sentence')}>

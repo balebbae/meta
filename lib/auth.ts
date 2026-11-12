@@ -1,3 +1,4 @@
+import {cache} from 'react';
 import {cookies} from 'next/headers';
 import supertokens from 'supertokens-node';
 import {getSSRSession} from 'supertokens-node/nextjs';
@@ -12,9 +13,10 @@ import type {User} from '@/lib/types';
  * Reads the SuperTokens access-token cookie (cookie-based sessions), verifies it, and maps
  * the SuperTokens user id to users.supertokens_id. On the first request for a new account
  * the users row is created (or a seeded row with the same email is linked).
- * Works in server components and route handlers.
+ * Works in server components and route handlers. Memoised per request, so the layout, the page
+ * and nested components share one session check and one users query.
  */
-export async function getSessionUser(): Promise<User | null> {
+export const getSessionUser = cache(async (): Promise<User | null> => {
   ensureSuperTokensInit();
   const cookieStore = await cookies();
   const {accessTokenPayload} = await getSSRSession(cookieStore.getAll());
@@ -31,7 +33,7 @@ export async function getSessionUser(): Promise<User | null> {
   const name = [metadata.first_name, metadata.last_name].filter(Boolean).join(' ');
   const created = await ensureUserRow(supertokensId, email, name);
   return created ? mapUser(created) : null;
-}
+});
 
 export function mapUser(r: Record<string, unknown>): User {
   return {

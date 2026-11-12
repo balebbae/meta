@@ -30,7 +30,7 @@ export type Reel = {
   attribution: string;
 };
 
-const SELECT = sql`
+const SELECT = () => sql`
   select r.id, r.pexels_id, r.video_url, r.poster_url, r.duration_sec, r.width, r.height, r.creator_name, r.creator_url, r.source_url, r.slug,
          r.caption, r.transcript, r.synthetic, r.exercises, r.difficulty, r.equipment, r.setting, r.tags, r.confidence, r.plays, r.created_at,
          (select count(*)::int from quests q where q.reel_id = r.id) as squads
@@ -73,41 +73,22 @@ export async function listReels(opts: ListReelsOptions = {}): Promise<Reel[]> {
   const tag = opts.tag?.trim().toLowerCase();
   const rows = tag
     ? opts.after
-      ? await sql`${SELECT} where r.is_fitness and r.id < ${opts.after} and exists (select 1 from unnest(r.tags) t where lower(t) = ${tag}) order by r.id desc limit ${limit}`
-      : await sql`${SELECT} where r.is_fitness and exists (select 1 from unnest(r.tags) t where lower(t) = ${tag}) order by r.id desc limit ${limit}`
+      ? await sql`${SELECT()} where r.is_fitness and r.id < ${opts.after} and exists (select 1 from unnest(r.tags) t where lower(t) = ${tag}) order by r.id desc limit ${limit}`
+      : await sql`${SELECT()} where r.is_fitness and exists (select 1 from unnest(r.tags) t where lower(t) = ${tag}) order by r.id desc limit ${limit}`
     : opts.after
-      ? await sql`${SELECT} where r.is_fitness and r.id < ${opts.after} order by r.id desc limit ${limit}`
-      : await sql`${SELECT} where r.is_fitness order by r.id desc limit ${limit}`;
+      ? await sql`${SELECT()} where r.is_fitness and r.id < ${opts.after} order by r.id desc limit ${limit}`
+      : await sql`${SELECT()} where r.is_fitness order by r.id desc limit ${limit}`;
   return rows.map(mapReel);
 }
 
 export async function getReel(id: number): Promise<Reel | null> {
-  const rows = await sql`${SELECT} where r.id = ${id}`;
+  const rows = await sql`${SELECT()} where r.id = ${id}`;
   return rows[0] ? mapReel(rows[0]) : null;
 }
 
-/**
- * Reels whose tags overlap the given user tags (case-insensitive, "HIIT" matches "hiit"), best overlap
- * first. Drives Discover's Learn section (§9) from tags only, never from health data.
- */
-export async function reelsForTags(tags: string[], limit = 8): Promise<Reel[]> {
-  const wanted = Array.from(new Set(tags.map(t => t.trim().toLowerCase()).filter(Boolean)));
-  if (!wanted.length) return [];
-  const rows = await sql`
-    select * from (${SELECT} where r.is_fitness) x
-    where exists (select 1 from unnest(x.tags) t where lower(t) = any(${wanted}::text[]))
-    order by (select count(*) from unnest(x.tags) t where lower(t) = any(${wanted}::text[])) desc, x.plays desc, x.id desc
-    limit ${limit}`;
-  return rows.map(mapReel);
-}
 
 export async function recordPlay(id: number): Promise<number | null> {
   const rows = await sql`update reels set plays = plays + 1 where id = ${id} returning plays`;
   return rows[0] ? Number(rows[0].plays) : null;
 }
 
-/** Distinct tags across the library with counts, for the filter chips. */
-export async function listReelTags(limit = 12): Promise<{tag: string; count: number}[]> {
-  const rows = await sql`select lower(t) as tag, count(*)::int as count from reels r, unnest(r.tags) t where r.is_fitness group by lower(t) order by count desc, tag limit ${limit}`;
-  return rows.map(r => ({tag: String(r.tag), count: Number(r.count)}));
-}

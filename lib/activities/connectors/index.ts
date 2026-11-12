@@ -101,6 +101,3 @@ export function listConnectorCards(platform: Platform): ConnectorCard[] {
   return order.map(id => ({id, platforms: REGISTRY[id]?.platforms ?? ['ios', 'android', 'web'], availability: availability(id, platform), ...META[id]}));
 }
 
-export function connectorMeta(id: ConnectorId) {
-  return META[id];
-}

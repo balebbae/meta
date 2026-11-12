@@ -1,11 +1,12 @@
 'use client';
 import Link from 'next/link';
-import {Fragment, useEffect, useMemo, useRef} from 'react';
+import {Fragment, useEffect, useMemo, useRef, useState} from 'react';
 import {ArrowLeftIcon} from '@/components/icons';
 import {formatFullDate} from '@/lib/format';
 import type {Conversation, Message} from '@/lib/messaging-types';
 import {ChatAvatar} from './ChatAvatar';
 import {Composer} from './Composer';
+import {RallySheet} from '@/components/rally/RallySheet';
 import {ConversationAvatar} from './ConversationRow';
 import {InfoCircleIcon, PhoneIcon, VideoCallIcon} from './icons';
 import styles from './messages.module.css';
@@ -50,6 +51,7 @@ export function Thread({
   infoOpen: boolean;
   onToggleInfo: () => void;
 }) {
+  const [rallyOpen, setRallyOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickRef = useRef(true);
   const lastCountRef = useRef(0);
@@ -99,6 +101,9 @@ export function Thread({
           <div className={styles.threadSub}>{subtitle}</div>
         </div>
         <div className={styles.threadActions}>
+          <button type="button" className={`${styles.iconBtn} ${rallyOpen ? styles.iconBtnActive : ''}`} aria-label="Rally: start a quest" title="Rally" onClick={() => setRallyOpen(true)}>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden><path d="M12 2l2.6 5.6 6.1.7-4.5 4.2 1.2 6L12 15.5 6.6 18.5l1.2-6L3.3 8.3l6.1-.7z" /></svg>
+          </button>
           <button type="button" className={styles.iconBtn} aria-label="Start a voice call">
             <PhoneIcon size={20} />
           </button>
@@ -176,6 +181,7 @@ export function Thread({
         })}
       </div>
       <Composer onSend={onSend} autoFocus />
+      <RallySheet conversationId={conversation.id} open={rallyOpen} onClose={() => setRallyOpen(false)} />
     </section>
   );
 }

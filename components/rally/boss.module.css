@@ -1,0 +1,45 @@
+.boss {
+  display: block;
+  overflow: visible;
+  transform-origin: 50% 100%;
+  animation: hover 3s ease-in-out infinite;
+}
+.eyes {
+  animation: blink 4s linear infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+.wings {
+  animation: flap 1.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+.hurt {
+  animation: shake 0.5s ease-in-out 2;
+  filter: brightness(1.2) saturate(0.6);
+}
+.down {
+  filter: grayscale(1) opacity(0.5);
+  transform: rotate(90deg) translateY(10px);
+  animation: none;
+}
+@keyframes hover {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4px) scale(1.02); }
+}
+@keyframes blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+@keyframes flap {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(0.85); }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px) rotate(-3deg); }
+  75% { transform: translateX(6px) rotate(3deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boss, .eyes, .wings { animation: none; }
+}

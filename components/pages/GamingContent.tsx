@@ -3,6 +3,7 @@ import Image from 'next/image';
 import {useRef, useState} from 'react';
 import {Dialog} from '@/components/ui/Dialog';
 import type {Game} from '@/lib/secondary-data';
+import Link from 'next/link';
 import {SectionHead} from './SecondaryLayout';
 import {ChevronLeftIcon, ChevronRightIcon, PlayIcon} from './icons';
 import styles from './gaming.module.css';
@@ -47,6 +48,19 @@ export function GamingContent({games}: {games: Game[]}) {
       <section>
         <SectionHead title="New and Rising Games" link="/gaming?tab=browse" />
         <div className={styles.grid}>
+          <article className={styles.tile}>
+            <div className={styles.tileImg} style={{background: 'linear-gradient(135deg, #1877F2, #f5a623)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 22}}>
+              R
+            </div>
+            <div className={styles.heroText}>
+              <div className={styles.name}>Rally</div>
+              <div className={styles.meta}>Co-op fitness quests with your group chats</div>
+              <span className={styles.tag}>New</span>
+            </div>
+            <Link href="/activities/games" className={styles.playSoft} style={{textDecoration: 'none'}}>
+              Play
+            </Link>
+          </article>
           {instant.map(g => (
             <article key={g.id} className={styles.tile}>
               <div className={styles.tileImg}>

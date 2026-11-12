@@ -12,12 +12,13 @@ import {FriendButton} from './FriendButton';
 import {profileApi} from './api';
 import styles from './profile.module.css';
 
-export type ProfileTab = 'posts' | 'about' | 'friends' | 'photos' | 'videos' | 'reels';
+export type ProfileTab = 'posts' | 'about' | 'friends' | 'photos' | 'activities' | 'videos' | 'reels';
 const TABS: {key: ProfileTab; label: string}[] = [
   {key: 'posts', label: 'All'},
   {key: 'about', label: 'About'},
   {key: 'friends', label: 'Friends'},
   {key: 'photos', label: 'Photos'},
+  {key: 'activities', label: 'Activities'},
   {key: 'reels', label: 'Reels'},
 ];
 

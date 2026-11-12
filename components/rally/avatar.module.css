@@ -1,0 +1,131 @@
+.avatar {
+  display: block;
+  overflow: visible;
+  transform-origin: 50% 100%;
+}
+.head,
+.torso,
+.legL,
+.legR,
+.armL,
+.armR,
+.cape,
+.badge {
+  transform-box: fill-box;
+}
+.head {
+  transform-origin: 50% 90%;
+}
+.armL,
+.armR {
+  transform-origin: 50% 5%;
+}
+.legL,
+.legR {
+  transform-origin: 50% 0%;
+}
+.cape {
+  transform-origin: 50% 0%;
+}
+
+/* idle: gentle breathing */
+.idle .torso {
+  animation: breathe 2.6s ease-in-out infinite;
+}
+.idle .head {
+  animation: nod 2.6s ease-in-out infinite;
+}
+.idle .cape {
+  animation: flutter 3s ease-in-out infinite;
+}
+
+/* run: bob + swinging limbs */
+.run {
+  animation: bob 0.5s ease-in-out infinite;
+}
+.run .legL,
+.run .armR {
+  animation: swing 0.5s ease-in-out infinite;
+}
+.run .legR,
+.run .armL {
+  animation: swing 0.5s ease-in-out infinite reverse;
+}
+.run .cape {
+  animation: flutter 0.5s ease-in-out infinite;
+  transform: rotate(-18deg);
+}
+
+/* attack: wind up and punch */
+.attack {
+  animation: lunge 0.9s ease-in-out infinite;
+}
+.attack .armR {
+  animation: punch 0.9s ease-in-out infinite;
+}
+.attack .armL {
+  transform: rotate(25deg);
+}
+
+/* celebrate: jump + arms up */
+.celebrate {
+  animation: jump 0.8s ease-in-out infinite;
+}
+.celebrate .armL {
+  transform: rotate(150deg);
+}
+.celebrate .armR {
+  transform: rotate(-150deg);
+}
+.celebrate .head {
+  animation: nod 0.8s ease-in-out infinite;
+}
+.celebrate .badge {
+  animation: sparkle 0.8s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scaleY(1); }
+  50% { transform: scaleY(1.03); }
+}
+@keyframes nod {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+@keyframes flutter {
+  0%, 100% { transform: skewX(0deg); }
+  50% { transform: skewX(-6deg); }
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@keyframes swing {
+  0%, 100% { transform: rotate(-30deg); }
+  50% { transform: rotate(30deg); }
+}
+@keyframes lunge {
+  0%, 100% { transform: translateX(0) rotate(0); }
+  40% { transform: translateX(-4px) rotate(-6deg); }
+  60% { transform: translateX(10px) rotate(6deg); }
+}
+@keyframes punch {
+  0%, 100% { transform: rotate(0); }
+  40% { transform: rotate(40deg); }
+  60% { transform: rotate(-110deg); }
+}
+@keyframes jump {
+  0%, 100% { transform: translateY(0) scaleY(1); }
+  30% { transform: translateY(0) scaleY(0.94); }
+  60% { transform: translateY(-14px) scaleY(1.04); }
+}
+@keyframes sparkle {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.25); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .avatar,
+  .avatar * {
+    animation: none !important;
+  }
+}

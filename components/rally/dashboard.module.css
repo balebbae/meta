@@ -342,3 +342,71 @@
     flex-direction: column;
   }
 }
+
+/* Post to groups dialog (ShareToGroupsDialog) */
+.shareBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 16px 16px;
+  font-size: 15px;
+}
+.shareBody p {
+  margin: 0;
+}
+.shareHead {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fb-text-secondary);
+}
+.shareRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--fb-radius);
+  cursor: pointer;
+}
+.shareRow:hover {
+  background: var(--fb-hover);
+}
+.shareRow input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--fb-blue);
+}
+.shareName {
+  display: flex;
+  flex-direction: column;
+  line-height: 18px;
+  min-width: 0;
+}
+.shareField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+}
+.shareField input,
+.shareField textarea {
+  padding: 8px 10px;
+  border: 1px solid var(--fb-divider);
+  border-radius: 6px;
+  background: var(--fb-input-bg);
+  color: var(--fb-text);
+  font: inherit;
+  font-size: 15px;
+}
+.shareError {
+  color: var(--fb-red);
+  font-size: 13px;
+}
+.shareActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}

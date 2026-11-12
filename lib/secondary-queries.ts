@@ -53,6 +53,21 @@ export type GroupPost = {
   likeCount: number;
   commentCount: number;
   createdAt: string;
+  activity: GroupActivity | null;
+};
+
+/** A Rally quest shared into the group as a sign-up post (lib/rally/groups.ts). */
+export type GroupActivity = {
+  questId: number;
+  title: string;
+  story: string;
+  template: string;
+  status: string;
+  endsAt: string | null;
+  capacity: number | null;
+  going: number;
+  joined: boolean;
+  avatars: string[];
 };
 
 export type GroupMember = Channel & {role: 'admin' | 'member'; joinedAt: string};
@@ -194,29 +209,42 @@ function mapGroupPost(r: Row): GroupPost {
     likeCount: r.like_count as number,
     commentCount: r.comment_count as number,
     createdAt: String(r.created_at),
+    activity: (r.activity as GroupActivity | null) ?? null,
   };
 }
+
+const ACTIVITY_SELECT = (viewerId: number) => sql`
+  case when q.id is null then null else json_build_object(
+    'questId', q.id, 'title', q.title, 'story', q.description, 'template', q.template, 'status', q.status,
+    'endsAt', q.ends_at, 'capacity', q.capacity,
+    'going', (select count(*)::int from quest_progress p where p.quest_id = q.id),
+    'joined', exists(select 1 from quest_progress p where p.quest_id = q.id and p.user_id = ${viewerId}),
+    'avatars', (select coalesce(json_agg(a.avatar_url), '[]'::json) from (
+      select u.avatar_url from quest_progress p join users u on u.id = p.user_id where p.quest_id = q.id order by p.id limit 5) a)
+  ) end as activity`;
 
 export async function listGroupFeed(viewerId: number): Promise<GroupPost[]> {
   const rows = await sql`
     select gp.*, g.name as group_name, g.icon_url as group_icon, g.privacy as group_privacy,
-           u.name as author_name, u.avatar_url as author_avatar
+           u.name as author_name, u.avatar_url as author_avatar, ${ACTIVITY_SELECT(viewerId)}
     from group_posts gp
     join groups g on g.id = gp.group_id
     join users u on u.id = gp.author_id
+    left join quests q on q.id = gp.quest_id
     where exists(select 1 from group_members gm where gm.group_id = g.id and gm.user_id = ${viewerId})
        or g.privacy = 'public'
     order by gp.created_at desc`;
   return rows.map(mapGroupPost);
 }
 
-export async function listGroupPosts(groupId: number): Promise<GroupPost[]> {
+export async function listGroupPosts(groupId: number, viewerId: number): Promise<GroupPost[]> {
   const rows = await sql`
     select gp.*, g.name as group_name, g.icon_url as group_icon, g.privacy as group_privacy,
-           u.name as author_name, u.avatar_url as author_avatar
+           u.name as author_name, u.avatar_url as author_avatar, ${ACTIVITY_SELECT(viewerId)}
     from group_posts gp
     join groups g on g.id = gp.group_id
     join users u on u.id = gp.author_id
+    left join quests q on q.id = gp.quest_id
     where gp.group_id = ${groupId}
     order by gp.created_at desc`;
   return rows.map(mapGroupPost);

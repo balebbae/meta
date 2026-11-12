@@ -565,3 +565,8 @@ create table if not exists turf_privacy_zones (
   created_at timestamptz not null default now()
 );
 create index if not exists turf_privacy_zones_user_idx on turf_privacy_zones (user_id);
+
+-- Group activities: a Rally quest posted into groups as a sign-up post; capacity caps quest_progress rows
+alter table quests add column if not exists capacity integer check (capacity between 2 and 100);
+alter table group_posts add column if not exists quest_id integer references quests(id) on delete cascade;
+create index if not exists group_posts_quest_idx on group_posts (quest_id) where quest_id is not null;

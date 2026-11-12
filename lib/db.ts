@@ -4,7 +4,7 @@ type Sql = NeonQueryFunction<false, false>;
 
 let _sql: Sql | null = null;
 
-function getSql(): Sql {
+export function getSql(): Sql {
   if (_sql) return _sql;
   const url = process.env.DATABASE_URL?.trim();
   if (!url) {

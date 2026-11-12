@@ -5,6 +5,7 @@ import type {QuestState} from '@/lib/rally/queries';
 import {RallyAvatar, type AvatarState} from './Avatar';
 import {BossArt} from './BossArt';
 import {LogMoveSheet} from './LogMoveSheet';
+import {ShareToGroupsDialog} from './ShareToGroupsDialog';
 import {rallyApi, type OkMove} from './api';
 import s from './dashboard.module.css';
 import r from './rally.module.css';
@@ -15,6 +16,7 @@ const POLL_MS = 3000;
 export function QuestDashboard({initial}: {initial: QuestState}) {
   const [state, setState] = useState<QuestState>(initial);
   const [logOpen, setLogOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [dare, setDare] = useState<QuestState['dares'][number] | null>(null);
   const [anim, setAnim] = useState<{userId: number; state: AvatarState; hurt: boolean} | null>(null);
   const [banner, setBanner] = useState<string | null>(null);
@@ -83,11 +85,16 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
               {!state.museUsed && <span className={r.offline}>Muse offline · template quest</span>}
             </div>
           </div>
-          {q.conversationId && (
-            <Link href={`/messages/${q.conversationId}`} className="fb-btn-secondary" style={{whiteSpace: 'nowrap'}}>
-              Open chat
-            </Link>
-          )}
+          <div style={{display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end'}}>
+            <button type="button" className="fb-btn-primary" style={{whiteSpace: 'nowrap'}} disabled={done} onClick={() => setShareOpen(true)}>
+              Post to groups
+            </button>
+            {q.conversationId && (
+              <Link href={`/messages/${q.conversationId}`} className="fb-btn-secondary" style={{whiteSpace: 'nowrap'}}>
+                Open chat
+              </Link>
+            )}
+          </div>
         </div>
         {spec.boss && (
           <div className={s.arenaStage}>
@@ -315,6 +322,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
 
       <LogMoveSheet questId={q.id} open={logOpen} onClose={() => setLogOpen(false)} levelName={level?.name} exercises={level?.exercises.map(e => `${e.name}${e.reps ? ` ×${e.reps}` : ''}${e.seconds ? ` ${e.seconds}s` : ''}`)} target={me?.target ?? null} onDone={onMove} />
       <LogMoveSheet questId={q.id} open={Boolean(dare)} onClose={() => setDare(null)} dare={dare} onDone={onMove} />
+      <ShareToGroupsDialog questId={q.id} open={shareOpen} onClose={() => setShareOpen(false)} />
     </div>
   );
 }

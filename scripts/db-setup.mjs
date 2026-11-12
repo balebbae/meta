@@ -9,7 +9,7 @@ const sql = neon(url);
 
 const reset = process.argv.includes('--reset');
 if (reset) {
-  await sql.query('drop table if exists notifications, stories, friendships, reactions, comments, posts, users cascade');
+  await sql.query('drop table if exists user_details, notifications, stories, friendships, reactions, comments, posts, users cascade');
 }
 for (const file of ['db/schema.sql', 'db/seed.sql']) {
   const statements = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')

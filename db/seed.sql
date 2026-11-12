@@ -166,3 +166,90 @@ on conflict do nothing;
 insert into event_rsvps (event_id, user_id, status)
 select e.id, 1, 'interested' from events e where e.title in ('HackUTD 2026 Kickoff', 'Deep Ellum Night Market')
 on conflict do nothing;
+||||||| parent of 3d118bb (profile: user_details table, non-friend users with pending requests, photo posts for Caleb)
+
+-- profile agent: people who are NOT friends with Caleb (for Friend Requests / People You May Know)
+insert into users (name, email, avatar_url, cover_url, bio, is_online) values
+  ('Olivia Chen', 'olivia@example.com', 'https://i.pravatar.cc/300?img=44', 'https://picsum.photos/seed/cover-olivia/1200/450', 'UX researcher. Austin, TX.', true),
+  ('Jamal Wright', 'jamal@example.com', 'https://i.pravatar.cc/300?img=60', 'https://picsum.photos/seed/cover-jamal/1200/450', 'Data engineer by day, DJ by night.', false),
+  ('Isabella Rossi', 'isabella@example.com', 'https://i.pravatar.cc/300?img=49', 'https://picsum.photos/seed/cover-isabella/1200/450', 'Architecture student. Espresso enthusiast.', true),
+  ('Kenji Tanaka', 'kenji@example.com', 'https://i.pravatar.cc/300?img=15', 'https://picsum.photos/seed/cover-kenji/1200/450', 'Game dev. Unity + Rust.', false),
+  ('Grace Kim', 'grace@example.com', 'https://i.pravatar.cc/300?img=29', 'https://picsum.photos/seed/cover-grace/1200/450', 'Pianist. Marathon runner.', true),
+  ('Ravi Menon', 'ravi@example.com', 'https://i.pravatar.cc/300?img=11', 'https://picsum.photos/seed/cover-ravi/1200/450', 'Cloud infra @ a startup you have not heard of.', false),
+  ('Lucas Fernandez', 'lucas@example.com', 'https://i.pravatar.cc/300?img=57', 'https://picsum.photos/seed/cover-lucas/1200/450', 'Soccer, salsa, software.', true),
+  ('Emily Park', 'emily@example.com', 'https://i.pravatar.cc/300?img=20', 'https://picsum.photos/seed/cover-emily/1200/450', 'Nursing student. Cat person.', false)
+on conflict (email) do nothing;
+
+-- keep these people out of Caleb's friend list even if the seed is re-run
+delete from friendships
+where (user_id = 1 or friend_id = 1)
+  and (user_id in (select id from users where email in ('olivia@example.com','jamal@example.com','isabella@example.com','kenji@example.com','grace@example.com','ravi@example.com','lucas@example.com','emily@example.com'))
+    or friend_id in (select id from users where email in ('olivia@example.com','jamal@example.com','isabella@example.com','kenji@example.com','grace@example.com','ravi@example.com','lucas@example.com','emily@example.com')));
+
+-- three incoming friend requests for Caleb
+insert into friendships (user_id, friend_id, status)
+select u.id, 1, 'pending' from users u where u.email in ('olivia@example.com', 'jamal@example.com', 'isabella@example.com')
+on conflict do nothing;
+
+-- mutual friends between the new people and Caleb's friends
+insert into friendships (user_id, friend_id, status)
+select a.id, b.id, 'accepted' from users a join users b on true
+where (a.email, b.email) in (
+  ('olivia@example.com','priya@example.com'), ('olivia@example.com','marcus@example.com'), ('olivia@example.com','daniel@example.com'),
+  ('jamal@example.com','priya@example.com'), ('jamal@example.com','sofia@example.com'),
+  ('isabella@example.com','zoe@example.com'), ('isabella@example.com','amara@example.com'), ('isabella@example.com','noah@example.com'), ('isabella@example.com','hannah@example.com'),
+  ('kenji@example.com','marcus@example.com'), ('kenji@example.com','ethan@example.com'),
+  ('grace@example.com','maya@example.com'), ('grace@example.com','hannah@example.com'), ('grace@example.com','priya@example.com'),
+  ('ravi@example.com','ethan@example.com'),
+  ('lucas@example.com','daniel@example.com'), ('lucas@example.com','liam@example.com'),
+  ('emily@example.com','maya@example.com'))
+on conflict do nothing;
+insert into friendships (user_id, friend_id, status)
+select f.friend_id, f.user_id, 'accepted' from friendships f
+join users a on a.id = f.user_id
+where f.status = 'accepted' and a.email in ('olivia@example.com','jamal@example.com','isabella@example.com','kenji@example.com','grace@example.com','ravi@example.com','lucas@example.com','emily@example.com')
+on conflict do nothing;
+
+-- photo posts for Caleb so his Photos grid is not empty
+insert into posts (author_id, content, image_url, audience, share_count, created_at)
+select 1, v.content, v.image_url, 'public', v.shares, now() - v.age
+from (values
+  ('Opening ceremony energy. 1,200 hackers in one room.', 'https://picsum.photos/seed/caleb-opening/1200/800', 31, interval '6 days'),
+  ('Late-night debugging with the best team.', 'https://picsum.photos/seed/caleb-team/1200/900', 8, interval '9 days'),
+  ('Campus in the fall never gets old.', 'https://picsum.photos/seed/caleb-campus/1200/800', 14, interval '13 days'),
+  ('New desk setup. Finally cable-managed.', 'https://picsum.photos/seed/caleb-desk/1200/800', 5, interval '20 days'),
+  ('Weekend hike at Cedar Ridge.', 'https://picsum.photos/seed/caleb-hike/1200/900', 19, interval '27 days'),
+  ('Sponsor fair setup is done. Doors open at 9.', 'https://picsum.photos/seed/caleb-sponsors/1200/800', 3, interval '34 days'),
+  ('Coffee, code, repeat.', 'https://picsum.photos/seed/caleb-coffee/1200/1200', 2, interval '41 days'),
+  ('Throwback to our first hackathon as organizers.', 'https://picsum.photos/seed/caleb-throwback/1200/800', 27, interval '60 days'),
+  ('Dallas skyline from the Reunion Tower.', 'https://picsum.photos/seed/caleb-skyline/1200/800', 12, interval '75 days')
+) as v(content, image_url, shares, age)
+where not exists (select 1 from posts p where p.author_id = 1 and p.image_url = v.image_url);
+
+-- About tab details for every seeded user
+insert into user_details (user_id, work, work_title, education, high_school, current_city, hometown, relationship, phone, website, birthday, gender, languages)
+select u.id, v.work, v.work_title, v.education, v.high_school, v.current_city, v.hometown, v.relationship, v.phone, v.website, v.birthday, v.gender, v.languages
+from (values
+  ('caleb@example.com', 'HackUTD', 'Director', 'The University of Texas at Dallas', 'Plano Senior High School', 'Dallas, Texas', 'Plano, Texas', 'Single', '+1 469-555-0101', 'hackutd.co', 'March 14, 2004', 'Male', 'English, Korean'),
+  ('priya@example.com', 'ACM UTD', 'Officer', 'The University of Texas at Dallas', 'Coppell High School', 'Richardson, Texas', 'Coppell, Texas', 'In a relationship', '+1 972-555-0102', 'priya.dev', 'July 2, 2004', 'Female', 'English, Hindi'),
+  ('marcus@example.com', 'Self-employed', 'Founder', 'University of Texas at Austin', 'Westlake High School', 'Austin, Texas', 'Houston, Texas', 'Single', '+1 512-555-0103', 'marcuslee.co', 'November 20, 2001', 'Male', 'English'),
+  ('sofia@example.com', 'Freelance', 'Photographer', 'Southern Methodist University', 'Lake Highlands High School', 'Dallas, Texas', 'San Antonio, Texas', 'Married', '+1 214-555-0104', 'sofiaalvarez.photo', 'May 9, 1998', 'Female', 'English, Spanish'),
+  ('daniel@example.com', 'Capital One', 'Software Engineer', 'The University of Texas at Dallas', 'Allen High School', 'Plano, Texas', 'Allen, Texas', 'Single', '+1 469-555-0105', null, 'January 30, 2002', 'Male', 'English, Korean'),
+  ('amara@example.com', 'Figma', 'Product Designer', 'University of North Texas', 'Frisco High School', 'Frisco, Texas', 'Lagos, Nigeria', 'In a relationship', '+1 972-555-0106', 'amara.design', 'August 17, 2000', 'Female', 'English, Igbo'),
+  ('noah@example.com', 'Student', null, 'The University of Texas at Dallas', 'Centennial High School', 'Richardson, Texas', 'Frisco, Texas', 'Single', '+1 469-555-0107', null, 'February 11, 2005', 'Male', 'English, Gujarati'),
+  ('hannah@example.com', 'Texas Instruments', 'Data Analyst', 'Texas A&M University', 'Garland High School', 'Garland, Texas', 'Garland, Texas', 'Single', '+1 214-555-0108', null, 'October 5, 2000', 'Female', 'English, Vietnamese'),
+  ('liam@example.com', 'Lockheed Martin', 'Mechanical Engineer', 'Texas Tech University', 'Rockwall High School', 'Fort Worth, Texas', 'Rockwall, Texas', 'Engaged', '+1 817-555-0109', null, 'June 23, 1999', 'Male', 'English'),
+  ('zoe@example.com', 'Toyota Connected', 'UX Designer', 'University of North Texas', 'Hebron High School', 'Plano, Texas', 'Carrollton, Texas', 'Single', '+1 972-555-0110', 'zoemartin.design', 'April 1, 2001', 'Female', 'English, French'),
+  ('ethan@example.com', 'Stripe', 'Backend Engineer', 'University of Texas at Austin', 'Keller High School', 'Austin, Texas', 'Keller, Texas', 'Married', '+1 512-555-0111', 'ethanbrooks.dev', 'September 28, 1997', 'Male', 'English'),
+  ('maya@example.com', 'UT Southwestern Medical Center', 'Resident Physician', 'Baylor University', 'Highland Park High School', 'Dallas, Texas', 'Dallas, Texas', 'Single', '+1 214-555-0112', null, 'December 12, 1998', 'Female', 'English'),
+  ('olivia@example.com', 'Indeed', 'UX Researcher', 'University of Texas at Austin', 'Anderson High School', 'Austin, Texas', 'Sugar Land, Texas', 'Single', '+1 512-555-0113', null, 'March 3, 2000', 'Female', 'English, Mandarin'),
+  ('jamal@example.com', 'American Airlines', 'Data Engineer', 'University of Houston', 'Lamar High School', 'Fort Worth, Texas', 'Houston, Texas', 'Single', '+1 817-555-0114', null, 'July 19, 1999', 'Male', 'English'),
+  ('isabella@example.com', 'Student', null, 'Rice University', 'Liceo Classico Dante', 'Houston, Texas', 'Milan, Italy', 'Single', '+1 713-555-0115', null, 'May 25, 2003', 'Female', 'Italian, English'),
+  ('kenji@example.com', 'Gearbox Software', 'Gameplay Programmer', 'Southern Methodist University', 'Lewisville High School', 'Frisco, Texas', 'Osaka, Japan', 'In a relationship', '+1 972-555-0116', null, 'October 10, 1998', 'Male', 'Japanese, English'),
+  ('grace@example.com', 'Dallas Symphony Orchestra', 'Pianist', 'University of North Texas', 'Plano West Senior High School', 'Dallas, Texas', 'Plano, Texas', 'Single', '+1 214-555-0117', null, 'January 8, 2001', 'Female', 'English, Korean'),
+  ('ravi@example.com', 'Vercel', 'Infrastructure Engineer', 'Georgia Institute of Technology', 'Clements High School', 'Dallas, Texas', 'Sugar Land, Texas', 'Married', '+1 469-555-0118', 'ravimenon.io', 'August 30, 1995', 'Male', 'English, Malayalam'),
+  ('lucas@example.com', 'FC Dallas', 'Analyst', 'University of Texas at Dallas', 'Irving High School', 'Irving, Texas', 'Monterrey, Mexico', 'Single', '+1 972-555-0119', null, 'June 6, 2002', 'Male', 'Spanish, English'),
+  ('emily@example.com', 'Student', null, 'Texas Woman''s University', 'Denton High School', 'Denton, Texas', 'Denton, Texas', 'Single', '+1 940-555-0120', null, 'February 27, 2004', 'Female', 'English')
+) as v(email, work, work_title, education, high_school, current_city, hometown, relationship, phone, website, birthday, gender, languages)
+join users u on u.email = v.email
+on conflict (user_id) do nothing;

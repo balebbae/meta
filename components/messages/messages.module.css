@@ -769,6 +769,9 @@
 
 /* ---- responsive ---- */
 @media (max-width: 1100px) {
+  .infoAuto {
+    display: none;
+  }
   .info {
     position: absolute;
     right: 0;

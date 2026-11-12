@@ -130,7 +130,7 @@ export function Thread({
           const sameAsPrev = !!prev && !showDivider && prev.sender?.id === m.sender?.id && t - new Date(prev.createdAt).getTime() < ONE_MIN;
           const sameAsNext = !!next && next.sender?.id === m.sender?.id && new Date(next.createdAt).getTime() - t < ONE_MIN && new Date(next.createdAt).getTime() - t <= GAP;
           const pos = sameAsPrev && sameAsNext ? 'middle' : sameAsPrev ? 'last' : sameAsNext ? 'first' : 'only';
-          const seenBy = seenAt.get(m.id) ?? [];
+          const seenBy = (seenAt.get(m.id) ?? []).filter(s => s.id !== m.sender?.id);
           const emoji = isEmojiOnly(m.body) && !m.imageUrl;
           return (
             <Fragment key={m.id}>

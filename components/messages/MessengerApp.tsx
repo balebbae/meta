@@ -26,7 +26,8 @@ export function MessengerApp({
 }) {
   const router = useRouter();
   const {conversations, refresh, patch} = useConversations(initialConversations);
-  const [infoOpen, setInfoOpen] = useState(() => typeof window === 'undefined' || window.innerWidth >= 1100);
+  // null = not toggled yet: CSS decides (open on wide screens, hidden below 1100px) so SSR and client markup match
+  const [infoOpen, setInfoOpen] = useState<boolean | null>(null);
   const active = activeId != null ? (conversations ?? []).find(c => c.id === activeId) ?? null : null;
 
   const markRead = useCallback(
@@ -90,11 +91,12 @@ export function MessengerApp({
             onLoadOlder={live.loadOlder}
             onSend={onSend}
             onRetry={live.retry}
-            infoOpen={infoOpen}
-            onToggleInfo={() => setInfoOpen(o => !o)}
+            infoOpen={infoOpen ?? true}
+            onToggleInfo={() => setInfoOpen(o => !(o ?? window.innerWidth >= 1100))}
           />
-          {infoOpen && (
+          {infoOpen !== false && (
             <InfoPanel
+              auto={infoOpen === null}
               conversation={active}
               viewerId={viewer.id}
               messages={live.messages}

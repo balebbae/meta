@@ -26,6 +26,7 @@ function Section({title, defaultOpen = false, children}: {title: string; default
 }
 
 export function InfoPanel({
+  auto = false,
   conversation,
   viewerId,
   messages,
@@ -33,6 +34,7 @@ export function InfoPanel({
   onUpdated,
   onLeft,
 }: {
+  auto?: boolean;
   conversation: Conversation;
   viewerId: number;
   messages: Message[];
@@ -68,7 +70,7 @@ export function InfoPanel({
   };
 
   return (
-    <aside className={styles.info} aria-label="Conversation information">
+    <aside className={`${styles.info} ${auto ? styles.infoAuto : ''}`} aria-label="Conversation information">
       <div className={styles.infoTop}>
         <ConversationAvatar c={conversation} size={80} viewerId={viewerId} />
         <div className={styles.infoName}>{conversation.title}</div>

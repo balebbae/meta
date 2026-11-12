@@ -33,7 +33,7 @@ export function ConversationRow({c, viewerId, active, onClick, size = 56}: {c: C
         <span className={`${styles.rowName} ${unread ? styles.rowNameUnread : ''}`}>{c.title}</span>
         <span className={`${styles.rowPreview} ${unread ? styles.rowPreviewUnread : ''}`}>
           <span>{previewText(c, viewerId)}</span>
-          <span className={styles.time}>· {time}</span>
+          <span className={styles.time} suppressHydrationWarning>· {time}</span>
         </span>
       </span>
       {unread && <span className={styles.dot} aria-label={`${c.unreadCount} unread`} />}

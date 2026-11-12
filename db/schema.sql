@@ -68,3 +68,105 @@ create table if not exists notifications (
   created_at timestamptz not null default now()
 );
 create index if not exists notifications_user_idx on notifications (user_id, created_at desc);
+
+-- Secondary destination pages (Groups, Marketplace, Events, Video, Saved)
+create table if not exists groups (
+  id serial primary key,
+  name text not null unique,
+  description text,
+  cover_url text not null,
+  icon_url text not null,
+  privacy text not null default 'public' check (privacy in ('public', 'private')),
+  created_by integer references users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists group_members (
+  id serial primary key,
+  group_id integer not null references groups(id) on delete cascade,
+  user_id integer not null references users(id) on delete cascade,
+  role text not null default 'member' check (role in ('admin', 'member')),
+  joined_at timestamptz not null default now(),
+  unique (group_id, user_id)
+);
+
+create table if not exists group_posts (
+  id serial primary key,
+  group_id integer not null references groups(id) on delete cascade,
+  author_id integer not null references users(id) on delete cascade,
+  content text not null,
+  image_url text,
+  like_count integer not null default 0,
+  comment_count integer not null default 0,
+  created_at timestamptz not null default now()
+);
+create index if not exists group_posts_group_idx on group_posts (group_id, created_at desc);
+
+create table if not exists marketplace_listings (
+  id serial primary key,
+  seller_id integer not null references users(id) on delete cascade,
+  title text not null,
+  description text,
+  price_cents integer not null,
+  category text not null,
+  condition text not null default 'used_good',
+  location text not null default 'Dallas, TX',
+  image_url text not null,
+  is_saved_default boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists marketplace_created_idx on marketplace_listings (created_at desc);
+
+create table if not exists marketplace_saved (
+  id serial primary key,
+  listing_id integer not null references marketplace_listings(id) on delete cascade,
+  user_id integer not null references users(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (listing_id, user_id)
+);
+
+create table if not exists events (
+  id serial primary key,
+  host_id integer not null references users(id) on delete cascade,
+  title text not null,
+  description text,
+  location text not null,
+  cover_url text not null,
+  starts_at timestamptz not null,
+  ends_at timestamptz,
+  interested_count integer not null default 0,
+  is_online boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists events_starts_idx on events (starts_at);
+
+create table if not exists event_rsvps (
+  id serial primary key,
+  event_id integer not null references events(id) on delete cascade,
+  user_id integer not null references users(id) on delete cascade,
+  status text not null default 'interested' check (status in ('interested', 'going')),
+  created_at timestamptz not null default now(),
+  unique (event_id, user_id)
+);
+
+create table if not exists videos (
+  id serial primary key,
+  channel_id integer not null references users(id) on delete cascade,
+  title text not null,
+  thumbnail_url text not null,
+  duration_seconds integer not null,
+  view_count integer not null default 0,
+  like_count integer not null default 0,
+  comment_count integer not null default 0,
+  share_count integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists saved_posts (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  post_id integer not null references posts(id) on delete cascade,
+  collection text not null default 'For later',
+  created_at timestamptz not null default now(),
+  unique (user_id, post_id)
+);

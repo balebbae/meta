@@ -75,3 +75,94 @@ insert into notifications (user_id, actor_id, type, post_id, message, is_read, c
   (1, 5, 'reaction', 12, 'Daniel Kim reacted to your post.', false, now() - interval '20 minutes'),
   (1, 7, 'friend_request', null, 'Noah Patel sent you a friend request.', true, now() - interval '1 day'),
   (1, 12, 'birthday', null, 'Maya Robinson has a birthday today. Wish her well!', false, now() - interval '3 hours');
+
+-- ---------- Secondary pages (idempotent) ----------
+insert into groups (name, description, cover_url, icon_url, privacy, created_by) values
+  ('UT Dallas Computer Science', 'Students, alumni and faculty of UTD CS. Share internships, projects and events.', 'https://picsum.photos/seed/group-utdcs/1600/600', 'https://picsum.photos/seed/icon-utdcs/200/200', 'public', 1),
+  ('HackUTD Organizers', 'Private group for the HackUTD organizing team.', 'https://picsum.photos/seed/group-hackutd/1600/600', 'https://picsum.photos/seed/icon-hackutd/200/200', 'private', 1),
+  ('Dallas Photography Club', 'Photowalks, critiques, and gear talk around DFW.', 'https://picsum.photos/seed/group-photo/1600/600', 'https://picsum.photos/seed/icon-photo/200/200', 'public', 4),
+  ('Richardson Housing & Roommates', 'Find roommates and sublets near Richardson and Plano.', 'https://picsum.photos/seed/group-housing/1600/600', 'https://picsum.photos/seed/icon-housing/200/200', 'public', 6),
+  ('Plant Parents of DFW', 'Show off your plants, trade cuttings, ask for help.', 'https://picsum.photos/seed/group-plants/1600/600', 'https://picsum.photos/seed/icon-plants/200/200', 'public', 8),
+  ('Texas Climbing Community', 'Indoor and outdoor climbing across Texas.', 'https://picsum.photos/seed/group-climb/1600/600', 'https://picsum.photos/seed/icon-climb/200/200', 'private', 9)
+on conflict (name) do nothing;
+
+insert into group_members (group_id, user_id, role)
+select g.id, u.id, case when g.created_by = u.id then 'admin' else 'member' end
+from groups g cross join users u
+where (g.id + u.id) % 3 <> 0 or u.id = 1 or g.created_by = u.id
+on conflict do nothing;
+
+insert into group_posts (group_id, author_id, content, image_url, like_count, comment_count, created_at)
+select g.id, v.author_id, v.content, v.image_url, v.like_count, v.comment_count, now() - v.age
+from (values
+  ('UT Dallas Computer Science', 2, 'Anyone else taking CS 4348 with Ozbirn this spring? Looking to form a study group.', null, 24, 11, interval '1 hour'),
+  ('UT Dallas Computer Science', 11, 'Career fair recap: 60+ companies, most were hiring for summer SWE interns. Bring printed resumes next time, half the booths asked for them.', 'https://picsum.photos/seed/gp-career/1200/700', 89, 17, interval '6 hours'),
+  ('HackUTD Organizers', 1, 'Sponsor code toggle is live on HARP. Codes unlock the moment hacking starts.', null, 31, 6, interval '3 hours'),
+  ('Dallas Photography Club', 4, 'Photowalk this Saturday at Klyde Warren Park, 7am for golden hour. Bring a 35 or 50.', 'https://picsum.photos/seed/gp-photowalk/1200/800', 56, 14, interval '9 hours'),
+  ('Richardson Housing & Roommates', 6, '1 bed available in a 3/2 near Campbell and Coit starting January. $650 + utilities.', 'https://picsum.photos/seed/gp-room/1200/800', 12, 9, interval '1 day'),
+  ('Plant Parents of DFW', 8, 'Cutting swap at the Richardson farmers market next Sunday. I have pothos, philodendron and a few hoyas.', 'https://picsum.photos/seed/gp-plants/1200/900', 73, 22, interval '1 day 4 hours'),
+  ('Texas Climbing Community', 9, 'Reimers Ranch conditions report: dry, cool, perfect. Go now.', 'https://picsum.photos/seed/gp-climb/1200/800', 41, 8, interval '2 days'),
+  ('UT Dallas Computer Science', 7, 'Reminder: HackUTD applications close Friday. Do not sleep on it.', null, 102, 19, interval '2 days 5 hours')
+) as v(group_name, author_id, content, image_url, like_count, comment_count, age)
+join groups g on g.name = v.group_name
+where not exists (select 1 from group_posts gp where gp.group_id = g.id and gp.content = v.content);
+
+insert into marketplace_listings (seller_id, title, description, price_cents, category, condition, location, image_url, created_at)
+select * from (values
+  (3, 'IKEA MALM desk, white', 'Barely used, no scratches. Pickup only.', 6000, 'Home Goods', 'used_like_new', 'Richardson, TX', 'https://picsum.photos/seed/mk-desk/800/800', now() - interval '2 hours'),
+  (5, '2016 Honda Civic LX', '98k miles, clean title, new tires. One owner.', 1250000, 'Vehicles', 'used_good', 'Plano, TX', 'https://picsum.photos/seed/mk-civic/800/800', now() - interval '5 hours'),
+  (2, 'Sony WH-1000XM4 headphones', 'Great condition, comes with case and cable.', 15000, 'Electronics', 'used_good', 'Dallas, TX', 'https://picsum.photos/seed/mk-headphones/800/800', now() - interval '7 hours'),
+  (4, 'Canon AE-1 film camera + 50mm', 'Fully working light meter. Fresh seals.', 22000, 'Electronics', 'used_good', 'Dallas, TX', 'https://picsum.photos/seed/mk-camera/800/800', now() - interval '1 day'),
+  (6, 'Mid-century accent chair', 'Walnut legs, mustard upholstery.', 9500, 'Home Goods', 'used_good', 'Garland, TX', 'https://picsum.photos/seed/mk-chair/800/800', now() - interval '1 day 3 hours'),
+  (7, 'Mechanical keyboard, Keychron K2', 'Brown switches, hot-swappable. Includes keycap puller.', 5500, 'Electronics', 'used_like_new', 'Richardson, TX', 'https://picsum.photos/seed/mk-keyboard/800/800', now() - interval '1 day 8 hours'),
+  (8, 'Monstera deliciosa, 3ft', 'Healthy and fenestrated. Pot included.', 4000, 'Garden & Outdoor', 'new', 'Frisco, TX', 'https://picsum.photos/seed/mk-monstera/800/800', now() - interval '2 days'),
+  (9, 'La Sportiva climbing shoes, 42', 'Resoled once, lots of life left.', 6500, 'Sporting Goods', 'used_good', 'Dallas, TX', 'https://picsum.photos/seed/mk-shoes/800/800', now() - interval '2 days 2 hours'),
+  (10, '27in LG 4K monitor', 'UHD, USB-C. Includes stand and box.', 24000, 'Electronics', 'used_like_new', 'Addison, TX', 'https://picsum.photos/seed/mk-monitor/800/800', now() - interval '2 days 9 hours'),
+  (11, 'Standing desk frame, Flexispot', 'Dual motor, works perfectly. No top.', 12000, 'Home Goods', 'used_good', 'Plano, TX', 'https://picsum.photos/seed/mk-standing/800/800', now() - interval '3 days'),
+  (12, 'Queen bed frame + mattress', 'Moving out, must go this weekend.', 18000, 'Home Goods', 'used_fair', 'Dallas, TX', 'https://picsum.photos/seed/mk-bed/800/800', now() - interval '3 days 4 hours'),
+  (2, 'Nintendo Switch OLED', 'With dock, Joy-Cons and two games.', 25000, 'Electronics', 'used_like_new', 'Irving, TX', 'https://picsum.photos/seed/mk-switch/800/800', now() - interval '4 days'),
+  (3, 'Trek FX 2 hybrid bike', 'Size M, recently tuned.', 38000, 'Sporting Goods', 'used_good', 'Richardson, TX', 'https://picsum.photos/seed/mk-bike/800/800', now() - interval '4 days 6 hours'),
+  (5, 'Patagonia down sweater, M', 'Navy. Worn a handful of times.', 11000, 'Apparel', 'used_like_new', 'Dallas, TX', 'https://picsum.photos/seed/mk-jacket/800/800', now() - interval '5 days'),
+  (6, 'Dining table + 4 chairs', 'Solid oak. Minor wear on one chair.', 25000, 'Home Goods', 'used_good', 'Carrollton, TX', 'https://picsum.photos/seed/mk-table/800/800', now() - interval '5 days 3 hours'),
+  (7, 'Apartment sublet near UTD', '1b/1b, Jan-May, $1,100/mo. Pets ok.', 110000, 'Property Rentals', 'new', 'Richardson, TX', 'https://picsum.photos/seed/mk-apt/800/800', now() - interval '6 days')
+) as v(seller_id, title, description, price_cents, category, condition, location, image_url, created_at)
+where not exists (select 1 from marketplace_listings m where m.title = v.title);
+
+insert into events (host_id, title, description, location, cover_url, starts_at, ends_at, interested_count, is_online)
+select * from (values
+  (1, 'HackUTD 2026 Kickoff', 'Opening ceremony, team formation and sponsor expo.', 'ECSW Building, Richardson, TX', 'https://picsum.photos/seed/ev-hackutd/1200/675', date_trunc('day', now()) + interval '3 days 19 hours', date_trunc('day', now()) + interval '3 days 22 hours', 1243, false),
+  (4, 'White Rock Lake Sunrise Photowalk', 'Meet at the Bath House Cultural Center.', 'White Rock Lake, Dallas, TX', 'https://picsum.photos/seed/ev-photowalk/1200/675', date_trunc('day', now()) + interval '5 days 6 hours 30 minutes', null, 86, false),
+  (5, 'Deep Ellum Night Market', 'Local vendors, food trucks, live music.', 'Deep Ellum, Dallas, TX', 'https://picsum.photos/seed/ev-market/1200/675', date_trunc('day', now()) + interval '2 days 18 hours', null, 2310, false),
+  (11, 'Go + Postgres Meetup: gRPC in production', 'Talks and pizza.', 'Capital Factory, Dallas, TX', 'https://picsum.photos/seed/ev-meetup/1200/675', date_trunc('day', now()) + interval '7 days 18 hours 30 minutes', null, 154, false),
+  (10, 'Figma Config Watch Party', 'Streaming the keynote together.', 'Online', 'https://picsum.photos/seed/ev-figma/1200/675', date_trunc('day', now()) + interval '9 days 11 hours', null, 412, true),
+  (9, 'Reimers Ranch Climbing Weekend', 'Camping Friday and Saturday night.', 'Reimers Ranch, Dripping Springs, TX', 'https://picsum.photos/seed/ev-climb/1200/675', date_trunc('day', now()) + interval '12 days 8 hours', date_trunc('day', now()) + interval '14 days 16 hours', 67, false),
+  (12, 'Dallas Marathon Cheer Station', 'Signs, cowbells and coffee at mile 18.', 'Lakewood, Dallas, TX', 'https://picsum.photos/seed/ev-marathon/1200/675', date_trunc('day', now()) + interval '16 days 7 hours', null, 528, false),
+  (8, 'Houseplant Swap & Sale', 'Bring a cutting, take a cutting.', 'Richardson Farmers Market, TX', 'https://picsum.photos/seed/ev-plants/1200/675', date_trunc('day', now()) + interval '4 days 10 hours', null, 231, false)
+) as v(host_id, title, description, location, cover_url, starts_at, ends_at, interested_count, is_online)
+where not exists (select 1 from events e where e.title = v.title);
+
+insert into videos (channel_id, title, thumbnail_url, duration_seconds, view_count, like_count, comment_count, share_count, created_at)
+select * from (values
+  (2, 'HackUTD 2025 Official Recap', 'https://picsum.photos/seed/vid-recap/1280/720', 212, 48200, 2100, 143, 312, now() - interval '3 hours'),
+  (4, 'Shooting Dallas on 35mm film: a day at White Rock Lake', 'https://picsum.photos/seed/vid-film/1280/720', 754, 12300, 980, 64, 51, now() - interval '9 hours'),
+  (5, 'The best tacos in Dallas, ranked', 'https://picsum.photos/seed/vid-tacos/1280/720', 611, 203000, 15400, 1240, 4300, now() - interval '1 day'),
+  (11, 'REST to gRPC: how we cut p99 latency 40%', 'https://picsum.photos/seed/vid-grpc/1280/720', 1512, 31500, 2400, 212, 870, now() - interval '1 day 6 hours'),
+  (9, 'Reimers Ranch lead climbing, first send of the season', 'https://picsum.photos/seed/vid-climb/1280/720', 338, 8700, 610, 38, 22, now() - interval '2 days'),
+  (8, 'How I keep 60 houseplants alive in a Texas apartment', 'https://picsum.photos/seed/vid-plants/1280/720', 905, 76400, 5300, 410, 1200, now() - interval '3 days'),
+  (10, 'Designing a Facebook clone in a day', 'https://picsum.photos/seed/vid-design/1280/720', 1180, 19800, 1700, 156, 230, now() - interval '4 days'),
+  (7, 'HackTX 2026: forming a team 10 minutes before the deadline', 'https://picsum.photos/seed/vid-hacktx/1280/720', 480, 5600, 420, 29, 18, now() - interval '5 days')
+) as v(channel_id, title, thumbnail_url, duration_seconds, view_count, like_count, comment_count, share_count, created_at)
+where not exists (select 1 from videos x where x.title = v.title);
+
+insert into saved_posts (user_id, post_id, collection)
+select 1, p.id, case when p.image_url is null then 'For later' else 'Inspiration' end
+from posts p where p.author_id in (3, 5, 11) and p.author_id <> 1
+on conflict do nothing;
+
+insert into marketplace_saved (listing_id, user_id)
+select m.id, 1 from marketplace_listings m where m.title in ('Canon AE-1 film camera + 50mm', '27in LG 4K monitor')
+on conflict do nothing;
+
+insert into event_rsvps (event_id, user_id, status)
+select e.id, 1, 'interested' from events e where e.title in ('HackUTD 2026 Kickoff', 'Deep Ellum Night Market')
+on conflict do nothing;

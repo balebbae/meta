@@ -445,24 +445,35 @@
   }
 }
 @media (max-width: 700px) {
+  /* Phone: black stage with breathing room above (header + notch already offset by the sticky header)
+     and below (floating tab bar + home indicator); the reel is a rounded card between them. */
   .stage {
     --reel-h: calc(100dvh - 56px - env(safe-area-inset-top));
+    --reel-pad-top: 10px;
+    --reel-pad-bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+  .item {
+    padding: var(--reel-pad-top) 0 var(--reel-pad-bottom);
+    box-sizing: border-box;
   }
   .frame {
     aspect-ratio: auto;
     width: 100%;
-    border-radius: 0;
+    height: 100%;
+    border-radius: 14px;
+  }
+  .topRow {
+    top: 14px;
   }
   .overlay {
-    padding-bottom: calc(92px + env(safe-area-inset-bottom));
-    padding-right: 68px;
+    padding: 72px 72px 16px 14px;
   }
   .rail {
-    bottom: calc(92px + env(safe-area-inset-bottom));
+    bottom: calc(var(--reel-pad-bottom) + 12px);
     left: auto;
     right: 6px;
   }
   .toast {
-    bottom: calc(92px + env(safe-area-inset-bottom));
+    bottom: calc(96px + env(safe-area-inset-bottom));
   }
 }

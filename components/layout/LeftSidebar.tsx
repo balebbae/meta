@@ -36,7 +36,7 @@ const PRIMARY = [
   {label: 'Memories', href: '/memories', Icon: RailMemoriesIcon},
   {label: 'Saved', href: '/saved', Icon: RailSavedIcon},
   {label: 'Groups', href: '/groups', Icon: RailGroupsIcon},
-  {label: 'Reels', href: '/video', Icon: RailReelsIcon},
+  {label: 'Reels', href: '/reels', Icon: RailReelsIcon},
   {label: 'Marketplace', href: '/marketplace', Icon: RailMarketplaceIcon},
   {label: 'Feeds', href: '/feeds', Icon: RailFeedsIcon},
   {label: 'Events', href: '/events', Icon: RailEventsIcon},

@@ -1,4 +1,7 @@
 /* ---------- panel: joined groups ---------- */
+.mobileGroups, .mobileGroupLabel, .mobilePostBody, .mobilePostControl, .mobileReaction, .mobileEmptyFeed { display: none; }
+.desktopGroupLabel { display: contents; }
+.more.mobilePostControl { display: none; }
 .joined {
   display: flex;
   align-items: center;
@@ -584,4 +587,69 @@
   background: var(--fb-disabled-bg);
   color: var(--fb-text-disabled);
   cursor: default;
+}
+
+@media (max-width: 700px) {
+  .mobileGroups { display: block; width: 100%; background: var(--fb-card); }
+  .mobileTabs { display: flex; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--fb-divider-soft); }
+  .mobileTabs a { padding: 8px 12px; border-radius: 20px; font-size: 15px; font-weight: 600; white-space: nowrap; }
+  .mobileTabActive { background: var(--fb-mobile-active); color: var(--fb-blue); }
+  .mobileJoined { border-bottom: 5px solid var(--fb-divider-soft); padding-bottom: 8px; }
+  .mobileSectionHead { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px 8px; }
+  .mobileSectionHead h2 { font-size: 17px; margin: 0; }
+  .mobileSectionHead > a, .mobileSort > button { font-size: 15px; color: var(--fb-blue); }
+  .mobileSort { position: relative; }
+  .mobileSort > div button { display: block; padding: 12px; font-size: 15px; }
+  .mobileGroupSearch { margin: 0 12px 8px; }
+  .mobileGroupSearch form { margin: 0; border-radius: 20px; }
+  .mobileJoinedRow { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+  .mobileJoinedRow > img { flex-shrink: 0; width: 48px; height: 48px; border-radius: 9px; object-fit: cover; }
+  .mobileJoinedRow > span { flex: 1; min-width: 0; font-size: 16px; line-height: 20px; font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .mobileJoinedRow > svg { color: var(--fb-text-secondary); flex-shrink: 0; }
+  .mobileEmpty { padding: 8px 12px; color: var(--fb-text-secondary); font-size: 15px; }
+  .mobileGroups ~ .desktopGroupHeading, .mobileGroups ~ .desktopGroupCards, .desktopGroupLabel, .desktopPostBody { display: none; }
+  .mobileEmptyFeed { display: block; }
+  .mobileGroupLabel { display: inline-flex; align-items: center; }
+  .discoverGroups { padding: 0 12px; gap: 12px; }
+  .feed { width: 100%; gap: 0; }
+  .feedHead { font-size: 17px; font-weight: 700; color: var(--fb-text); padding: 10px 12px; margin: 0; }
+  .post { border-radius: 0; box-shadow: none; border-bottom: 5px solid var(--fb-divider-soft); }
+  .postHead { padding: 10px 12px 6px; }
+  .postGroup { font-size: 16px; font-weight: 700; line-height: 20px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .postSub { font-size: 12px; flex-wrap: nowrap; }
+  .postSub a { max-width: 55%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .postSub > svg { flex-shrink: 0; }
+  .postBody { padding: 0 12px 8px; font-size: 16px; line-height: 20px; }
+  .mobilePostBody { display: block; }
+  .mobilePostBody:empty { display: none; }
+  .postSeeMore { font-weight: 600; color: var(--fb-text-secondary); }
+  .postHead .mobilePostControl { display: inline-flex; }
+  .postHead .more { width: 26px; flex-shrink: 0; }
+  .counts, .actionLabel { display: none; }
+  .actions { margin: 0; padding: 4px 12px; border-top: 0; gap: 20px; align-items: center; }
+  .actions .action, .actions .actionActive { flex: none; padding: 0; min-width: 0; gap: 5px; font-size: 13px; font-weight: 400; }
+  .actions .actionActive { color: var(--fb-blue); }
+  .mobileReaction { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: var(--fb-blue); color: var(--fb-card); margin-left: auto; }
+  .groupPage, .hero { background: var(--fb-card); }
+  .hero { box-shadow: none; }
+  .heroInner { padding: 0; }
+  .cover { aspect-ratio: 16 / 7; max-height: none; border-radius: 0; }
+  .heroBody { padding: 12px; gap: 12px; }
+  .groupName { font-size: 24px; line-height: 28px; }
+  .groupName > a { color: var(--fb-text-secondary); margin-left: 4px; vertical-align: middle; }
+  .groupMeta { flex-wrap: wrap; }
+  .facepile { display: none; }
+  .heroActions { flex-wrap: wrap; }
+  .tabs { gap: 8px; padding: 8px 12px 12px; border: 0; overflow: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs .tab, .tabs .tabActive { height: 36px; border-radius: 20px; background: var(--fb-icon-bg); color: var(--fb-text); flex-shrink: 0; }
+  .tabs .tabActive { background: var(--fb-mobile-active); color: var(--fb-blue); }
+  .tabActive::after { display: none; }
+  .tabs a[href$="tab=discussion"] { order: -1; }
+  .groupBody { display: block; padding: 0; }
+  .groupMain { gap: 0; }
+  .groupBody > .aboutCard { display: none; }
+  .composer { border-radius: 0; box-shadow: none; padding: 12px; border-bottom: 5px solid var(--fb-divider-soft); }
+  .composerInput { font-size: 16px; }
+  .emptyCard { border-radius: 0; box-shadow: none; margin: 0; padding: 24px 12px; }
 }

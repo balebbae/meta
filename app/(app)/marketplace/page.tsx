@@ -8,6 +8,7 @@ import {MARKETPLACE_LOCATION, matchesQuery} from '@/lib/secondary-data';
 import {SecondaryLayout} from '@/components/pages/SecondaryLayout';
 import {MarketplacePanel} from '@/components/pages/MarketplacePanel';
 import {ListingCard} from '@/components/pages/ListingCard';
+import {MobileMarketplaceNav} from '@/components/pages/MobileMarketplaceNav';
 import {PinIcon} from '@/components/pages/icons';
 import styles from '@/components/pages/marketplace.module.css';
 
@@ -44,6 +45,7 @@ export default async function MarketplacePage({searchParams}: {searchParams: Pro
 
   return (
     <SecondaryLayout panel={<MarketplacePanel activeCategory={category} activeTab={tab} />}>
+      <MobileMarketplaceNav tab={tab} category={category} q={q} />
       <nav className={styles.tabs} aria-label="Marketplace">
         {[['','Browse'],['jobs','Jobs'],['buying','Buying'],['selling','Selling'],['inbox','Inbox'],['notifications','Notifications'],['status','Status']].map(([id, label]) => (
           <Link key={label} href={id ? `/marketplace?tab=${id}` : '/marketplace'} className={tab === id || (!tab && !id) ? styles.tabOn : styles.tab}>{label}</Link>
@@ -57,6 +59,7 @@ export default async function MarketplacePage({searchParams}: {searchParams: Pro
             {places}
           </a>
         )}
+        {(!tab || tab === 'jobs' || tab === 'buying' || tab === 'selling') && <Link className={styles.mobileLocation} href={`/marketplace?q=${encodeURIComponent(MARKETPLACE_LOCATION.city.split(',')[0])}`}><PinIcon size={14} />{MARKETPLACE_LOCATION.city} · {MARKETPLACE_LOCATION.radius}</Link>}
       </div>
       {tab === 'notifications' ? (
         <div className={styles.notes}>

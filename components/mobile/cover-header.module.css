@@ -1,0 +1,14 @@
+.header { display: none; }
+
+@media (max-width: 700px) {
+  :global(body:has([data-mobile-cover])) :global([data-mobile-shell-header]) { display: none; }
+  .header { position: sticky; top: 0; height: 56px; margin-bottom: -56px; display: flex; align-items: center; gap: 4px; padding: 0 8px; z-index: 45; color: var(--fb-on-media); background: linear-gradient(var(--fb-scrim), transparent); }
+  .solid { background: var(--fb-card); color: var(--fb-text); }
+  .button { width: 36px; height: 40px; flex-shrink: 0; display: inline-flex; justify-content: center; align-items: center; }
+  .button > span { border-radius: 50%; border: 1px solid var(--fb-card); }
+  .name { flex: 1; min-width: 0; font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; visibility: hidden; }
+  .solid .name { visibility: visible; }
+  .more { position: relative; }
+  .options { color: var(--fb-text); padding: 4px; }
+  .options a { display: block; padding: 12px; font-size: 15px; }
+}

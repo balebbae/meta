@@ -167,7 +167,7 @@ export async function listUserPhotos(id: number, limit = 60): Promise<Photo[]> {
 /** Incoming pending requests for the viewer. Memoised per request (the layout and the home page both need it). */
 export const listFriendRequests = cache(async (viewerId: number): Promise<FriendSummary[]> => {
   const rows = await sql`
-    select u.id, u.name, u.avatar_url, u.is_online,
+    select u.id, u.name, u.avatar_url, u.is_online, f.created_at,
            (select count(*)::int from friendships a
               join friendships b on a.friend_id = b.friend_id
               where a.user_id = u.id and b.user_id = ${viewerId} and a.status = 'accepted' and b.status = 'accepted') as mutual_count
@@ -177,6 +177,18 @@ export const listFriendRequests = cache(async (viewerId: number): Promise<Friend
     order by f.created_at desc`;
   return rows.map(mapFriend);
 });
+
+export async function listMutualFriendAvatars(viewerId: number): Promise<Record<number, string[]>> {
+  const rows = await sql`
+    select a.user_id, (array_agg(u.avatar_url order by u.id))[1:2] as avatars
+    from friendships a
+    join friendships b on b.friend_id = a.friend_id
+    join users u on u.id = a.friend_id
+    where b.user_id = ${viewerId} and a.user_id <> ${viewerId}
+      and a.status = 'accepted' and b.status = 'accepted'
+    group by a.user_id`;
+  return Object.fromEntries(rows.map(r => [r.user_id, r.avatars]));
+}
 
 /** Users with no friendship row in either direction with the viewer, most mutual friends first. */
 /**

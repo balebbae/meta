@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import {useRouter} from 'next/navigation';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {MapPin, Play, Sparkles} from 'lucide-react';
@@ -26,6 +27,7 @@ import {useToast} from '@astryxdesign/core/Toast';
 import {Token} from '@astryxdesign/core/Token';
 import {VStack} from '@astryxdesign/core/VStack';
 import {BossArt} from '@/components/rally/BossArt';
+import {StravaConnection} from '@/components/turf/StravaConnection';
 import type {DiscoverCard, DiscoverPayload, DiscoverSection} from '@/lib/activities/discover';
 import type {Goal} from '@/lib/activities/goals';
 import {GoalSpotlight} from '@/components/activities/goals/GoalSpotlight';
@@ -44,6 +46,7 @@ type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPay
 type Chat = {id: number; title: string; isGroup: boolean};
 
 const json = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
+const TurfSetup = dynamic(() => import('@/components/turf/TurfSetup').then(m => m.TurfSetup), {loading: () => <Text>Loading Turf setup…</Text>});
 
 /** Ranking feedback (discover_events). Fire-and-forget; keepalive so a click that navigates away still lands. */
 const logEvents = (cards: DiscoverCard[], event: 'impression' | 'click' | 'dismiss') => {
@@ -85,7 +88,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
   }, [data]);
 
   useEffect(() => {
-    if (!startMode || chats.length) return;
+    if (startMode !== 'sentence' || chats.length) return;
     fetch('/api/conversations')
       .then(r => (r.ok ? r.json() : {conversations: []}))
       .then((d: {conversations?: Chat[]}) => {
@@ -133,7 +136,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
   };
 
   /** Rally library: call the owning endpoints; 404/501 → "coming soon". */
-  const startGame = async (template: string) => {
+  const startGame = async (template: 'sentence' | 'reel') => {
     setBusy(template);
     try {
       if (template === 'reel') {
@@ -144,12 +147,9 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
         say('Pick a chat to play in first.');
         return;
       }
-      const res =
-        template === 'turf'
-          ? await fetch('/api/games', json({type: 'turf', gameType: 'turf', conversationId: chatId, settings: {lengthDays: 7, radiusKm: 1.5, arenaLabel: 'Turf with friends'}, invitees: 'all'}))
-          : await fetch('/api/games/from-sentence', json({text: sentence.trim() || 'Run 3 km three times this week with friends', conversationId: chatId}));
+      const res = await fetch('/api/games/from-sentence', json({text: sentence.trim() || 'Run 3 km three times this week with friends', conversationId: chatId}));
       if (res.status === 404 || res.status === 501) {
-        say(`${template === 'turf' ? 'Turf' : 'Quest from a sentence'} is coming soon.`);
+        say('Quest from a sentence is coming soon.');
         return;
       }
       const d = (await res.json().catch(() => ({}))) as {id?: number; game?: {id?: number}; gameId?: number; quest?: {id?: number}; questId?: number; error?: string; url?: string};
@@ -157,7 +157,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
         say(d.error ?? 'Could not start the game yet.');
         return;
       }
-      const url = d.url ?? (template === 'turf' ? `/games/${d.game?.id ?? d.gameId ?? d.id ?? ''}` : `/activities/games/${d.quest?.id ?? d.questId ?? d.id ?? ''}`);
+      const url = d.url ?? `/activities/games/${d.quest?.id ?? d.questId ?? d.id ?? ''}`;
       router.push(url);
     } finally {
       setBusy(null);
@@ -177,7 +177,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
             hero={s.id === 'first_move'}
             onNotInterested={() => notInterested(c)}
             onOpen={() => logEvents([c], 'click')}
-            onStart={c.kind === 'start' ? () => (c.meta?.template === 'sentence' ? setStartMode('sentence') : startGame(String(c.meta?.template ?? 'turf'))) : undefined}
+            onStart={c.kind === 'start' ? () => (c.meta?.template === 'reel' ? startGame('reel') : setStartMode(c.meta?.template === 'sentence' ? 'sentence' : 'turf')) : undefined}
             busy={busy === c.meta?.template}
           />
         ))}
@@ -281,22 +281,18 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
       <ActivityLeaderboard />
       {sections.filter(s => s.id !== 'first_move' && s.id !== 'learn').map(renderSection)}
 
-      <Dialog isOpen={startMode === 'turf'} onOpenChange={o => !o && setStartMode(null)} purpose="form" width={480}>
+      <Dialog isOpen={startMode === 'turf'} onOpenChange={o => !o && setStartMode(null)} purpose="form" width={680}>
         <Layout
           header={<DialogHeader title="Start Turf" onOpenChange={() => setStartMode(null)} />}
           content={
             <LayoutContent>
-              <VStack gap={4}>
-                <Text>Turf turns this week&apos;s runs and walks into a game: every street you cover becomes a cell you own. Friends only see the blocks you claim, never your route or your times.</Text>
-                {chatPicker}
-              </VStack>
+              {startMode === 'turf' && <TurfSetup viewerId={viewer.id} />}
             </LayoutContent>
           }
           footer={
             <LayoutFooter>
               <HStack gap={2} hAlign="end">
                 <Button label="Not now" onClick={() => setStartMode(null)} />
-                <Button label="Create game & invite friends" variant="primary" isLoading={busy === 'turf'} onClick={() => void startGame('turf')} />
               </HStack>
             </LayoutFooter>
           }
@@ -378,6 +374,7 @@ function DiscoverCardView({card, hero, onNotInterested, onOpen, onStart, busy}: 
         )}
         {card.kind !== 'start' && card.kind !== 'invite' && <Button label="Not interested" variant="ghost" size="sm" tooltip={card.tag ? `Removes the "${card.tag}" tag` : 'Hide'} onClick={onNotInterested} />}
       </HStack>
+      {card.kind === 'start' && (card.meta?.template === 'turf' || !card.meta?.template) && <StravaConnection />}
     </VStack>
   );
   return (

@@ -25,6 +25,8 @@
 
 /* Facebook design tokens (measured against facebook.com desktop, Nov 2026) */
 :root {
+  --fb-strava: #fc4c02;
+  --fb-strava-text: #ffffff;
   --fb-blue: #0866ff;
   --fb-blue-hover: #0a5ce6;
   --fb-bg: #f0f2f5;

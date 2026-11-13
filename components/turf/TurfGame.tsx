@@ -8,6 +8,7 @@ import type {TurfState} from '@/lib/turf/types';
 import {ConsentCopy} from './ConsentSheet';
 import {HexMap} from './HexMap';
 import {PrivacyZones} from './PrivacyZones';
+import {StravaConnection} from './StravaConnection';
 import {endsLabel, timeLeft, turfApi, useTurfState, type PointsResult} from './api';
 import styles from './turf.module.css';
 import {useTracker} from './useTracker';
@@ -168,13 +169,13 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
                     />
                   </>
                 ))}
-              {live && <button type="button" className={styles.btn} disabled={busy != null || tracker.tracking} onClick={() => void run('strava', async () => {
+              <StravaConnection>{live && <button type="button" className={styles.btn} disabled={busy != null || tracker.tracking} onClick={() => void run('strava', async () => {
                 setNote(null);
                 const result = await turfApi.importStrava(gameId);
                 setNote(`Strava import: ${result.gained} cells gained.${result.gained === 0 ? ' No new loops in this arena since the game started (already imported runs are skipped).' : ''}`);
               })}>
                 {busy === 'strava' ? 'Importing Strava runs…' : 'Import Strava runs'}
-              </button>}
+              </button>}</StravaConnection>
               {tracker.error && <p className={styles.error}>{tracker.error}</p>}
               {error && <p className={styles.error}>{error}</p>}
               {note && (

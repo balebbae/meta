@@ -4,7 +4,6 @@ import {useRouter} from 'next/navigation';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {AlertDialog} from '@astryxdesign/core/AlertDialog';
 import {AspectRatio} from '@astryxdesign/core/AspectRatio';
-import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
 import {ClickableCard} from '@astryxdesign/core/ClickableCard';
@@ -171,10 +170,6 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
               ))}
               {state.relay.winner && <Text color="secondary">Winner: {state.relay.winner === 'tie' ? 'tie' : `Team ${state.relay.winner}`}</Text>}
             </VStack>
-          )}
-
-          {state.myReadiness && !done && (
-            <Banner status={state.myReadiness.fit === 'good' ? 'success' : 'warning'} title={state.myReadiness.fit === 'good' ? 'Good to go' : 'Heads up: this one is a stretch'} description={`${state.myReadiness.note} Only you see this.`} />
           )}
 
           {(state.fairness || state.myHandicap) && (
@@ -410,7 +405,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
         </VStack>
       </Card>
 
-      <LogMoveSheet questId={q.id} open={logOpen} onClose={() => setLogOpen(false)} levelName={level?.name} exercises={level?.exercises.map(exerciseLine)} target={me?.target ?? null} stretchNote={state.myReadiness?.fit === 'stretch' && me?.moves === 0 ? state.myReadiness.note : null} onDone={onMove} />
+      <LogMoveSheet questId={q.id} open={logOpen} onClose={() => setLogOpen(false)} levelName={level?.name} exercises={level?.exercises.map(exerciseLine)} target={me?.target ?? null} onDone={onMove} />
       <LogMoveSheet questId={q.id} open={Boolean(dare)} onClose={() => setDare(null)} dare={dare} onDone={onMove} />
       <ShareToGroupsDialog questId={q.id} open={shareOpen} onClose={() => setShareOpen(false)} />
       <AlertDialog

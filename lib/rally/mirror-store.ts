@@ -194,7 +194,7 @@ export async function markUnreadable(matchId: number) {
 }
 
 /** Bumped when the "is someone visible" rules change, so Reels rejected under old rules get another read. */
-export const UNREADABLE_V = 2;
+export const UNREADABLE_V = 3;
 
 export async function matchSteps(matchId: number): Promise<MirrorStep[]> {
   const [m] = await sql`select steps from mirror_matches where id = ${matchId}`;

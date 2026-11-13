@@ -227,15 +227,26 @@ export async function analyzeVideoUrl(url: string, start: number, end: number, f
   const stop = Math.min(end, Number.isFinite(v.duration) ? v.duration : end);
   const n = Math.max(1, Math.floor((stop - start) * fps));
   let out = canPlayScan ? await scanByPlaying(v, det, start, stop, fps, onProgress) : null;
-  if (!out) {
+  // moments the play-through had no sample for (slow stream, slow phone) are read by seeking, from the local copy,
+  // so a gap never counts as "nobody there"
+  const missing = out ? out.flatMap((x, i) => (x === undefined ? [i] : [])) : [];
+  if (!out || missing.length) {
     v.src = await local;
     await once(v, 'loadeddata');
-    out = await scanBySeeking(v, det, start, n, fps, onProgress);
+    if (!out) out = await scanBySeeking(v, det, start, n, fps, onProgress);
+    else {
+      await v.play().catch(() => {});
+      v.pause();
+      for (const i of missing) {
+        await seek(v, start + i / fps);
+        out[i] = pose(det, v);
+      }
+    }
   }
   onProgress(1);
   v.removeAttribute('src');
   v.load();
-  return out;
+  return out.map(x => x ?? null);
 }
 
 const SCAN_RATE = 1.25;
@@ -245,7 +256,8 @@ const SCAN_RATE = 1.25;
  * the samples up on the fps grid. Seeking costs a keyframe decode per frame, so this is ~3x faster than seeking.
  * Returns null if the browser wouldn't play it (the caller then seeks frame by frame).
  */
-async function scanByPlaying(v: HTMLVideoElement, det: Detector, start: number, stop: number, fps: number, onProgress: (p: number) => void): Promise<(Landmark[] | null)[] | null> {
+/** undefined = no sample near that moment (filled by seeking afterwards); null = sampled, nobody there. */
+async function scanByPlaying(v: HTMLVideoElement, det: Detector, start: number, stop: number, fps: number, onProgress: (p: number) => void): Promise<(Landmark[] | null | undefined)[] | null> {
   const samples: {t: number; lm: Landmark[] | null}[] = [];
   if (start > 0) await seek(v, start);
   v.playbackRate = SCAN_RATE;
@@ -283,11 +295,11 @@ async function scanByPlaying(v: HTMLVideoElement, det: Detector, start: number, 
     const t = start + i / fps;
     let best: (typeof samples)[number] | null = null;
     for (const s of samples) if (!best || Math.abs(s.t - t) < Math.abs(best.t - t)) best = s;
-    return best && Math.abs(best.t - t) <= 0.5 ? best.lm : null;
+    return best && Math.abs(best.t - t) <= 0.5 ? best.lm : undefined;
   });
 }
 
-async function scanBySeeking(v: HTMLVideoElement, det: Detector, start: number, n: number, fps: number, onProgress: (p: number) => void): Promise<(Landmark[] | null)[]> {
+async function scanBySeeking(v: HTMLVideoElement, det: Detector, start: number, n: number, fps: number, onProgress: (p: number) => void): Promise<(Landmark[] | null | undefined)[]> {
   // iOS Safari only decodes frames for seeking after a play()
   await v.play().catch(() => {});
   v.pause();

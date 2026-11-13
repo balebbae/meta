@@ -13,8 +13,12 @@ export async function POST(req: Request, {params}: {params: Promise<{id: string}
     if (!validReference(body)) return badRequest('not a pose reference');
     // usable when most steps have a clear pose (intros and close-ups don't count against it)
     if (!playable(body, await matchSteps(id))) {
-      await markUnreadable(id);
-      return badRequest('No one is clearly visible in this Reel. Pick another one.');
+      // only a Reel with nobody in any frame is given up on; a thin read (slow phone, slow stream) can be retried
+      if (!body.points.some(Boolean)) {
+        await markUnreadable(id);
+        return badRequest('No one is clearly visible in this Reel. Pick another one.');
+      }
+      return badRequest('Couldn’t read the poses this time. Tap Retry.');
     }
     return NextResponse.json({saved: await saveReference(id, body)});
   });

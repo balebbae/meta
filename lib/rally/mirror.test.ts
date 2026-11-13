@@ -59,7 +59,7 @@ test('playable judges each step, so an intro with nobody in it does not sink the
   const ref: Reference = {fps: 4, frames: [...Array(16).fill(none), ...Array(16).fill(fold)], points: [...Array(16).fill(null), ...Array(16).fill(pts)]};
   assert.equal(ref.points.filter(Boolean).length / ref.frames.length, 0.5);
   assert.equal(playable(ref, [{start: 4, end: 6}, {start: 6, end: 8}]), true);
-  assert.equal(playable(ref, [{start: 0, end: 2}, {start: 2, end: 3.5}, {start: 4, end: 8}]), false);
+  assert.equal(playable(ref, [{start: 0, end: 2}, {start: 2, end: 3.5}]), false);
   // a clear frame only near the edge of a step still gives that step a target
   const edge: Reference = {fps: 4, frames: [fold, ...Array(7).fill(none)], points: [pts, ...Array(7).fill(null)]};
   assert.equal(targetFor(edge, 0, 2)?.at, 0);

@@ -155,12 +155,12 @@ function clearest(ref: Reference, start: number, end: number): Target | null {
 
 /**
  * Can this Reel be played? Judged per step, not over the whole clip, so intros, title cards and close-ups don't
- * sink a Reel whose poses are clear: playable when at least half the steps have a clear target pose.
+ * sink a Reel whose poses are clear: playable when any step has a clear target pose.
  */
 export function playable(ref: Reference, steps: {start: number; end: number}[]): boolean {
   if (!steps.length) return ref.points.filter(Boolean).length >= ref.frames.length * 0.25;
-  const ok = steps.filter(s => targetFor(ref, s.start, s.end)).length;
-  return ok >= Math.ceil(steps.length / 2);
+  // any step with a clear pose is enough; steps without one are skipped when grading
+  return steps.some(s => targetFor(ref, s.start, s.end));
 }
 
 /** Grade the routine: one score per step (0 = no clear pose in the Reel, skipped), overall = average of the rest. */

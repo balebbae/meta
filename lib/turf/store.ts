@@ -12,9 +12,10 @@ import {parseHero} from '@/lib/kingdom/cast';
 import {isMember, sendMessage} from '@/lib/messaging-queries';
 import {sendPushToUser} from '@/lib/push';
 import {colorAt} from './colors';
-import {applyClaim, detectCut, detectLoop, fillLoop, obfuscateZone, pointsToCells, score, type Arena, type GpsPoint, type LatLng, type TrailCell, type TurfGame, type Zone} from './engine';
+import {applyClaim, detectCut, detectLoop, fillLoop, fmtPace, loopPace, obfuscateZone, paceOk, pointsToCells, score, type Arena, type GpsPoint, type LatLng, type TrailCell, type TurfGame, type Zone} from './engine';
 import {scriptInfo, scriptPoints, type ReplayScript} from './fixtures';
 import {finalText, narrateRecap, type FinalStanding} from './recap';
+import {PACE_MAX, PACE_MIN} from '@/lib/rally/reel-pace';
 import {emptyResult, type GameStatus, type InviteStatus, type MyOuting, type OutingResult, type OutingStatus, type TurfPlayer, type TurfSettings, type TurfState} from './types';
 
 type Actor = {id: number; name: string};
@@ -178,12 +179,21 @@ export async function createGame(host: Actor, input: CreateInput): Promise<{game
     startsAt = new Date(t).toISOString();
   }
 
+  let pace: TurfSettings['pace'] = null;
+  if (s.pace?.secPerKm != null) {
+    const p = Math.round(Number(s.pace.secPerKm));
+    if (!Number.isFinite(p) || p < PACE_MIN || p > PACE_MAX) throw new TurfError('Pace must be between 2:30 and 15:00 per km');
+    const d = Number(s.pace.distanceKm);
+    pace = {secPerKm: p, distanceKm: Number.isFinite(d) && d > 0 ? d : null, ...(s.pace.assumed ? {assumed: true} : {})};
+  }
+  const reelId = Number.isInteger(Number(s.reelId)) && Number(s.reelId) > 0 ? Number(s.reelId) : null;
+
   const members = (await sql`select user_id from conversation_members where conversation_id = ${conversationId} and user_id <> ${host.id} order by user_id`).map(r => Number(r.user_id));
   const wanted = input.invitees === 'all' || input.invitees == null ? members : [...new Set((Array.isArray(input.invitees) ? input.invitees : []).map(Number))].filter(id => members.includes(id));
   if (!wanted.length) throw new TurfError('Invite at least one person from this chat');
   if (wanted.length + 1 > MAX_PLAYERS) throw new TurfError('Turf is for 2 to 8 players');
 
-  const settings: TurfSettings = {center: {lat, lng}, radiusKm, lengthDays, arenaLabel, startsAt};
+  const settings: TurfSettings = {center: {lat, lng}, radiusKm, lengthDays, arenaLabel, startsAt, ...(pace ? {pace} : {}), ...(reelId ? {reelId} : {})};
   const endsAt = new Date((startsAt ? new Date(startsAt).getTime() : Date.now()) + lengthDays * DAY_MS).toISOString();
   const [row] = await sql`
     insert into games (conversation_id, game_type, settings, status, host_id, ends_at)
@@ -198,9 +208,9 @@ export async function createGame(host: Actor, input: CreateInput): Promise<{game
     from unnest(${ids}::int[], ${ids.map((_, i) => colorAt(i))}::text[]) as t(uid, color)
     on conflict do nothing`;
 
-  const payload: RallyInvitePayload = {gameId: game.id, gameType: 'turf', title: `Turf: ${arenaLabel}`, arenaLabel, endsAt};
+  const payload: RallyInvitePayload = {gameId: game.id, gameType: 'turf', title: `Turf: ${arenaLabel}`, arenaLabel, endsAt, paceSecPerKm: pace?.secPerKm ?? null, reelId};
   // sendMessage also writes a notification and a push for every other member of the thread (the invitees)
-  await sendMessage(conversationId, host, `${first(host.name)} invited you to Turf: ${arenaLabel}`, null, {kind: 'rally_invite', payload});
+  await sendMessage(conversationId, host, `${first(host.name)} invited you to Turf: ${arenaLabel}${pace ? `. Runs only count at ${fmtPace(pace.secPerKm)} per km or faster` : ''}`, null, {kind: 'rally_invite', payload});
   return {game, state: await buildState(game, host.id)};
 }
 
@@ -402,10 +412,20 @@ export async function addPoints(game: Game, user: Actor, outingId: number, point
   let consumed = Math.min(outing.consumed, trail.length);
   const claim: string[] = [];
   let loops = 0;
+  const target = game.settings.pace?.secPerKm ?? null;
   if (cutBy == null) {
     for (let guard = 0; guard < 50; guard++) {
       const loop = detectLoop(trail.slice(consumed), owned);
       if (!loop.closed) break;
+      if (target != null) {
+        // Paced game: the loop must have been run at the pace the Reel set. Too slow (or untimed) and it is spent without claiming.
+        const seg = trail.slice(consumed, consumed + loop.endIndex + 1), ran = loopPace(raw, seg[0].t, seg[seg.length - 1].t);
+        if (!ran || !paceOk(ran.secPerKm, target)) {
+          result.slow = {loops: (result.slow?.loops ?? 0) + 1, secPerKm: ran ? Math.round(ran.secPerKm) : null};
+          consumed += loop.endIndex + 1;
+          continue;
+        }
+      }
       const cells = fillLoop(loop.loop, arena);
       for (const c of cells) {
         if (!owned.has(c)) claim.push(c);
@@ -519,7 +539,9 @@ export async function importRoute(game: Game, user: Actor, points: GpsPoint[], s
  */
 export async function replayScript(game: Game, user: Actor, script: ReplayScript): Promise<PointsResult> {
   const info = scriptInfo(script);
-  const base = scriptPoints(script, game.settings.center, 0);
+  // shortcut: fixture routes are timed at a 1.4 m/s walk (714 s/km); in a paced game the replay is sped up to just beat the target. Record real paced routes if replays ever need to show a miss.
+  const quick = game.settings.pace ? Math.min(1, (game.settings.pace.secPerKm * 0.9) / 714) : 1;
+  const base = scriptPoints(script, game.settings.center, 0).map(p => ({...p, t: Math.round(p.t * quick)}));
   const duration = base[base.length - 1].t;
   const rows = await sql`select trail from turf_outings where game_id = ${game.id} and status = 'open' and user_id <> ${user.id}`;
   let latest = 0;
@@ -566,6 +588,8 @@ export async function buildState(game: Game, viewerId: number): Promise<TurfStat
     hostId: game.hostId,
     arena: {center: game.settings.center, radiusKm: game.settings.radiusKm},
     lengthDays: game.settings.lengthDays,
+    pace: game.settings.pace ?? null,
+    reelId: game.settings.reelId ?? null,
     startsAt: game.startsAt,
     endsAt: game.endsAt,
     now: new Date().toISOString(),

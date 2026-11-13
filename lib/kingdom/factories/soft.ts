@@ -8,7 +8,7 @@ import {rng} from '../rng';
 
 /** One texel: 6.25 cm, Minecraft's density (16 px to the metre). */
 export const PX = 1 / 16;
-export type MatKind = 'skin' | 'gloss' | 'eye' | 'flat' | 'cloth' | 'quilt' | 'leather' | 'metal' | 'gold' | 'wood' | 'blush' | 'stone' | 'rock' | 'slime' | 'scale' | 'glow' | 'grass' | 'leaf' | 'sand' | 'water';
+export type MatKind = 'skin' | 'gloss' | 'eye' | 'flat' | 'cloth' | 'quilt' | 'leather' | 'metal' | 'gold' | 'wood' | 'blush' | 'stone' | 'rock' | 'slime' | 'scale' | 'glow' | 'grass' | 'leaf' | 'sand' | 'water' | 'glass';
 export const EYE_INK = 0x1b1518, INK = 0x3a2630, MOUTH_IN = 0xd9475a, BLUSH = 0xf3a7a1;
 
 type Paint = (x: number, y: number, r: () => number) => number;
@@ -48,9 +48,11 @@ export function softMaterial(kind: MatKind, color: number): Material {
   const key = `${kind}:${color}`; let m = mats.get(key); if (m) return m;
   const map = pattern(kind);
   if (kind === 'flat' || kind === 'glow' || kind === 'eye') m = new MeshBasicMaterial({color});
+  else if (kind === 'glass') m = new MeshBasicMaterial({color, transparent: true, opacity: 0.28, depthWrite: false}); // helmets and masks: the face must show through
   else if (kind === 'blush') m = new MeshBasicMaterial({color, transparent: true, opacity: 0.75});
   else if (kind === 'slime') m = new MeshStandardMaterial({color, roughness: 0.9, map, transparent: true, opacity: 0.74});
   else m = new MeshStandardMaterial({color, roughness: kind === 'water' || kind === 'gloss' ? 0.55 : 0.92, map});
+  m.userData.soft = {kind, color}; // lets a world (scenes/worlds.ts) recolour a mesh without knowing who built it
   mats.set(key, m); return m;
 }
 export function disposeSoftResources(): void { for (const g of geos.values()) g.dispose(); geos.clear(); for (const m of mats.values()) m.dispose(); mats.clear(); for (const t of maps.values()) t.dispose(); maps.clear(); }

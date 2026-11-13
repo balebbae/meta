@@ -9,7 +9,7 @@ import {C} from '../palette';
 import {setState} from '../rig';
 import {PX, box, softMaterial} from '../factories/soft';
 import type {AnimState, Rig} from '../types';
-import {SKY, Stage, type Host} from './stage';
+import {Stage, type Host} from './stage';
 
 export type Fighter = {id: number; name: string; cast: Cast};
 export type BossFightOpts = {boss: Cast; name: string; hp: number; hpLeft: number; fighters: Fighter[]};
@@ -70,7 +70,7 @@ export function createBossFight(host: Host, o: BossFightOpts): BossFight {
   };
 
   return {
-    group: st.group, background: SKY,
+    group: st.group, background: st.sky,
     strike: (memberId, damage, reps = 1, critical = false) => { if (down || !squad.length) return; const n = Math.max(1, Math.round(reps)); queue.push({slot: squad.find((x) => x.id === memberId) ?? squad[squad.length - 1], damage: Math.max(0, Math.round(damage)), reps: n, swings: Math.min(MAX_SWINGS, n), critical, phase: 'run', t: 0, landed: 0}); },
     setHp: (hpLeft) => { hpTarget = Math.max(0, hpLeft); },
     dispose: () => st.dispose(),

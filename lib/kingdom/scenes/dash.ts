@@ -5,7 +5,7 @@ import {autoDash} from '../games/autopilot';
 import {DASH, createDash, startDash, stepDash} from '../games/dash';
 import {setContinuous, setState} from '../rig';
 import {box, softMaterial} from '../factories/soft';
-import {SKY, Stage, type GameScene, type Host} from './stage';
+import {Stage, type GameScene, type Host} from './stage';
 
 const POOL = 8, COINS = 30, TALL = 9;
 
@@ -25,7 +25,7 @@ export function createDashScene(host: Host): GameScene {
   dragon.group.scale.setScalar(1 / dragon.group.userData.creature.scale); dragon.rest = 'flap'; setState(dragon, 'flap'); // you fly this one: its px size matches DASH.radius
 
   return {
-    group: st.group, background: SKY,
+    group: st.group, background: st.sky,
     start: (seed = 1) => { s = startDash(createDash(seed)); setState(dragon, 'flap'); },
     auto: () => autoDash(s),
     hud: () => ({phase: s.phase, score: s.score, message: s.message, left: `♥ ${s.lives}`, right: `${Math.min(DASH.goal, Math.round(s.dist))} / ${DASH.goal} m · ${s.coins} gold`}),

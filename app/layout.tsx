@@ -3,6 +3,7 @@ import './globals.css';
 import {AuthProvider} from '@/components/auth/AuthProvider';
 import {cookies} from 'next/headers';
 import {Providers} from './providers';
+import {AgentationBar} from '@/components/dev/AgentationBar';
 
 // Resolves the theme before first paint and persists it in a cookie so the server can render the
 // same mode next time (Astryx's Theme wrapper is SSR'd; React does not patch attribute mismatches).
@@ -33,6 +34,7 @@ export default async function RootLayout({children}: {children: React.ReactNode}
       <body>
         <Providers initialMode={mode}>
           <AuthProvider>{children}</AuthProvider>
+          <AgentationBar />
         </Providers>
       </body>
     </html>

@@ -3,15 +3,17 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-auto-rows: 210px;
-  gap: var(--spacing-2);
+  gap: 10px;
 }
 .reelTile {
   position: relative;
   display: block;
   overflow: hidden;
-  border-radius: var(--radius-container);
-  background: var(--color-background-muted);
-  color: var(--color-on-dark);
+  border-radius: 18px;
+  background: var(--fb-act-surface-2);
+  color: #fff;
+  box-shadow: var(--fb-act-shadow);
+  transition: transform 0.14s var(--fb-act-ease);
   isolation: isolate;
 }
 .reelTile:first-child {
@@ -31,9 +33,12 @@
   .reelTile:hover img {
     transform: scale(1.04);
   }
+  .reelTile:hover {
+    transform: translateY(-2px);
+  }
 }
 .reelTile:focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--fb-act-blue);
   outline-offset: 2px;
 }
 .reelTile::after {
@@ -45,14 +50,14 @@
 }
 .reelTag {
   position: absolute;
-  top: var(--spacing-2);
-  left: var(--spacing-2);
+  top: 10px;
+  left: 10px;
   max-width: calc(100% - 16px);
   display: inline-flex;
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  border-radius: var(--radius-full);
+  border-radius: 999px;
   background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);

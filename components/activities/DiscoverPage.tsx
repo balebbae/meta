@@ -3,44 +3,35 @@
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {MapPin, Play, Sparkles} from 'lucide-react';
-import {AspectRatio} from '@astryxdesign/core/AspectRatio';
-import {Avatar} from '@astryxdesign/core/Avatar';
+import {Play, Sparkles} from 'lucide-react';
 import {Button} from '@astryxdesign/core/Button';
-import {Card} from '@astryxdesign/core/Card';
-import {Carousel} from '@astryxdesign/core/Carousel';
-import {Center} from '@astryxdesign/core/Center';
-import {ClickableCard} from '@astryxdesign/core/ClickableCard';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
-import {EmptyState} from '@astryxdesign/core/EmptyState';
-import {Grid} from '@astryxdesign/core/Grid';
-import {Heading} from '@astryxdesign/core/Heading';
 import {HStack} from '@astryxdesign/core/HStack';
-import {Icon} from '@astryxdesign/core/Icon';
 import {Layout, LayoutContent, LayoutFooter} from '@astryxdesign/core/Layout';
 import {Selector} from '@astryxdesign/core/Selector';
-import {StackItem} from '@astryxdesign/core/Stack';
 import {Text} from '@astryxdesign/core/Text';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {useToast} from '@astryxdesign/core/Toast';
-import {Token} from '@astryxdesign/core/Token';
 import {VStack} from '@astryxdesign/core/VStack';
-import {BossArt} from '@/components/rally/BossArt';
 import type {DiscoverCard, DiscoverPayload, DiscoverSection} from '@/lib/activities/discover';
 import type {Goal} from '@/lib/activities/goals';
-import {GoalSpotlight} from '@/components/activities/goals/GoalSpotlight';
+import type {HomeProgress, Nearby} from '@/lib/activities/home';
 import type {MuseActionsPayload} from '@/lib/activities/actions';
 import type {ListingBrief} from '@/lib/rally/queries';
 import type {FitnessLevel} from '@/lib/activities/level';
 import {ActivityLeaderboard} from './ActivityLeaderboard';
 import {CoachToggle} from './CoachMode';
-import {LevelCard} from './LevelCard';
 import {MuseActions} from './MuseActions';
+import {Communities} from './home/Communities';
+import {EventsNearby} from './home/EventsNearby';
+import {ProgressHero} from './home/ProgressHero';
+import {YourGames} from './home/YourGames';
+import h from './home/home.module.css';
 import b from './reels-bento.module.css';
 
 type Viewer = {id: number; name: string; avatarUrl: string};
 export type MyGame = {key: string; href: string; title: string; subtitle: string; boss: {kind: string; name: string} | null};
-type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; listings: ListingBrief[]; start: string | null; eventId: number | null; goal?: Goal | null; games?: MyGame[]; level?: FitnessLevel | null};
+type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; listings: ListingBrief[]; start: string | null; eventId: number | null; goal?: Goal | null; games?: MyGame[]; level?: FitnessLevel | null; progress?: HomeProgress | null; nearby?: Nearby | null};
 type Chat = {id: number; title: string; isGroup: boolean};
 
 const json = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
@@ -54,19 +45,21 @@ const logEvents = (cards: DiscoverCard[], event: 'impression' | 'click' | 'dismi
 /** Section title row: heading on the left, an optional note or "See all" on the right. */
 export function SectionHead({title, sub, href}: {title: string; sub?: string; href?: string}) {
   return (
-    <HStack gap={2} vAlign="center" justify="between" wrap="wrap">
-      <Heading level={2}>{title}</Heading>
-      {sub && (
-        <Text type="supporting" color="secondary">
-          {sub}
-        </Text>
+    <div className={h.head}>
+      <div>
+        <h2 className={h.h2}>{title}</h2>
+        {sub && <span className={h.sub}>{sub}</span>}
+      </div>
+      {href && (
+        <Link className={h.more} href={href}>
+          See all
+        </Link>
       )}
-      {href && <Button label="See all" variant="ghost" size="sm" href={href} />}
-    </HStack>
+    </div>
   );
 }
 
-export function DiscoverPage({viewer, data, museActions, listings, start, eventId, goal = null, games = [], level = null}: Props) {
+export function DiscoverPage({viewer, data, museActions, listings, start, eventId, goal = null, games = [], level = null, progress = null, nearby = null}: Props) {
   const router = useRouter();
   const showToast = useToast();
   const [sections, setSections] = useState<DiscoverSection[]>(data.sections);
@@ -166,10 +159,18 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
   };
 
   const byId = (id: DiscoverSection['id']) => sections.find(s => s.id === id);
-  const renderSection = (s: DiscoverSection) => (
-    <VStack key={s.id} gap={3} as="section" aria-label={s.title}>
-      <SectionHead title={s.title} sub={s.id === 'mentors' ? 'Talk through your Muses · names stay hidden · 18+' : s.id === 'friends' ? 'Yes/no answers only' : undefined} />
-      <Grid columns={s.id === 'first_move' ? 1 : {minWidth: 220}} gap={3}>
+  let order = 0;
+  const section = (key: string, title: string, body: React.ReactNode, sub?: string, href?: string) => (
+    <section key={key} className={h.section} style={{'--i': order++} as React.CSSProperties} aria-label={title}>
+      <SectionHead title={title} sub={sub} href={href} />
+      {body}
+    </section>
+  );
+  const renderSection = (s: DiscoverSection) =>
+    section(
+      s.id,
+      s.title,
+      <div className={h.grid3} style={s.id === 'first_move' ? {gridTemplateColumns: '1fr'} : undefined}>
         {s.cards.map(c => (
           <DiscoverCardView
             key={c.id}
@@ -181,11 +182,12 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
             busy={busy === c.meta?.template}
           />
         ))}
-      </Grid>
-    </VStack>
-  );
+      </div>,
+      s.id === 'mentors' ? 'Talk through your Muses · names stay hidden · 18+' : s.id === 'friends' ? 'Yes/no answers only' : undefined,
+    );
   const firstMove = byId('first_move');
   const reels = byId('learn');
+  const groups = byId('groups');
   const chatPicker = (
     <Selector
       label="Play in"
@@ -198,88 +200,72 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
   );
 
   return (
-    <VStack gap={6} paddingBlock={4}>
-      <HStack gap={3} vAlign="center" justify="between" wrap="wrap">
-        <Heading level={1}>Activities</Heading>
+    <div className={h.page}>
+      <div className={h.titleRow}>
+        <h1 className={h.h1}>Activities</h1>
         <CoachToggle />
-      </HStack>
+      </div>
 
-      <VStack gap={3} as="section" aria-label="Your games">
-        <SectionHead title="Your games" />
-        {games.length === 0 ? (
-          <Card>
-            <EmptyState title="You're not in any games right now" description="Start one below or from a group chat." isCompact />
-          </Card>
-        ) : (
-          <Grid columns={{minWidth: 200}} gap={3}>
-            {games.map(g => (
-              <ClickableCard key={g.key} href={g.href} label={g.title}>
-                <VStack gap={2} hAlign="center">
-                  {g.boss ? <BossArt kind={g.boss.kind} name={g.boss.name} size={72} /> : <Icon icon={MapPin} size="lg" color="accent" />}
-                  <VStack gap={0.5} hAlign="center">
-                    <Text weight="bold" justify="center">
-                      {g.title}
-                    </Text>
-                    <Text type="supporting" color="secondary">
-                      {g.subtitle}
-                    </Text>
-                  </VStack>
-                </VStack>
-              </ClickableCard>
-            ))}
-          </Grid>
-        )}
-      </VStack>
-
-      {level && <LevelCard level={level} />}
-      <GoalSpotlight goal={goal} />
+      {progress && (
+        <div className={h.section} style={{'--i': order++} as React.CSSProperties}>
+          <ProgressHero name={viewer.name} progress={progress} goal={goal} level={level} />
+        </div>
+      )}
       <MuseActions initial={museActions} viewerName={viewer.name} say={say} />
-      {firstMove && renderSection(firstMove)}
+      {section('games', 'Your games', <YourGames games={games} onStart={() => setStartMode('sentence')} />, games.length ? undefined : 'Co-op with a group chat')}
+      {groups && section('groups', 'Communities', <Communities cards={groups.cards} onOpen={c => logEvents([c], 'click')} onHide={c => void notInterested(c)} />, 'Clubs your friends are in', '/groups')}
 
-      {reels && (
-        <VStack gap={3} as="section" aria-label="Suggested reels">
-          <SectionHead title="Suggested reels" href="/reels" />
+      {reels &&
+        section(
+          'reels',
+          'Suggested reels',
           <nav className={b.bento} aria-label="Suggested reels">
             {reels.cards.map(c => (
               <Link key={c.id} href={c.href ?? '/reels'} className={b.reelTile} onClick={() => logEvents([c], 'click')}>
                 {c.imageUrl && <img src={c.imageUrl} alt="" loading="lazy" />}
                 <span className={b.reelTag}>
-                  <Icon icon={Play} size="xsm" color="inherit" />
+                  <Play size={12} />
                   For {String(c.meta?.label ?? 'Workouts')}
                 </span>
                 <span className={b.reelCaption}>{c.title}</span>
               </Link>
             ))}
-          </nav>
-        </VStack>
-      )}
+          </nav>,
+          undefined,
+          '/reels',
+        )}
 
-      {listings.length > 0 && (
-        <VStack gap={3} as="section" aria-label="Suggested on Marketplace">
-          <SectionHead title="Suggested on Marketplace" href="/marketplace?category=Sporting%20Goods" />
-          <Carousel gap={2} hasButtons hasEdgeFade aria-label="Suggested on Marketplace">
+      {nearby && nearby.events.length > 0 && section('nearby', 'Near you', <EventsNearby events={nearby.events} home={nearby.home} />, nearby.home ? 'Distances from your city' : 'Add your city for distances', '/events')}
+
+      {listings.length > 0 &&
+        section(
+          'shop',
+          'Gear on Marketplace',
+          <div className={h.strip}>
             {listings.map(l => (
-              <ClickableCard key={l.id} href={`/marketplace/${l.id}`} label={l.title} padding={0} width={200}>
-                <VStack>
-                  <AspectRatio ratio={1}>
-                    <img src={l.imageUrl} alt="" loading="lazy" />
-                  </AspectRatio>
-                  <VStack gap={0.5} padding={2}>
-                    <Text weight="bold">${(l.priceCents / 100).toFixed(0)}</Text>
-                    <Text maxLines={1}>{l.title}</Text>
-                    <Text type="supporting" color="secondary" maxLines={1}>
-                      {l.location}
-                    </Text>
-                  </VStack>
-                </VStack>
-              </ClickableCard>
+              <Link key={l.id} href={`/marketplace/item/${l.id}`} className={`${h.card} ${h.shopTile}`}>
+                <img src={l.imageUrl} alt="" loading="lazy" />
+                <span className={h.cardBody} style={{padding: '10px 12px 12px', gap: 2}}>
+                  <span className={h.price}>${(l.priceCents / 100).toFixed(0)}</span>
+                  <span className={h.cardTitle} style={{fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+                    {l.title}
+                  </span>
+                  <span className={h.cardSub} style={{fontSize: 12}}>
+                    {l.location}
+                  </span>
+                </span>
+              </Link>
             ))}
-          </Carousel>
-        </VStack>
-      )}
+          </div>,
+          undefined,
+          '/marketplace?category=Sporting%20Goods',
+        )}
 
-      <ActivityLeaderboard />
-      {sections.filter(s => s.id !== 'first_move' && s.id !== 'learn').map(renderSection)}
+      {firstMove && renderSection(firstMove)}
+      {sections.filter(s => !['first_move', 'learn', 'groups'].includes(s.id)).map(renderSection)}
+      <div className={h.section} style={{'--i': order++} as React.CSSProperties}>
+        <ActivityLeaderboard />
+      </div>
 
       <Dialog isOpen={startMode === 'turf'} onOpenChange={o => !o && setStartMode(null)} purpose="form" width={480}>
         <Layout
@@ -323,76 +309,67 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
           }
         />
       </Dialog>
-    </VStack>
+    </div>
   );
 }
 
 function DiscoverCardView({card, hero, onNotInterested, onOpen, onStart, busy}: {card: DiscoverCard; hero: boolean; onNotInterested: () => void; onOpen: () => void; onStart?: () => void; busy: boolean}) {
   const cta = card.cta ?? 'Open';
   const media = card.imageUrl ? (
-    <AspectRatio ratio={16 / 9}>
-      <img src={card.imageUrl} alt="" loading="lazy" />
-    </AspectRatio>
+    <img className={h.cover} src={card.imageUrl} alt="" loading="lazy" style={hero ? {aspectRatio: 'auto', height: '100%', minHeight: 180} : undefined} />
   ) : card.avatarUrl ? (
-    <Center paddingBlockStart={4}>
-      <Avatar src={card.avatarUrl} name={card.title} size={hero ? 72 : 60} />
-    </Center>
+    <div className={h.avatarWrap}>
+      <img className={h.avatar} src={card.avatarUrl} alt="" />
+    </div>
   ) : null;
+  const tags = [card.meta?.bossFight ? ['Boss fight IRL · counts double', h.chipEmber] : null, card.meta?.rally ? ['Weekly Rally', ''] : null, card.kind === 'mentor' ? ['Muse to Muse · name hidden', ''] : null].filter(Boolean) as [string, string][];
   const body = (
-    <VStack gap={2} padding={4} width="100%">
-      {(card.meta?.bossFight || card.meta?.rally || card.kind === 'mentor') && (
-        <HStack gap={1.5} wrap="wrap">
-          {card.meta?.bossFight ? <Token label="Boss fight IRL · counts double" size="sm" color="red" /> : null}
-          {card.meta?.rally ? <Token label="Weekly Rally" size="sm" color="blue" /> : null}
-          {card.kind === 'mentor' && <Token label="Muse to Muse · name hidden" size="sm" color="purple" />}
-        </HStack>
+    <div className={h.cardBody}>
+      {tags.length > 0 && (
+        <div className={h.chips}>
+          {tags.map(([t, cls]) => (
+            <span key={t} className={`${h.chip} ${cls}`}>
+              {t}
+            </span>
+          ))}
+        </div>
       )}
-      <Heading level={3}>{card.title}</Heading>
-      {card.subtitle && (
-        <Text type="supporting" color="secondary">
-          {card.subtitle}
-        </Text>
-      )}
-      <HStack gap={1.5} vAlign="center">
-        <Icon icon={Sparkles} size="xsm" color="accent" />
-        <StackItem size="fill">
-          <Text type="supporting" color="secondary">
-            {card.why}
-          </Text>
-        </StackItem>
-      </HStack>
-      <HStack gap={2} wrap="wrap">
+      <h3 className={h.cardTitle}>{card.title}</h3>
+      {card.subtitle && <p className={h.cardSub}>{card.subtitle}</p>}
+      <p className={h.why}>
+        <Sparkles size={14} />
+        <span>{card.why}</span>
+      </p>
+      <div className={h.cardBtns}>
         {onStart ? (
-          <Button
-            label={cta}
-            variant="primary"
-            size="sm"
-            isLoading={busy}
+          <button
+            type="button"
+            className={`${h.pill} ${h.pillSm} ${h.pillBlue}`}
+            disabled={busy}
             onClick={() => {
               onOpen();
               onStart();
             }}
-          />
+          >
+            {busy ? 'Starting…' : cta}
+          </button>
         ) : (
-          <Button label={cta} variant="primary" size="sm" href={card.href ?? '/activities'} onClick={onOpen} />
+          <Link className={`${h.pill} ${h.pillSm} ${h.pillBlue}`} href={card.href ?? '/activities'} onClick={onOpen}>
+            {cta}
+          </Link>
         )}
-        {card.kind !== 'start' && card.kind !== 'invite' && <Button label="Not interested" variant="ghost" size="sm" tooltip={card.tag ? `Removes the "${card.tag}" tag` : 'Hide'} onClick={onNotInterested} />}
-      </HStack>
-    </VStack>
+        {card.kind !== 'start' && card.kind !== 'invite' && (
+          <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillGhost}`} title={card.tag ? `Removes the "${card.tag}" tag` : 'Hide'} onClick={onNotInterested}>
+            Not interested
+          </button>
+        )}
+      </div>
+    </div>
   );
   return (
-    <Card padding={0}>
-      {hero && card.imageUrl ? (
-        <Grid columns={{minWidth: 240, max: 2}}>
-          {media}
-          {body}
-        </Grid>
-      ) : (
-        <VStack>
-          {media}
-          {body}
-        </VStack>
-      )}
-    </Card>
+    <article className={h.card} style={hero && card.imageUrl ? {display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)'} : undefined}>
+      {media}
+      {body}
+    </article>
   );
 }

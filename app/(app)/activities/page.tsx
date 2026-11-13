@@ -12,6 +12,7 @@ import {CoachMode} from '@/components/activities/CoachMode';
 import {setCoachMode} from '@/lib/activities/coach';
 import {fitnessLevel} from '@/lib/activities/level';
 import {listVaultEvents} from '@/lib/activities/vault';
+import {homeProgress, nearbyEvents} from '@/lib/activities/home';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
   if (!user) redirect('/auth/signin');
   const params = await searchParams;
   // Goals are optional here: if the table isn't migrated yet Discover still renders without the spotlight.
-  const [data, museActions, listings, goals, quests, turf] = await Promise.all([
+  const [data, museActions, listings, goals, quests, turf, progress, nearby] = await Promise.all([
     getDiscover(user.id),
     listActions(user.id),
     // Gear for the user's tags (no tags: 'fitness' + Sporting Goods); nothing matching falls back to newest listings.
@@ -32,6 +33,8 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
     listGoals(user.id).catch(() => []),
     listQuestsForUser(user.id),
     listActiveGamesForUser(user.id),
+    homeProgress(user.id).catch(() => null),
+    nearbyEvents(user.id).catch(() => null),
   ]);
   // Coach mode always opens off; only an explicit ?coach=on (Your Muse link, old /activities/coach) opens it on
   const coachOn = params.coach === 'on';
@@ -49,7 +52,7 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
     <>
       <OnboardingGate userId={user.id} searchParams={params} />
       <CoachMode initialOn={coachOn}>
-        <DiscoverPage viewer={{id: user.id, name: user.name, avatarUrl: user.avatarUrl}} data={data} museActions={museActions} listings={listings} start={params.start ?? null} eventId={params.event ? Number(params.event) : null} goal={goals.find(x => x.status === 'active') ?? null} games={games} level={level} />
+        <DiscoverPage viewer={{id: user.id, name: user.name, avatarUrl: user.avatarUrl}} data={data} museActions={museActions} listings={listings} start={params.start ?? null} eventId={params.event ? Number(params.event) : null} goal={goals.find(x => x.status === 'active') ?? null} games={games} level={level} progress={progress} nearby={nearby} />
       </CoachMode>
     </>
   );

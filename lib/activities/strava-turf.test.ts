@@ -20,8 +20,10 @@ test('only accepted players in live games receive real runs within the game wind
   for (const sport_type of ['Ride', 'VirtualRun', 'VirtualRide', '']) assert.equal(stravaGameEligible({...activity, sport_type}, game, 'accepted', now), false);
   for (const status of ['invited', 'left', 'declined']) assert.equal(stravaGameEligible(activity, game, status, now), false);
   for (const status of ['pending', 'ended', 'cancelled']) assert.equal(stravaGameEligible(activity, {...game, status}, 'accepted', now), false);
-  for (const start_date of ['bad', '2025-12-31T23:59:59Z', game.endsAt]) assert.equal(stravaGameEligible({...activity, start_date}, game, 'accepted', now), false);
+  for (const start_date of ['bad', '2025-12-30T23:59:59Z', game.endsAt]) assert.equal(stravaGameEligible({...activity, start_date}, game, 'accepted', now), false);
   assert.equal(stravaGameEligible(activity, {...game, startsAt: null}, 'accepted', now), false);
   assert.equal(stravaGameEligible(activity, game, 'accepted', Date.parse(game.endsAt)), false);
   assert.ok(stravaGameEligible(activity, {...game, endsAt: null}, 'accepted', now));
+  // runs up to 24 h before the start count (demo grace)
+  assert.ok(stravaGameEligible({...activity, start_date: '2025-12-31T23:59:59Z'}, game, 'accepted', now));
 });

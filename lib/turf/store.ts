@@ -11,7 +11,7 @@ import type {RallyInvitePayload, SystemPayload, TurfRecapPayload} from '@/lib/ac
 import {isMember, sendMessage} from '@/lib/messaging-queries';
 import {sendPushToUser} from '@/lib/push';
 import {colorAt} from './colors';
-import {applyClaim, detectCut, detectLoop, fillLoop, obfuscateZone, outingTrimM, pointsToCells, score, type Arena, type GpsPoint, type LatLng, type TrailCell, type TurfGame, type Zone} from './engine';
+import {applyClaim, detectCut, detectLoop, fillLoop, obfuscateZone, pointsToCells, score, type Arena, type GpsPoint, type LatLng, type TrailCell, type TurfGame, type Zone} from './engine';
 import {scriptInfo, scriptPoints, type ReplayScript} from './fixtures';
 import {finalText, narrateRecap, type FinalStanding} from './recap';
 import {emptyResult, type GameStatus, type InviteStatus, type MyOuting, type OutingResult, type OutingStatus, type TurfPlayer, type TurfSettings, type TurfState} from './types';
@@ -370,7 +370,8 @@ export async function addPoints(game: Game, user: Actor, outingId: number, point
     .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng) && Number.isFinite(p.t) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180);
   const raw = [...outing.raw, ...clean].sort((a, b) => a.t - b.t).slice(-MAX_POINTS);
   const arena = arenaOf(game);
-  const trail = pointsToCells(raw, arena, {zones: await privacyZones(user.id), trimM: outingTrimM(outing.id), keepHidden: true});
+  // shortcut: start/end privacy trim off (demo: short loops must show); restore outingTrimM(outing.id) to hide where outings begin and end
+  const trail = pointsToCells(raw, arena, {zones: await privacyZones(user.id), trimM: 0, keepHidden: true});
 
   const [cellRows, otherRows, playerRows] = await Promise.all([
     sql`select cell, owner_id from turf_cells where game_id = ${game.id} and owner_id is not null`,

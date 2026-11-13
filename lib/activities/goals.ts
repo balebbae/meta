@@ -120,7 +120,8 @@ export async function createGoal(userId: number, text: string, now = new Date())
         input: `You are a careful training planner inside Facebook Activities. Today is ${now.toISOString().slice(0, 10)}.
 The user's goal, in their words: "${raw}"
 ${event ? `This is a ${event.name}. Its parts (use these ids for componentId, or "" for none): ${JSON.stringify(components)}` : 'This is a custom goal. Use "" for every componentId.'}
-Their recent activity (rounded, last 2 weeks): ${JSON.stringify(ctx)}. Their tags: ${tags.join(', ') || 'none'}.
+Their recent activity (rounded, from their synced devices and logs): ${JSON.stringify(ctx)}. Their tags: ${tags.join(', ') || 'none'}.
+level_detail is their measured level (computed by code from the last 4 weeks; trust it over the tags). Week 1 should look like what they already do at that level, then build by about 10% a week at most. A "new" person starts with 2-3 short, easy sessions a week. If easy_week is true, make week 1 an easy week and say so in the summary without giving a reason.
 Return:
 - title: short name for the goal (max 40 characters).
 - eventDate: YYYY-MM-DD if the user gave or clearly implied a date or month (pick a Saturday in that month), else "".
@@ -186,7 +187,8 @@ export async function checkIn(goal: Goal, now = new Date()): Promise<Goal> {
         effort: 'low',
         input: `Weekly check-in for the goal "${goal.title}". It is week ${goal.week} of ${goal.plan.weeks}, phase "${phase?.name ?? ''}" (${phase?.focus ?? ''}).
 Milestones: ${JSON.stringify(goal.plan.milestones.map(m => ({title: m.title, week: m.week, done: m.done})))}
-Their last 2 weeks (rounded): ${JSON.stringify(ctx)}
+Their recent activity (rounded; level_detail is their measured 4-week level): ${JSON.stringify(ctx)}
+If easy_week is true, this week's adjustments are lighter (fewer or easier sessions, an extra rest day), never extra volume, and you do not guess why.
 The rule-based read is: ${checkin.status} ("${checkin.headline}"). Agree unless the activity clearly says otherwise.
 Return status, a one-sentence headline to the user ("you"), and 2-3 specific adjustments for the next 7 days (each max 18 words).
 Encouraging, honest, no guilt. If they are behind, shrink the plan instead of piling on. Never mention bodies, weight or health. Not medical advice.`,

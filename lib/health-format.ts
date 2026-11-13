@@ -288,3 +288,58 @@ export function layoutHealth(samples: HealthReading[]) {
 
   return {highlights, sections};
 }
+
+// ---- Synced readings -> vault history ----------------------------------------------------
+
+type Source = 'whoop' | 'apple_health' | 'health_connect';
+type VaultKind = 'run' | 'walk' | 'ride' | 'strength' | 'yoga' | 'swim' | 'steps' | 'sleep' | 'recovery' | 'other';
+export type HealthEvent = {
+  source: Source;
+  externalId: string;
+  kind: VaultKind;
+  startedAt: string;
+  endedAt?: string;
+  distanceKm?: number;
+  durationMin?: number;
+  steps?: number;
+  trust: 'device';
+  displayScope: 'normal' | 'owner_only';
+  raw?: unknown;
+};
+
+/** Workout title ("Walking · 4.2 strain · …", "Treadmill", "Functional Fitness") -> vault kind. */
+export function workoutKind(title: string): VaultKind {
+  const t = title.split('·')[0].toLowerCase();
+  if (/run|jog|treadmill/.test(t)) return 'run';
+  if (/walk|hik/.test(t)) return 'walk';
+  if (/cycl|bike|spin|ride/.test(t)) return 'ride';
+  if (/strength|weight|lift|functional|crossfit|hiit|circuit/.test(t)) return 'strength';
+  if (/yoga|pilates|stretch/.test(t)) return 'yoga';
+  if (/swim/.test(t)) return 'swim';
+  return 'other';
+}
+
+/**
+ * The /health snapshot only keeps the latest reading per metric, so each sync also writes what the level needs into
+ * the vault, where it stays as history: workouts, daily steps, nightly sleep and WHOOP recovery. No heart rate is kept.
+ * WHOOP sleep and recovery are owner_only, so museContext() never sees them; recovery only sets the code-side easy-week flag.
+ * shortcut: steps are the phone's rolling 24 h total, filed under the sync's day; switch to per-day totals if the app sends them.
+ */
+export function healthToEvents(userId: number, source: Source, samples: HealthReading[]): HealthEvent[] {
+  const day = (iso: string) => iso.slice(0, 10);
+  const base = {source, trust: 'device' as const};
+  return samples.flatMap((s): HealthEvent[] => {
+    const end = new Date(s.recordedAt);
+    if (/^workout_\d+$/.test(s.metric)) {
+      if (s.value < 5) return [];
+      const km = s.unit.match(/(\d+(?:\.\d+)?) km\b/);
+      const m = s.unit.match(/· (\d+) m\b/); // "· +12 m" is altitude, "· 850 m" is distance
+      const distanceKm = km ? Number(km[1]) : m ? Math.round(Number(m[1]) / 10) / 100 : undefined;
+      return [{...base, externalId: `${source}:${userId}:workout:${end.toISOString()}`, kind: workoutKind(s.unit), startedAt: new Date(end.getTime() - s.value * 60_000).toISOString(), endedAt: end.toISOString(), durationMin: Math.round(s.value), distanceKm, displayScope: 'normal'}];
+    }
+    if (s.metric === 'steps') return [{...base, externalId: `${source}:${userId}:steps:${day(s.recordedAt)}`, kind: 'steps', startedAt: `${day(s.recordedAt)}T12:00:00.000Z`, steps: Math.round(s.value), displayScope: 'normal'}];
+    if (s.metric === 'sleep_hours') return [{...base, externalId: `${source}:${userId}:sleep:${day(s.recordedAt)}`, kind: 'sleep', startedAt: new Date(end.getTime() - s.value * 3_600_000).toISOString(), endedAt: end.toISOString(), durationMin: Math.round(s.value * 60), displayScope: source === 'whoop' ? 'owner_only' : 'normal'}];
+    if (s.metric === 'recovery_score' && source === 'whoop') return [{...base, externalId: `whoop:${userId}:recovery:${day(s.recordedAt)}`, kind: 'recovery', startedAt: end.toISOString(), raw: {recovery_score: s.value}, displayScope: 'owner_only'}];
+    return [];
+  });
+}

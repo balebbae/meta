@@ -6,6 +6,7 @@ import {Avatar} from '@/components/ui/Avatar';
 import {Dialog} from '@/components/ui/Dialog';
 import {Popover} from '@/components/ui/Popover';
 import {Tooltip} from '@/components/ui/Tooltip';
+import {useToast} from '@astryxdesign/core/Toast';
 import {
   BookmarkIcon,
   CameraIcon,
@@ -28,6 +29,7 @@ import {
   StickerIcon,
   TrashIcon,
   UnfollowIcon,
+  FeedActionIcon,
 } from '@/components/icons';
 import {formatCompactTime, formatCount, formatFullDate, formatRelativeTime, pluralize} from '@/lib/format';
 import type {Comment, Post, ReactionType, User} from '@/lib/types';
@@ -43,7 +45,8 @@ export function AudienceIcon({audience, size = 12}: {audience: Post['audience'];
 
 const SEE_MORE_LIMIT = 400;
 
-export function PostCard({post: initial, viewer}: {post: Post; viewer: User}): React.JSX.Element {
+export function PostCard({post: initial, viewer, mobileFeed = false}: {post: Post; viewer: User; mobileFeed?: boolean}): React.JSX.Element {
+  const toast = useToast();
   const [post, setPost] = useState<Post>(initial);
   const [deleted, setDeleted] = useState(false);
   const [imgBroken, setImgBroken] = useState(false);
@@ -102,9 +105,25 @@ export function PostCard({post: initial, viewer}: {post: Post; viewer: User}): R
   const shortNoImage = !post.imageUrl && post.content.length <= 85 && !post.content.includes('\n');
   const reactionLabel = REACTIONS.find(r => r.type === post.viewerReaction)?.label ?? 'Like';
   const reactionColor = REACTIONS.find(r => r.type === post.viewerReaction)?.color;
+  const mobileLongText = post.content.length > 220;
+  const mobileText = mobileLongText && !expanded ? post.content.slice(0, 220).trimEnd() + '… ' : post.content;
+  async function share() {
+    if (!mobileFeed || window.innerWidth > 700) return;
+    const url = new URL(`/posts/${post.id}`, window.location.origin).href;
+    if (navigator.share) {
+      try { await navigator.share({url}); return; }
+      catch (error) { if (error instanceof Error && error.name === 'AbortError') return; }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({body: 'Link copied', autoHideDuration: 2000});
+    } catch {
+      toast({body: 'Could not copy the link. Please try again.', type: 'error', autoHideDuration: 3000});
+    }
+  }
 
   return (
-    <article className={styles.card} aria-label={`Post by ${post.author.name}`}>
+    <article className={`${styles.card} ${mobileFeed ? styles.mobileFeed : ''}`} aria-label={`Post by ${post.author.name}`}>
       <header className={styles.header}>
         <Link href={`/profile/${post.author.id}`} className={styles.authorLink}>
           <Avatar src={post.author.avatarUrl} alt={post.author.name} size={40} />
@@ -114,9 +133,11 @@ export function PostCard({post: initial, viewer}: {post: Post; viewer: User}): R
             {post.author.name}
           </Link>
           <div className={styles.sub}>
+            {mobileFeed && <><span className={styles.mobileMetaName}>{post.author.name}</span><span className={styles.mobileOnly}>·</span></>}
             <Tooltip label={formatFullDate(post.createdAt)}>
               <a href={`/posts/${post.id}`} onClick={e => e.preventDefault()}>
-                {formatRelativeTime(post.createdAt, now)}
+                <span className={styles.desktopTime}>{formatRelativeTime(post.createdAt, now)}</span>
+                {mobileFeed && <span className={styles.mobileOnly}>{formatCompactTime(post.createdAt, now)}</span>}
               </a>
             </Tooltip>
             <span className={styles.dot}>·</span>
@@ -174,7 +195,7 @@ export function PostCard({post: initial, viewer}: {post: Post; viewer: User}): R
         </div>
       </header>
 
-      <div className={`${styles.content} ${shortNoImage ? styles.contentLarge : ''}`}>
+      <div className={`${styles.content} ${styles.desktopContent} ${shortNoImage ? styles.contentLarge : ''}`}>
         {text}
         {longText && !expanded && (
           <button className={styles.seeMore} onClick={() => setExpanded(true)}>
@@ -182,6 +203,10 @@ export function PostCard({post: initial, viewer}: {post: Post; viewer: User}): R
           </button>
         )}
       </div>
+      {mobileFeed && <div className={`${styles.content} ${styles.mobileContent}`}>
+        {mobileText}
+        {mobileLongText && !expanded && <button className={styles.seeMore} onClick={() => setExpanded(true)}>See more</button>}
+      </div>}
 
       {post.imageUrl && !imgBroken && (
         <Image src={post.imageUrl} alt="" width={1200} height={800} sizes="(max-width: 700px) 100vw, 680px" className={styles.image} priority={false} onError={() => setImgBroken(true)} />
@@ -222,6 +247,7 @@ export function PostCard({post: initial, viewer}: {post: Post; viewer: User}): R
           label={reactionLabel}
           color={reactionColor}
           count={post.reactionCount}
+          mobileFeed={mobileFeed}
           onToggle={() => react(post.viewerReaction ? null : 'like')}
           onPick={t => react(t)}
         />
@@ -232,11 +258,14 @@ export function PostCard({post: initial, viewer}: {post: Post; viewer: User}): R
             setShowComments(true);
             setFocusComposer(n => n + 1);
           }}>
-          <CommentIcon size={22} />
+          <span className={styles.desktopAction}><CommentIcon size={22} /></span>
+          {mobileFeed && <span className={styles.mobileOnly}><FeedActionIcon name="comment" size={22} /></span>}
           {post.commentCount > 0 && <span className={styles.actionCount}>{formatCount(post.commentCount)}</span>}
+          {mobileFeed && post.commentCount === 0 && <span className={`${styles.actionCount} ${styles.mobileOnly}`}>0</span>}
         </button>
-        <button className={styles.actionBtn} aria-label="Share">
-          <ShareIcon size={22} />
+        <button className={`${styles.actionBtn} ${styles.shareButton}`} aria-label="Share" onClick={share}>
+          <span className={styles.desktopAction}><ShareIcon size={22} /></span>
+          {mobileFeed && <span className={styles.mobileOnly}><FeedActionIcon name="share" size={22} /></span>}
           {post.shareCount > 0 && <span className={styles.actionCount}>{formatCount(post.shareCount)}</span>}
         </button>
       </div>
@@ -301,6 +330,7 @@ function LikeButton({
   onToggle,
   onPick,
   count = 0,
+  mobileFeed = false,
 }: {
   current: ReactionType | null;
   label: string;
@@ -308,12 +338,16 @@ function LikeButton({
   onToggle: () => void;
   onPick: (t: ReactionType) => void;
   count?: number;
+  mobileFeed?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const enterTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPress = useRef(false);
+  const clearTouch = () => { if (enterTimer.current) clearTimeout(enterTimer.current); };
 
   const onEnter = () => {
+    if (mobileFeed && window.matchMedia('(hover: none)').matches) return;
     if (leaveTimer.current) clearTimeout(leaveTimer.current);
     enterTimer.current = setTimeout(() => setOpen(true), 700);
   };
@@ -334,15 +368,28 @@ function LikeButton({
       <button
         className={`${styles.actionBtn} ${current ? styles.actionActive : ''}`}
         style={current && color ? {color} : undefined}
+        onTouchStart={mobileFeed ? () => {
+          longPress.current = false;
+          enterTimer.current = setTimeout(() => { longPress.current = true; setOpen(true); }, 500);
+        } : undefined}
+        onTouchEnd={mobileFeed ? clearTouch : undefined}
+        onTouchMove={mobileFeed ? clearTouch : undefined}
+        onTouchCancel={mobileFeed ? clearTouch : undefined}
         onClick={() => {
+          if (longPress.current) { longPress.current = false; return; }
           setOpen(false);
           onToggle();
         }}
         aria-pressed={!!current}>
-        {current ? current === 'like' ? <LikeFilledIcon size={22} /> : <ReactionIcon type={current} size={22} /> : <LikeIcon size={22} />}
+        {current ? current === 'like' ? <LikeFilledIcon size={22} /> : <ReactionIcon type={current} size={22} /> : <>
+          <span className={styles.desktopAction}><LikeIcon size={22} /></span>
+          {mobileFeed && <span className={styles.mobileOnly}><FeedActionIcon name="like" size={22} /></span>}
+        </>}
         <span className={styles.srOnly}>{label}</span>
         {count > 0 && <span className={styles.actionCount}>{formatCount(count)}</span>}
+        {mobileFeed && count === 0 && <span className={`${styles.actionCount} ${styles.mobileOnly}`}>0</span>}
       </button>
+      {mobileFeed && <button className={styles.mobileReactionBubble} aria-label="Choose a reaction" aria-expanded={open} onClick={() => setOpen(v => !v)}><ReactionIcon type="like" size={16} /></button>}
       {open && (
         <div className={styles.picker} role="menu" aria-label="Reactions">
           {REACTIONS.map(r => (

@@ -1,41 +1,56 @@
 'use client';
 
 import Link from 'next/link';
-import {useEffect, useState} from 'react';
+import {Fragment, useEffect, useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import {BellIcon, CommentIcon, LikeFilledIcon, MoreHorizontalIcon, UsersIcon} from '@/components/icons';
 import {formatCompactTime} from '@/lib/format';
 import type {Notification} from '@/lib/queries';
 import {Skeleton} from '@/components/ui/Skeleton';
+import {profileApi} from '@/components/profile/api';
+import {MobileNotificationRow} from './MobileNotificationRow';
 import styles from './layout.module.css';
+import {panelHref} from '@/lib/activities/panel-href';
 
 export function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (n: number) => void}) {
   const [items, setItems] = useState<Notification[] | null>(null);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [error, setError] = useState('');
+  const [responding, setResponding] = useState<number | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     if (!open) return;
+    setError('');
     fetch('/api/notifications')
       .then(r => (r.ok ? r.json() : null))
       .then((d: {notifications: Notification[]; unreadCount: number} | null) => {
-        if (!d) return;
+        if (!d) throw new Error();
         setItems(d.notifications);
         onUnread(d.unreadCount);
       })
-      .catch(() => {});
-  }, [open, onUnread]);
+      .catch(() => { setItems([]); setError('Could not load notifications. Please try again.'); });
+  }, [open, onUnread, loadAttempt]);
 
   const markRead = async (ids: number[] | 'all') => {
+    setError('');
     setItems(list =>
       list?.map(n => (ids === 'all' || ids.includes(n.id) ? {...n, isRead: true} : n)) ?? null,
     );
     const remaining = (items ?? []).filter(n => !n.isRead && !(ids === 'all' || ids.includes(n.id))).length;
     onUnread(remaining);
-    await fetch('/api/notifications', {
-      method: 'PATCH',
-      headers: {'content-type': 'application/json'},
-      body: JSON.stringify(ids === 'all' ? {all: true} : {ids}),
-    });
+    try {
+      const res = await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: {'content-type': 'application/json'},
+        body: JSON.stringify(ids === 'all' ? {all: true} : {ids}),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setItems(items);
+      onUnread((items ?? []).filter(n => !n.isRead).length);
+      setError('Could not mark notifications as read. Please try again.');
+    }
   };
 
   const shown = (items ?? []).filter(n => filter === 'all' || !n.isRead);
@@ -45,15 +60,22 @@ export function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (
   const earlier = shown.filter(n => !isNew(n));
   const respond = async (n: Notification, accept: boolean) => {
     if (!n.actor) return;
-    setItems(list => list?.filter(x => x.id !== n.id) ?? null);
-    markRead([n.id]);
+    setError('');
+    setResponding(n.id);
     try {
-      if (accept) await fetch('/api/friends/accept', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({userId: n.actor.id})});
-      else await fetch(`/api/friends/${n.actor.id}`, {method: 'DELETE'});
-    } catch {}
+      if (accept) await profileApi.accept(n.actor.id);
+      else await profileApi.remove(n.actor.id);
+      await markRead([n.id]);
+      setItems(list => list?.filter(x => x.id !== n.id) ?? null);
+    } catch {
+      setError('Could not update this request. Please try again.');
+    } finally {
+      setResponding(null);
+    }
   };
   const row = (n: Notification) => (
-    <Link key={n.id} href={n.type === 'ahead' ? '/activities/ahead' : n.postId ? `/?post=${n.postId}` : n.actor ? `/profile/${n.actor.id}` : '/'} className={styles.notif} onClick={() => !n.isRead && markRead([n.id])}>
+    <Fragment key={n.id}>
+    <Link key={n.id} href={n.type === 'ahead' ? panelHref({panel: 'mentors'}) : n.postId ? `/?post=${n.postId}` : n.actor ? `/profile/${n.actor.id}` : '/'} className={styles.notif} onClick={() => !n.isRead && markRead([n.id])}>
       <span className={styles.notifAvatar}>
         <Avatar src={n.actor?.avatarUrl ?? '/favicon.svg'} alt="" size={56} />
         <span className={styles.notifType} style={{background: n.type === 'reaction' ? 'var(--fb-blue)' : n.type === 'comment' ? '#31a24c' : n.type === 'friend_request' ? 'var(--fb-blue)' : '#65676b'}}>
@@ -76,9 +98,12 @@ export function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (
       </span>
       {!n.isRead && <span className={styles.notifDot} />}
     </Link>
+    <MobileNotificationRow item={n} href={n.type === 'ahead' ? panelHref({panel: 'mentors'}) : n.postId ? `/?post=${n.postId}` : n.actor ? `/profile/${n.actor.id}` : '/'} markRead={() => { if (!n.isRead) void markRead([n.id]); }} respond={accept => void respond(n, accept)} busy={responding !== null} />
+    </Fragment>
   );
   return (
-    <div className={styles.panel}>
+    <div className={styles.panel} data-mobile-notifications>
+      {error && <div role="alert" className={styles.searchEmpty}>{error} <button className={styles.linkBtn} onClick={() => setLoadAttempt(n => n + 1)}>Reload</button></div>}
       <div className={styles.panelHead}>
         <div className={styles.panelTitle}>Notifications</div>
         <button className={styles.rrIconBtn} aria-label="Mark all as read" title="Mark all as read" onClick={() => markRead('all')}>
@@ -106,7 +131,7 @@ export function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (
           ))}
         </div>
       )}
-      {items !== null && shown.length === 0 && <div className={styles.searchEmpty}>You&apos;re all caught up</div>}
+      {!error && items !== null && shown.length === 0 && <div className={styles.searchEmpty}>You&apos;re all caught up</div>}
       {fresh.length > 0 && (
         <div className={styles.notifSection}>
           <span>New</span>

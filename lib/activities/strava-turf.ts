@@ -18,7 +18,9 @@ export function stravaPoints(startDate: string, streams: StravaStreams): GpsPoin
 
 export function stravaGameEligible(activity: {start_date: string; sport_type?: string; type?: string}, game: {status: string; startsAt: string | null; endsAt: string | null}, playerStatus: string, now = Date.now()): boolean {
   const start = Date.parse(activity.start_date);
+  // shortcut: runs from up to 24 h before the game started count (demo); set to 0 to stop old runs being imported
+  const grace = 86_400_000;
   return ['Run', 'TrailRun', 'Walk', 'Hike'].includes(activity.sport_type ?? activity.type ?? '') &&
     playerStatus === 'accepted' && game.status === 'live' && game.startsAt != null &&
-    start >= Date.parse(game.startsAt) && (!game.endsAt || (start < Date.parse(game.endsAt) && now < Date.parse(game.endsAt)));
+    start >= Date.parse(game.startsAt) - grace && (!game.endsAt || (start < Date.parse(game.endsAt) && now < Date.parse(game.endsAt)));
 }

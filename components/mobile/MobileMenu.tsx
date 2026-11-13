@@ -28,10 +28,13 @@ import {
   RailVideoIcon,
   SettingsIcon,
   WarningIcon,
+  ActivitiesIcon, FriendsIcon, GroupsIcon, MarketplaceIcon, VideoIcon, GamingIcon, CalendarIcon, MenuGridIcon, PlusIcon, CloseIcon, CheckIcon, MuseMarkIcon, MobileSettingsIcon, MobileHelpIcon, MessengerIcon,
 } from '@/components/icons';
 import type {User} from '@/lib/types';
 import {PeopleSearchButton} from './MobileHeader';
 import styles from './mobile.module.css';
+import menu from './menu.module.css';
+import {panelHref} from '@/lib/activities/panel-href';
 
 const SHORTCUTS = [
   {label: 'Friends', Icon: RailFriendsIcon, href: '/friends'},
@@ -100,7 +103,7 @@ function useLocalGradientIds(ref: React.RefObject<HTMLElement | null>) {
   }, [ref]);
 }
 
-export function MobileMenu({user}: {user: User}) {
+export function MobileMenu({user, drawer = false}: {user: User; drawer?: boolean}) {
   const router = useRouter();
   const gridRef = useRef<HTMLDivElement>(null);
   useLocalGradientIds(gridRef);
@@ -124,7 +127,8 @@ export function MobileMenu({user}: {user: User}) {
       document.cookie = `fb.theme=${next};path=/;max-age=31536000;SameSite=Lax`;
     } catch {}
   };
-  return (
+  return <>
+    {!drawer && <div className={menu.legacy}>
     <div className={styles.menuPage}>
       <header className={`${styles.titleBar} ${styles.mobileOnly}`} style={{margin: '0 -12px', padding: 'calc(env(safe-area-inset-top) + 10px) 12px 10px 16px'}}>
         <h1>Menu</h1>
@@ -183,5 +187,86 @@ export function MobileMenu({user}: {user: User}) {
         {busy ? 'Logging out…' : 'Log out'}
       </button>
     </div>
-  );
+    </div>}
+    <MenuContent user={user} busy={busy} logout={logout} toggleTheme={toggleTheme} />
+  </>;
+}
+
+const OUTLINE_ICONS = [FriendsIcon, ActivitiesIcon, ClockIcon, GroupsIcon, BookmarkIcon, MarketplaceIcon, VideoIcon, CalendarIcon, MenuGridIcon, VideoIcon, GamingIcon, FeedbackIcon, BookmarkIcon];
+
+function MenuContent({user, busy, logout, toggleTheme}: {user: User; busy: boolean; logout: () => void; toggleTheme: () => void}) {
+  const [expanded, setExpanded] = useState(false);
+  const [promo, setPromo] = useState(true);
+  const [sheet, setSheet] = useState(false);
+  const sheetRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    try { setPromo(localStorage.getItem('fb.muse-promo-dismissed') !== 'true'); } catch {}
+  }, []);
+  useEffect(() => {
+    if (!sheet) return;
+    const dialog = sheetRef.current!;
+    const overflow = document.body.style.overflow;
+    const nested = !!dialog.parentElement?.closest('dialog[open]');
+    if (!nested) document.body.style.overflow = 'hidden';
+    dialog.showModal();
+    return () => { dialog.close(); if (!nested) document.body.style.overflow = overflow; };
+  }, [sheet]);
+  function dismissPromo() {
+    setPromo(false);
+    try { localStorage.setItem('fb.muse-promo-dismissed', 'true'); } catch {}
+  }
+  return <section className={menu.content} aria-label="Menu shortcuts">
+    <div className={menu.profileCard}>
+      <div className={menu.profileRow}>
+        <Link href={`/profile/${user.id}`} className={menu.nameRow}><Avatar src={user.avatarUrl} alt="" size={40} /><strong>{user.name}</strong></Link>
+        <button className={menu.profileToggle} aria-label="Switch profile" onClick={() => setSheet(true)}><ChevronDownIcon size={20} /></button>
+      </div>
+      <Link href="/pages" className={menu.createPage}><span className={menu.plus}><PlusIcon size={22} /></span>Create Facebook Page</Link>
+    </div>
+    {promo && <aside className={menu.promo} aria-label="Muse">
+      <h2><MuseMarkIcon size={22} />Muse</h2>
+      <button aria-label="Dismiss Muse promo" className={menu.dismiss} onClick={dismissPromo}><CloseIcon size={16} /></button>
+      <p>Meet Muse, your personal AI agent.</p>
+      <Link href={panelHref({panel: 'settings', tab: 'muse'})}>Try Muse</Link>
+    </aside>}
+    <nav className={menu.shortcuts} aria-label="Shortcuts">
+      {SHORTCUTS.slice(0, expanded ? SHORTCUTS.length : 5).map(({label, href}, i) => {
+        const Icon = OUTLINE_ICONS[i];
+        return <Link key={href} href={href} className={menu.shortcut}><Icon size={26} /><span>{label}</span></Link>;
+      })}
+    </nav>
+    <button className={menu.seeMore} aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>{expanded ? 'See less' : 'See more'}</button>
+    <details className={menu.accordion}>
+      <summary><MobileHelpIcon size={24} /><span>Help and support</span><ChevronDownIcon size={20} /></summary>
+      <Link href="/settings#help">Help Center</Link><Link href="/notifications">Support Inbox</Link><Link href="/settings#feedback">Report a problem</Link><Link href="/privacy">Safety Center</Link>
+    </details>
+    <details className={menu.accordion}>
+      <summary><MobileSettingsIcon size={24} /><span>Settings and privacy</span><ChevronDownIcon size={20} /></summary>
+      <Link href="/settings">Settings</Link><Link href="/privacy">Privacy Checkup</Link><Link href={`/profile/${user.id}`}>Activity log</Link><Link href="/settings#feedback">Feedback</Link>
+      <button onClick={toggleTheme}><MoonIcon size={20} />Dark mode</button>
+      <button onClick={logout} disabled={busy}>{busy ? 'Logging out…' : 'Log out'}</button>
+    </details>
+    <details className={menu.accordion} open>
+      <summary><MenuGridIcon size={24} /><span>Upgrades</span><ChevronDownIcon size={20} /></summary>
+      <div className={menu.cards}>
+        <Link href="/pages"><span className={menu.cardArt}><GroupsIcon size={36} /></span><strong>Public presence</strong><small>Get tools to help you grow on Facebook.</small></Link>
+        <Link href="/settings"><span className={`${menu.cardArt} ${menu.blueArt}`}><CheckIcon size={36} /></span><strong>Facebook Plus</strong><small>Unlock exclusive features and more.</small></Link>
+      </div>
+    </details>
+    <details className={menu.accordion} open>
+      <summary><MenuGridIcon size={24} /><span>Also from Meta</span><ChevronDownIcon size={20} /></summary>
+      <Link href="/messages"><MessengerIcon size={24} />Messenger</Link><Link href="/reels"><VideoIcon size={24} />Reels</Link>
+    </details>
+    {sheet && <dialog ref={sheetRef} className={menu.sheet} aria-label="Profile switcher" onCancel={e => { e.preventDefault(); e.stopPropagation(); setSheet(false); }} onClick={e => { if (e.target === e.currentTarget) setSheet(false); }}>
+      <div className={menu.sheetBody}>
+        <button className={menu.handle} aria-label="Close profile switcher" onClick={() => setSheet(false)}><span /></button>
+        <div className={menu.sheetCard}>
+          <Link href={`/profile/${user.id}`} className={menu.nameRow}><Avatar src={user.avatarUrl} alt="" size={40} /><strong>{user.name}</strong><span className={menu.checked} aria-label="Current profile"><CheckIcon size={16} /></span></Link>
+          <Link href="/pages" className={menu.sheetCreate}><span className={menu.plus}><PlusIcon size={24} /></span>Create Facebook Page</Link>
+        </div>
+        <Link href="/settings" className={menu.accounts}>Go to Accounts Center</Link>
+        <p className={menu.meta}><span>∞</span> Meta</p>
+      </div>
+    </dialog>}
+  </section>;
 }

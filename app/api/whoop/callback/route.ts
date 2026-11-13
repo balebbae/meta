@@ -4,6 +4,7 @@ import {sql} from '@/lib/db';
 import {insertHealthSamples} from '@/lib/health';
 import {exchangeWhoopCode, fetchWhoopSamples, whoopGet} from '@/lib/whoop';
 import {GET as connectCallback} from '@/app/api/connect/[source]/callback/route';
+import {panelHref} from '@/lib/activities/panel-href';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -12,7 +13,7 @@ export async function GET(req: Request) {
   const cookie = req.headers.get('cookie') ?? '';
   const saved = cookie.match(/(?:^|;\s*)whoop_oauth_state=([^;]+)/)?.[1];
   if (!saved) return connectCallback(req, {params: Promise.resolve({source: 'whoop'})});
-  const fail = (msg: string) => NextResponse.redirect(new URL(`/activities/muse?whoop=error&msg=${encodeURIComponent(msg)}#devices`, url.origin));
+  const fail = (msg: string) => NextResponse.redirect(new URL(`${panelHref({panel: 'settings', tab: 'sources'})}&whoop=error&msg=${encodeURIComponent(msg)}`, url.origin));
 
   if (!code || !state || !saved || state !== saved) return fail('oauth state mismatch');
   const user = await getSessionUser();
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
     const samples = await fetchWhoopSamples(token.access_token);
     if (samples.length) await insertHealthSamples(user.id, 'whoop', samples);
 
-    const res = NextResponse.redirect(new URL('/activities/muse?whoop=connected#devices', url.origin));
+    const res = NextResponse.redirect(new URL(`${panelHref({panel: 'settings', tab: 'sources'})}&whoop=connected`, url.origin));
     res.cookies.set('whoop_oauth_state', '', {path: '/', maxAge: 0});
     return res;
   } catch (err) {

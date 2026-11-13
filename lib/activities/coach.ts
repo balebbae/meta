@@ -8,6 +8,7 @@ import {getPolicies} from '@/lib/activities/policies';
 import {getUserTags} from '@/lib/activities/discover';
 import {listVaultEvents} from '@/lib/activities/vault';
 import {MODELS, museConfigured, museJson} from '@/lib/muse/client';
+import {panelHref} from '@/lib/activities/panel-href';
 
 /**
  * Coach mode (docs/scheduler-coach.md §2, without the calendar half): this week vs last week from the owner's vault,
@@ -79,7 +80,7 @@ function fallbackBridge(c: WeekCompare, easy: boolean): BridgeStep[] {
   if (kindGap) steps.push({kind: 'session', title: `One easy ${kindGap.label.toLowerCase().replace(/s$/, '').replace(/ sessions?$/, ' session')}`, why: `You did ${kindGap.this} this week, ${kindGap.last} last week.`, when: 'Midweek', sessions: 1, minutes: 30, href: null});
   else if (top || !c.thisWeek.sessions) steps.push({kind: 'session', title: `${n === 1 ? 'One' : 'Two'} easy 30-minute ${n === 1 ? 'session' : 'sessions'}`, why: top ? `${top.label}: ${top.this} this week vs ${top.last} last week.` : 'A small, steady start beats a big one.', when: n === 1 ? 'Midweek' : 'Two days apart', sessions: n, minutes: 30 * n, href: null});
   else steps.push({kind: 'session', title: 'Repeat this week', why: 'No gaps to close; keeping it steady is the win.', when: 'Same days as this week', sessions: Math.min(c.thisWeek.sessions, c.cap.sessions), minutes: Math.min(c.thisWeek.minutes, c.cap.minutes), href: null});
-  steps.push({kind: 'ahead', title: 'Ask someone a few months ahead', why: 'Their Muse can tell you what got them past the same week.', when: 'Any time', sessions: 0, minutes: 0, href: '/activities/ahead'});
+  steps.push({kind: 'ahead', title: 'Ask someone a few months ahead', why: 'Their Muse can tell you what got them past the same week.', when: 'Any time', sessions: 0, minutes: 0, href: panelHref({panel: 'mentors'})});
   return steps.slice(0, 3);
 }
 
@@ -137,7 +138,7 @@ Never mention weight, bodies, calories or health conditions. Not medical advice.
       const steps = (out.bridge ?? []).slice(0, 3).flatMap((s): BridgeStep[] => {
         if (!KINDS.includes(s.kind)) return [];
         if (s.kind === 'event' && !eventIds.has(s.candidateId)) return [];
-        const href = s.kind === 'event' ? eventIds.get(s.candidateId)! : s.kind === 'ahead' ? '/activities/ahead' : s.kind === 'rally' ? '/activities/games' : s.kind === 'goal' ? (goal ? `/activities/goals/${goal.id}` : '/activities/goals') : null;
+        const href = s.kind === 'event' ? eventIds.get(s.candidateId)! : s.kind === 'ahead' ? panelHref({panel: 'mentors'}) : s.kind === 'rally' ? '/activities#games' : s.kind === 'goal' ? panelHref({panel: 'goals', goal: goal?.id}) : null;
         const clip = (v: unknown, n: number) => String(v ?? '').replace(/\s+/g, ' ').trim().slice(0, n);
         return [{kind: s.kind, title: clip(s.title, 70), why: clip(s.why, 140), when: clip(s.when, 40), sessions: Math.max(0, Math.round(Number(s.sessions) || 0)), minutes: Math.max(0, Math.round(Number(s.minutes) || 0)), href}];
       });

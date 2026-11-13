@@ -40,11 +40,61 @@
   justify-content: center;
   color: var(--fb-text);
 }
+.homeHeader,
+.pageHeader {
+  padding-left: 12px;
+  padding-right: 10px;
+  gap: 6px;
+}
+.homeHeader .hamburger,
+.pageHeader .hamburger {
+  width: 24px;
+  flex-shrink: 0;
+}
+.homeHeader .headerIcons,
+.pageHeader .headerIcons {
+  gap: 2px;
+}
+.homeHeader .headerBtn,
+.pageHeader .headerBtn {
+  width: 36px;
+}
+.homeHeader .wordmark svg {
+  height: 24px;
+  width: auto;
+}
+.pageTitle {
+  flex: 1;
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 34px;
+  letter-spacing: -0.5px;
+}
+.groupsHeader .pageTitle {
+  font-size: 18px;
+  letter-spacing: 0;
+  text-align: center;
+  padding-left: 82px;
+}
+.moreWrap {
+  position: relative;
+}
+.headerOption {
+  display: block;
+  padding: 12px;
+  color: var(--fb-text);
+  font-weight: 600;
+}
+.headerOption:hover {
+  background: var(--fb-hover);
+}
 .badge {
   position: absolute;
   top: 2px;
   right: 2px;
-  min-width: 20px;
+  box-sizing: content-box;
+  min-width: 16px;
   height: 20px;
   padding: 0 5px;
   border-radius: 10px;
@@ -54,11 +104,6 @@
   font-weight: 600;
   line-height: 20px;
   text-align: center;
-  border: 2px solid var(--fb-card);
-  box-sizing: content-box;
-  min-width: 12px;
-  height: 16px;
-  line-height: 16px;
 }
 
 /* ---- title header (Menu / Friends pages) ---- */
@@ -92,14 +137,14 @@
 .composer {
   align-items: center;
   gap: 10px;
-  padding: 10px 16px 14px 12px;
+  padding: 12px;
   background: var(--fb-card);
-  border-bottom: 1px solid var(--fb-divider-soft);
+  border-bottom: 5px solid var(--fb-divider-soft);
 }
 .composerText {
   flex: 1;
   text-align: left;
-  font-size: 18px;
+  font-size: 16px;
   color: var(--fb-text);
   padding: 0 4px;
 }
@@ -115,13 +160,14 @@
 /* ---- stories ---- */
 .stories {
   background: var(--fb-card);
-  padding: 12px 0 12px;
+  padding: 8px 0;
+  border-bottom: 5px solid var(--fb-divider-soft);
 }
 .storiesTrack {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 0 12px;
+  padding: 0 4px;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
 }
@@ -131,9 +177,9 @@
 .storyCard {
   position: relative;
   flex: 0 0 auto;
-  width: 112px;
-  height: 196px;
-  border-radius: 14px;
+  width: 114px;
+  height: 204px;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--fb-card);
   border: 1px solid var(--fb-divider-soft);
@@ -143,7 +189,6 @@
 }
 .musicCard {
   background: linear-gradient(170deg, #5fc39c 0%, #4fa2cf 100%);
-  border: 0;
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -174,7 +219,7 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 66%;
+  height: 70%;
   object-fit: cover;
 }
 .createBottom {
@@ -182,14 +227,14 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 34%;
+  height: 30%;
   background: var(--fb-card);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
   padding-bottom: 10px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 18px;
 }
@@ -207,6 +252,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.createLabel {
+  max-width: 50px;
 }
 .requestCard {
   display: flex;
@@ -287,7 +335,6 @@
   background: var(--fb-divider);
 }
 
-/* ---- bottom tab bar ---- */
 /* Bottom tab bar: frosted liquid glass (liquid-glass-react) in Instagram's shape. The library positions the glass
    itself (fixed, centered by translate) and gets its z-index from the style prop. The dock must NOT create a stacking
    context (no position/z-index here): backdrop-filter can only see what is painted inside its nearest isolated layer,
@@ -373,6 +420,38 @@
   .glassIndicator {
     transition: none;
   }
+}
+
+/* Activities mode (html[data-mode='activities'], see layout.module.css): the phone chrome reads the --fb-act-* palette.
+   Same glass, navy-tinted, with a blue pill and ember for what is new. */
+:global(html[data-mode='activities']) .header {
+  --fb-card: var(--fb-act-surface);
+  --fb-text: var(--fb-act-ink);
+  --fb-blue: var(--fb-act-blue);
+  --fb-notif: var(--fb-act-ember);
+  /* solid, not frosted like the desktop header: a backdrop-filter here would trap the fixed search sheet inside the bar */
+  box-shadow: 0 1px 0 var(--fb-act-line);
+}
+:global(html[data-mode='activities']) .badge {
+  color: var(--fb-act-ember-ink);
+}
+:global(html[data-mode='activities']) .glassBar {
+  background: var(--fb-act-glass-tint);
+}
+:global(html[data-mode='activities']) .glassIndicator {
+  background: var(--fb-act-glass-pill);
+}
+:global(html[data-mode='activities']) .glassDot {
+  background: var(--fb-act-ember);
+}
+:global(html[data-theme-fade]) .header,
+:global(html[data-theme-fade]) .header *,
+:global(html[data-theme-fade]) .glassBar,
+:global(html[data-theme-fade]) .glassDot {
+  transition:
+    background-color 0.42s var(--fb-act-ease),
+    color 0.42s var(--fb-act-ease),
+    box-shadow 0.42s var(--fb-act-ease) !important;
 }
 
 /* ---- Menu page ---- */
@@ -513,7 +592,7 @@
   color: var(--fb-text);
 }
 .pillActive {
-  background: #e7f3ff;
+  background: var(--fb-mobile-active);
   color: var(--fb-blue);
 }
 .friendsHead {
@@ -594,7 +673,33 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 16px;
+  padding: 10px 12px;
+}
+.personTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.personTitle .personName {
+  flex: 1;
+  min-width: 0;
+}
+.personTime {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+}
+.mutualAvatars {
+  display: inline-flex;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.mutualAvatars > span + span {
+  margin-left: -8px;
+}
+.mutualAvatars > span {
+  border-radius: 50%;
+  outline: 2px solid var(--fb-card);
 }
 .personBody {
   flex: 1;

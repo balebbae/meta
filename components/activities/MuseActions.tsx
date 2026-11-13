@@ -1,32 +1,24 @@
 'use client';
 
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {CalendarDays, ShoppingBag, Sparkles} from 'lucide-react';
-import {AspectRatio} from '@astryxdesign/core/AspectRatio';
+import {IconCalendarEvent, IconCalendarPlus, IconCheck, IconReceipt, IconShoppingBag, IconX} from '@tabler/icons-react';
+import {InfoTip} from '@astryxdesign/core/InfoTip';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
-import {Card} from '@astryxdesign/core/Card';
-import {Center} from '@astryxdesign/core/Center';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
-import {EmptyState} from '@astryxdesign/core/EmptyState';
-import {Grid} from '@astryxdesign/core/Grid';
-import {Heading} from '@astryxdesign/core/Heading';
 import {HStack} from '@astryxdesign/core/HStack';
-import {Icon} from '@astryxdesign/core/Icon';
 import {Layout, LayoutContent, LayoutFooter} from '@astryxdesign/core/Layout';
 import {Link} from '@astryxdesign/core/Link';
 import {MetadataList, MetadataListItem} from '@astryxdesign/core/MetadataList';
-import {StackItem} from '@astryxdesign/core/Stack';
 import {Text} from '@astryxdesign/core/Text';
-import {Token} from '@astryxdesign/core/Token';
 import {VStack} from '@astryxdesign/core/VStack';
 import type {MuseAction, MuseActionsPayload} from '@/lib/activities/actions';
+import h from './home/home.module.css';
 
 const post = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
-const verb = (a: MuseAction) => (a.kind === 'event' ? 'Register' : 'Buy');
-const doneLabel = (a: MuseAction) => (a.kind === 'event' ? 'Registered' : 'Ordered');
+const verb = (a: MuseAction) => (a.kind === 'event' ? 'Book it' : 'Buy it');
 
-/** "From your Muse": private action items. Register and Buy are simulated: nothing is charged or sent out. */
+/** "Picked for you": the Muse's private action items. Register and Buy are simulated: nothing is charged or sent out. */
 export function MuseActions({initial, viewerName, say}: {initial: MuseActionsPayload; viewerName: string; say: (text: string) => void}) {
   const [data, setData] = useState(initial);
   const [asking, setAsking] = useState(false);
@@ -81,82 +73,57 @@ export function MuseActions({initial, viewerName, say}: {initial: MuseActionsPay
   };
 
   const done = open?.status === 'done';
-  const glyph = (a: MuseAction) => (a.kind === 'event' ? CalendarDays : ShoppingBag);
+  const glyph = (a: MuseAction) => (a.kind === 'event' ? <IconCalendarEvent size={16} /> : <IconShoppingBag size={16} />);
   return (
-    <VStack gap={3} as="section" aria-label="Action items" aria-busy={asking}>
-      <HStack gap={2} vAlign="center" justify="between" wrap="wrap">
-        <VStack gap={0.5}>
-          <Heading level={2}>Action items</Heading>
-          <Text type="supporting" color="secondary">
-            From your Muse · only you see these · demo checkout
-          </Text>
-        </VStack>
-        <Button label={asking ? 'Muse is looking…' : 'Ask Muse again'} variant="ghost" size="sm" isLoading={asking} onClick={() => void ask(data.needsLocation)} />
-      </HStack>
-      {data.actions.length === 0 ? (
-        <Card>
-          <EmptyState
-            title={asking ? 'Muse is looking' : 'Nothing yet'}
-            description={
-              asking
-                ? 'Muse is looking at what you do and what is coming up near you. This takes about half a minute.'
-                : data.needsLocation
-                  ? 'Add your city to your profile, or tap Ask Muse again to use your approximate location.'
-                  : 'Log a few activities and ask Muse again.'
-            }
-            isCompact
-          />
-        </Card>
-      ) : (
-        <Grid columns={{minWidth: 220}} gap={3}>
-          {data.actions.map(a => (
-            <Card key={a.id} padding={0}>
-              <VStack>
-                <AspectRatio ratio={16 / 9}>
-                  {a.imageUrl ? (
-                    <img src={a.imageUrl} alt="" loading="lazy" />
-                  ) : (
-                    <Center>
-                      <Icon icon={glyph(a)} size="lg" color="secondary" />
-                    </Center>
-                  )}
-                </AspectRatio>
-                <VStack gap={2} padding={4}>
-                  <HStack>
-                    <Token label={`${a.kind === 'event' ? 'Event' : 'Suggested buy'}${a.price ? ` · ${a.price}` : ''}`} size="sm" color={a.kind === 'event' ? 'blue' : 'green'} />
-                  </HStack>
-                  <Heading level={3}>{a.title}</Heading>
-                  {a.detail && (
-                    <Text type="supporting" color="secondary">
-                      {a.detail}
-                    </Text>
-                  )}
+    <section className={h.section} style={{'--i': 1} as React.CSSProperties} aria-label="Picked for you" aria-busy={asking}>
+      <div className={h.head}>
+        <h2 className={h.h2}>Picked for you</h2>
+      </div>
+      <div className={h.list}>
+        {data.actions.length === 0 ? (
+          <p className={h.empty}>
+            {asking ? 'Looking…' : data.needsLocation ? 'Add your city to your profile for suggestions near you.' : 'Nothing yet.'}
+          </p>
+        ) : (
+          data.actions.map((a, i) => (
+            <div key={a.id} className={`${h.task} ${a.status === 'done' ? h.taskDone : ''}`} style={{'--i': i} as React.CSSProperties}>
+              <span className={`${h.orb} ${a.kind === 'buy' ? h.orbBuy : ''} ${a.status === 'done' ? h.orbDone : ''}`} aria-hidden>
+                {a.status === 'done' ? <IconCheck size={16} /> : glyph(a)}
+              </span>
+              <div>
+                <p className={h.taskText}>
+                  <strong>{a.title}</strong>
+                  {a.detail ? ` · ${a.detail}` : ''}
+                  {a.price ? <> <span className={h.chip}>{a.price}</span></> : null}
                   {a.why && (
-                    <HStack gap={1.5} vAlign="center">
-                      <Icon icon={Sparkles} size="xsm" color="accent" />
-                      <StackItem size="fill">
-                        <Text type="supporting" color="secondary">
-                          {a.why}
-                        </Text>
-                      </StackItem>
-                    </HStack>
+                    <>
+                      {' '}
+                      <InfoTip content={a.why} label="Why Muse suggests this" size="xsm" />
+                    </>
                   )}
-                  <HStack gap={2} wrap="wrap">
-                    {a.status === 'done' ? (
-                      <Button label={doneLabel(a)} size="sm" icon={<Icon icon="check" />} onClick={() => setOpen(a)} />
-                    ) : (
-                      <>
-                        <Button label={verb(a)} variant="primary" size="sm" onClick={() => setOpen(a)} />
-                        <Button label="Not now" variant="ghost" size="sm" onClick={() => void act(a, 'dismiss')} />
-                      </>
-                    )}
-                  </HStack>
-                </VStack>
-              </VStack>
-            </Card>
-          ))}
-        </Grid>
-      )}
+                </p>
+              </div>
+              <div className={h.taskBtns}>
+                {a.status === 'done' ? (
+                  <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillIcon} ${h.pillQuiet}`} aria-label="View confirmation" title="View confirmation" onClick={() => setOpen(a)}>
+                    <IconReceipt size={16} aria-hidden />
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillBlue}`} onClick={() => setOpen(a)}>
+                      {a.kind === 'event' ? <IconCalendarPlus size={16} aria-hidden /> : <IconShoppingBag size={16} aria-hidden />}
+                      {verb(a)}
+                    </button>
+                    <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillIcon} ${h.pillGhost}`} aria-label="Not now" title="Not now" onClick={() => void act(a, 'dismiss')}>
+                      <IconX size={16} aria-hidden />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
       <Dialog isOpen={!!open} onOpenChange={o => !o && setOpen(null)} width={480}>
         {open && (
           <Layout
@@ -203,6 +170,6 @@ export function MuseActions({initial, viewerName, say}: {initial: MuseActionsPay
           />
         )}
       </Dialog>
-    </VStack>
+    </section>
   );
 }

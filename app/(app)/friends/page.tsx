@@ -2,7 +2,7 @@ import type {Metadata} from 'next';
 import Link from 'next/link';
 import {redirect} from 'next/navigation';
 import {getSessionUser} from '@/lib/auth';
-import {listFriendRequests, listSuggestions, listUserFriends} from '@/lib/profile-queries';
+import {listFriendRequests, listMutualFriendAvatars, listSuggestions, listUserFriends} from '@/lib/profile-queries';
 import {FriendsRail} from '@/components/friends/FriendsRail';
 import {RequestCards, SuggestionCards} from '@/components/friends/FriendCards';
 import {AllFriendsCards} from '@/components/friends/AllFriendsCards';
@@ -20,10 +20,11 @@ export default async function FriendsPage({searchParams}: {searchParams: Promise
   const {view: rawView} = await searchParams;
   const view: View = VIEWS.includes(rawView as View) ? (rawView as View) : 'home';
 
-  const [requests, allSuggestions, friends] = await Promise.all([
+  const [requests, allSuggestions, friends, mutualAvatars] = await Promise.all([
     listFriendRequests(viewer.id),
     view === 'home' || view === 'suggestions' ? listSuggestions(viewer.id, 200) : Promise.resolve([]),
     view === 'all' || view === 'home' ? listUserFriends(viewer.id, viewer.id) : Promise.resolve([]),
+    listMutualFriendAvatars(viewer.id),
   ]);
   // People who already sent a request live in Friend Requests; don't show them a second time under People You May Know.
   const requestIds = new Set(requests.map(r => r.id));
@@ -31,7 +32,7 @@ export default async function FriendsPage({searchParams}: {searchParams: Promise
 
   return (
     <>
-    <MobileFriends viewer={viewer} view={view} requests={requests} suggestions={suggestions} friends={friends} />
+    <MobileFriends viewer={viewer} view={view} requests={requests} suggestions={suggestions} friends={friends} mutualAvatars={mutualAvatars} />
     <div className={styles.page}>
       <FriendsRail requestCount={requests.length} active={view} />
       <section className={styles.main} aria-label="Friends">

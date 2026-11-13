@@ -9,6 +9,10 @@ import {PeopleYouMayKnow} from './PeopleYouMayKnow';
 import {CameraIcon, ChevronDownIcon, ChevronUpIcon, EllipsisIcon, MessengerIcon, PencilIcon, PlusIcon} from './icons';
 import {EditDialog} from './EditDialog';
 import {FriendButton} from './FriendButton';
+import {CreateStoryDialog} from '@/components/feed/StoryDialogs';
+import {ContactDmLink} from '@/components/messages/ContactDmLink';
+import {Popover} from '@/components/ui/Popover';
+import {MobileStoryIcon} from '@/components/icons';
 import {profileApi} from './api';
 import styles from './profile.module.css';
 
@@ -28,6 +32,9 @@ export function ProfileHeader({profile, isOwn, tab, suggestions = []}: {profile:
   const {user} = profile;
   const [dialog, setDialog] = useState<Dialog>(null);
   const [pymkOpen, setPymkOpen] = useState(true);
+  const [mobileSuggestions, setMobileSuggestions] = useState(false);
+  const [profileMenu, setProfileMenu] = useState(false);
+  const [story, setStory] = useState(false);
   const router = useRouter();
   const base = `/profile/${user.id}`;
 
@@ -40,10 +47,10 @@ export function ProfileHeader({profile, isOwn, tab, suggestions = []}: {profile:
     <div className={styles.top}>
       <div className={styles.coverBand}>
         <div className={styles.coverWrap}>
-          <div className={styles.cover}>
+          <div className={styles.cover} data-mobile-cover>
             {user.coverUrl && <Image src={user.coverUrl} alt="" fill priority sizes="(max-width: 1095px) 100vw, 1095px" />}
             {isOwn && (
-              <button type="button" className={styles.coverBtn} onClick={() => setDialog('cover')}>
+              <button type="button" className={styles.coverBtn} onClick={() => setDialog('cover')} aria-label="Edit cover photo">
                 <CameraIcon size={16} />
                 <span className={styles.coverBtnText}>Edit cover photo</span>
               </button>
@@ -72,6 +79,14 @@ export function ProfileHeader({profile, isOwn, tab, suggestions = []}: {profile:
 
           <div className={styles.nameBlock}>
             <h1 className={styles.name}>{user.name}</h1>
+            <span className={styles.mobileNameMenu}>
+              <button aria-label="Profile menu" aria-expanded={profileMenu} onClick={() => setProfileMenu(v => !v)}><ChevronDownIcon size={22} /></button>
+              <Popover open={profileMenu} onClose={() => setProfileMenu(false)} width={220}>
+                <Link href={`${base}?tab=about`} onClick={() => setProfileMenu(false)}>{isOwn ? 'Edit profile' : 'About'}</Link>
+                <Link href={`${base}?tab=friends`} onClick={() => setProfileMenu(false)}>Friends</Link>
+                {isOwn && suggestions.length > 0 && <button onClick={() => { setPymkOpen(true); setMobileSuggestions(v => !v); setProfileMenu(false); }}>People you may know</button>}
+              </Popover>
+            </span>
             <Link href={`${base}?tab=friends`} className={styles.friendCount}>
               {profile.friendCount.toLocaleString()} {profile.friendCount === 1 ? 'friend' : 'friends'}
               {!isOwn && profile.mutualCount > 0 && ` · ${profile.mutualCount} mutual`}
@@ -87,11 +102,16 @@ export function ProfileHeader({profile, isOwn, tab, suggestions = []}: {profile:
             )}
           </div>
 
+          {profile.friendPreview.length > 0 && <Link href={`${base}?tab=friends`} className={styles.mobileCommonFriends}>
+            <span>{profile.friendPreview.slice(0, 3).map(f => <Image key={f.id} src={f.avatarUrl} alt="" width={30} height={30} />)}</span>
+            Friends with things in common
+          </Link>}
+
           <div className={styles.actions}>
             {isOwn ? (
               <>
-                <button type="button" className="fb-btn-primary">
-                  <PlusIcon size={16} /> Add to story
+                <button type="button" className="fb-btn-primary" onClick={() => setStory(true)}>
+                  <PlusIcon size={16} className={styles.desktopOnly} /><MobileStoryIcon size={16} className={styles.mobileLabel} /> Add to story
                 </button>
                 <Link href={`${base}?tab=about`} className="fb-btn-secondary">
                   <PencilIcon size={16} /> Edit profile
@@ -103,9 +123,9 @@ export function ProfileHeader({profile, isOwn, tab, suggestions = []}: {profile:
             ) : (
               <>
                 <FriendButton userId={user.id} initial={profile.friendship} />
-                <button type="button" className={profile.friendship === 'friends' ? 'fb-btn-primary' : 'fb-btn-secondary'}>
+                <ContactDmLink userId={user.id} className={profile.friendship === 'friends' ? 'fb-btn-primary' : 'fb-btn-secondary'}>
                   <MessengerIcon size={16} /> Message
-                </button>
+                </ContactDmLink>
                 <button type="button" className={`fb-btn-secondary ${styles.iconOnly}`} aria-label="More">
                   <ChevronDownIcon size={20} />
                 </button>
@@ -114,7 +134,7 @@ export function ProfileHeader({profile, isOwn, tab, suggestions = []}: {profile:
           </div>
         </div>
 
-        {isOwn && pymkOpen && suggestions.length > 0 && <PeopleYouMayKnow suggestions={suggestions} />}
+        {isOwn && pymkOpen && suggestions.length > 0 && <div className={`${styles.profileSuggestions} ${mobileSuggestions ? styles.mobileSuggestionsOpen : ''}`}><PeopleYouMayKnow suggestions={suggestions} /></div>}
 
         <div className={styles.divider} />
 
@@ -136,6 +156,8 @@ export function ProfileHeader({profile, isOwn, tab, suggestions = []}: {profile:
           </button>
         </div>
       </div>
+
+      <CreateStoryDialog open={story} onClose={() => setStory(false)} />
 
       {dialog === 'cover' && (
         <EditDialog

@@ -57,7 +57,7 @@ export function GamingContent({games}: {games: Game[]}) {
               <div className={styles.meta}>Co-op fitness quests with your group chats</div>
               <span className={styles.tag}>New</span>
             </div>
-            <Link href="/activities/games" className={styles.playSoft} style={{textDecoration: 'none'}}>
+            <Link href="/activities#games" className={styles.playSoft} style={{textDecoration: 'none'}}>
               Play
             </Link>
           </article>

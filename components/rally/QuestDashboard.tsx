@@ -1,5 +1,8 @@
 'use client';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import {IconChevronLeft} from '@tabler/icons-react';
+import ah from '@/components/activities/home/home.module.css';
 import {useRouter} from 'next/navigation';
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {AlertDialog} from '@astryxdesign/core/AlertDialog';
@@ -110,6 +113,9 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
 
   return (
     <VStack gap={3} paddingBlock={3}>
+      <Link href="/activities#games" className={`${ah.pill} ${ah.pillSm} ${ah.pillIcon} ${ah.pillOutline} ${ah.phoneOnly}`} aria-label="Back to Activities" title="Back to Activities">
+        <IconChevronLeft size={18} aria-hidden />
+      </Link>
       <Card aria-label="Boss arena">
         <VStack gap={4}>
           <HStack gap={3} vAlign="start" justify="between" wrap="wrap">

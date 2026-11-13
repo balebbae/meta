@@ -6,6 +6,8 @@ import {BODY_EXERCISES} from '@/lib/rally/proof-fusion';
 
 const POSE_LABELS = [...BODY_EXERCISES, 'none'];
 
+export const maxDuration = 60; // room for the background Glimmer clip check (after())
+
 type Ctx = {params: Promise<{id: string}>};
 const SOURCES: MoveSource[] = ['manual', 'photo', 'voice', 'vault', 'clip'];
 

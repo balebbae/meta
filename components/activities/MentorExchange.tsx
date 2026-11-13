@@ -2,7 +2,8 @@
 
 import {useCallback, useEffect, useState} from 'react';
 import type {ConnectAction, ExchangeEvent, MentorRequestView, Plan, RelayMessage, Turn} from '@/lib/activities/mentor';
-import {UserRound} from 'lucide-react';
+// Tabler icons, aliased to the names this file already uses
+import {IconUser as UserRound} from '@tabler/icons-react';
 import {Avatar} from '@astryxdesign/core/Avatar';
 import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
@@ -23,7 +24,7 @@ const museAvatar = (mine: boolean) => <Avatar name={mine ? 'Your Muse' : 'Their 
 const json = (method: string, body?: unknown) => ({method, headers: {'content-type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
 const POLL_MS = 4000;
 
-/** /activities/ahead/[id]: the advice exchange (streams once), then connect → a thread relayed by both Muses. */
+/** One mentor conversation in the Mentors panel: the advice exchange (streams once), then connect → a thread relayed by both Muses. */
 export function MentorExchange({initial}: {initial: MentorRequestView}) {
   const [req, setReq] = useState(initial);
   const [turns, setTurns] = useState<Turn[]>(initial.transcript);
@@ -121,9 +122,8 @@ export function MentorExchange({initial}: {initial: MentorRequestView}) {
   };
 
   return (
-    <VStack gap={4} paddingBlock={4}>
+    <VStack gap={4}>
       <VStack gap={1} hAlign="start">
-        <Button label="A few months ahead" variant="ghost" size="sm" icon={<Icon icon="chevronLeft" />} href="/activities/ahead" />
         <Heading level={1}>{req.offer.metric ? `${req.offer.metric}: ${req.offer.fromValue} → ${req.offer.toValue}` : isSeeker ? 'Where you want to be in 3 months' : 'Someone a few months behind you'}</Heading>
         <HStack gap={2} vAlign="center" wrap="wrap">
           <Text color="secondary">Everything here goes through your Muses. Neither of you sees the other&apos;s raw data or words.</Text>

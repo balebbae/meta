@@ -23,7 +23,7 @@ export const AUDIENCE_LABEL: Record<Audience, string> = {
   only_me: 'Only me',
   game_participants: 'Games I join',
   friends: 'Friends',
-  mentor_match: 'A few months ahead',
+  mentor_match: 'Mentors',
   public: 'Public',
 };
 

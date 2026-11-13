@@ -1,0 +1,226 @@
+/* Inside the Activities panels: the home page's tiles, pills and badges. One line per row, muted second line only when it says something. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--fb-act-ink);
+}
+.tabs {
+  display: flex;
+  gap: 6px;
+}
+.tabs > * {
+  flex: 1;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.label {
+  margin: 6px 0 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fb-act-muted);
+}
+.note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fb-act-muted);
+}
+.error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fb-act-red);
+}
+
+/* rows */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--fb-act-line);
+  background: var(--fb-act-surface);
+}
+/* the clickable part of a row (opens its detail); actions sit beside it, never inside */
+.rowMain {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.rowMain:focus-visible {
+  outline: 2px solid var(--fb-act-blue);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+.rowText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rowText strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.rowText small {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--fb-act-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.metric {
+  font-weight: 500;
+  color: var(--fb-act-muted);
+  font-variant-numeric: tabular-nums;
+}
+.row > svg,
+.rowMain > svg {
+  flex: none;
+}
+.open {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* a short list of plain lines in one tile (what your Muse shares) */
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px;
+  list-style: none;
+  border-radius: 14px;
+  border: 1px solid var(--fb-act-line);
+  font-size: 14px;
+}
+.lines li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lines svg {
+  flex: none;
+  color: var(--fb-act-blue);
+}
+
+/* solid badges: colour carries the state, white text */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.6;
+  color: #fff;
+  background: var(--fb-act-gray-solid);
+  white-space: nowrap;
+}
+.green {
+  background: var(--fb-act-green);
+}
+.blue {
+  background: var(--fb-act-blue);
+}
+.red {
+  background: var(--fb-act-red);
+}
+.purple {
+  background: var(--fb-act-purple);
+}
+.ember {
+  background: var(--fb-act-ember-deep);
+}
+
+/* text-only actions */
+.textBtn {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 600 13px var(--fb-font);
+  color: var(--fb-act-blue);
+  cursor: pointer;
+}
+.textBtn:hover {
+  text-decoration: underline;
+}
+.danger {
+  color: var(--fb-act-red);
+}
+
+/* privacy: per-audience level pills under an opened category */
+.levels {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+.levels > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.levels > div > span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fb-act-muted);
+}
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* one source's detail */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.head h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+}
+.steps code {
+  font-size: 12px;
+  word-break: break-all;
+}

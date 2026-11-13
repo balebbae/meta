@@ -22,7 +22,7 @@ async function post(body: {action: string; deleteHistory?: boolean}): Promise<Co
 }
 
 /**
- * Coach mode is a mode of /activities, not a page: the switch in the title row swaps the Activities page (children)
+ * Coach mode is a mode of /activities, not a page: the Coach mode button on the goal card swaps the Activities page (children)
  * for the Coach view, drawn in a nested dark theme with a lime accent. The page always opens with it off; switching on
  * records the opt-in (activity_profiles.coach_mode), which the Coach report needs.
  */
@@ -92,7 +92,18 @@ export function CoachMode({initialOn, children}: {initialOn: boolean; children: 
   );
 }
 
-/** The switch in the title row. Renders nothing outside a CoachMode. */
+/** "Coach mode" button (bottom right of the goal card) that switches the Coach view on. Renders nothing outside a CoachMode. */
+export function CoachButton({className, children}: {className?: string; children?: ReactNode}) {
+  const ctx = useContext(CoachCtx);
+  if (!ctx) return null;
+  return (
+    <button type="button" className={className} aria-label="Coach mode" title="Coach mode" disabled={ctx.busy} onClick={() => ctx.toggle(true)}>
+      {children ?? 'Coach mode'}
+    </button>
+  );
+}
+
+/** The on/off switch inside the Coach view's header. Renders nothing outside a CoachMode. */
 export function CoachToggle({compact = false}: {compact?: boolean}) {
   const ctx = useContext(CoachCtx);
   if (!ctx) return null;

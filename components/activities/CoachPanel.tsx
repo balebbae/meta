@@ -1,6 +1,7 @@
 'use client';
 import {useState} from 'react';
-import {TrendingDown, TrendingUp} from 'lucide-react';
+// Tabler icons, aliased to the names this file already uses
+import {IconTrendingDown as TrendingDown, IconTrendingUp as TrendingUp} from '@tabler/icons-react';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';

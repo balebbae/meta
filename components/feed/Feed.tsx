@@ -1,5 +1,6 @@
 'use client';
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {Fragment, useCallback, useEffect, useRef, useState} from 'react';
+import {FeedModules, type FeedReelPreview} from './FeedModules';
 import {Composer} from '@/components/feed/Composer';
 import {CreateStoryCard} from '@/components/feed/CreateStoryCard';
 import {PostCard} from '@/components/feed/PostCard';
@@ -17,12 +18,16 @@ export function Feed({
   initialCursor,
   stories = [],
   requests = [],
+  suggestions = [],
+  reels = [],
 }: {
   viewer: User;
   initialPosts: Post[];
   initialCursor: string | null;
   stories?: Story[];
   requests?: FriendSummary[];
+  suggestions?: FriendSummary[];
+  reels?: FeedReelPreview[];
 }) {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [turfPrompt, setTurfPrompt] = useState<string | null>(null);
@@ -68,8 +73,11 @@ export function Feed({
       <CreateStoryCard />
       <MobileComposer viewer={viewer} />
       <MobileStories viewer={viewer} requests={requests} stories={stories} />
-      {posts.map(p => (
-        <PostCard key={p.id} post={p} viewer={viewer} />
+      {posts.map((p, i) => (
+        <Fragment key={p.id}>
+          <PostCard post={p} viewer={viewer} mobileFeed />
+          {i === 1 && <FeedModules suggestions={suggestions} reels={reels} />}
+        </Fragment>
       ))}
       {(loading || cursor) && (
         <>
@@ -77,7 +85,7 @@ export function Feed({
           <PostSkeleton />
         </>
       )}
-      <div ref={sentinel} className={styles.sentinel} />
+      <div ref={sentinel} className={styles.sentinel} data-home-feed />
       {!cursor && !loading && <p className={styles.endOfFeed}>You&apos;re all caught up.</p>}
     </>
   );

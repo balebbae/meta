@@ -54,6 +54,7 @@ import {COMPOSE_EVENT} from '@/components/layout/ComposeFab';
 import {CreateStoryDialog} from '@/components/feed/StoryDialogs';
 import type {User} from '@/lib/types';
 import styles from './layout.module.css';
+import {panelHref} from '@/lib/activities/panel-href';
 
 const TABS = [
   {href: '/', label: 'Home', Icon: HomeIcon},
@@ -475,7 +476,7 @@ function AccountPanel({user, onNavigate}: {user: User; onNavigate: () => void}) 
           {v !== 'feedback' && <ChevronRightIcon size={20} />}
         </button>
       ))}
-      <Link href="/activities/connect" className={styles.menuRow} onClick={onNavigate}>
+      <Link href={panelHref({panel: 'settings', tab: 'sources'})} className={styles.menuRow} onClick={onNavigate}>
         <span className={styles.menuIcon}><ConnectorsIcon size={20} /></span>
         <span className={styles.grow}>Connectors</span>
         <ChevronRightIcon size={20} />

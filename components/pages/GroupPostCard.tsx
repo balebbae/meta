@@ -6,11 +6,15 @@ import type {GroupPost} from '@/lib/secondary-queries';
 import {formatCount, timeAgo} from '@/lib/secondary-data';
 import {CommentIcon, GlobeIcon, LikeIcon, LikeOutlineIcon, LockIcon, MoreIcon, ShareIcon} from './icons';
 import {GroupActivityCard} from './GroupActivityCard';
+import {CloseIcon, FeedActionIcon} from '@/components/icons';
 import styles from './groups.module.css';
 
 export function GroupPostCard({post, showGroup = true}: {post: GroupPost; showGroup?: boolean}) {
   const [liked, setLiked] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const likes = post.likeCount + (liked ? 1 : 0);
+  if (hidden) return null;
   return (
     <article className={styles.post}>
       <header className={styles.postHead}>
@@ -54,8 +58,13 @@ export function GroupPostCard({post, showGroup = true}: {post: GroupPost; showGr
         <button type="button" className={styles.more} aria-label="More">
           <MoreIcon size={20} />
         </button>
+        {showGroup && <button className={`${styles.more} ${styles.mobilePostControl}`} aria-label="Hide post" onClick={() => setHidden(true)}><CloseIcon size={20} /></button>}
       </header>
-      <div className={styles.postBody}>{post.content}</div>
+      <div className={`${styles.postBody} ${styles.desktopPostBody}`}>{post.content}</div>
+      <div className={`${styles.postBody} ${styles.mobilePostBody}`}>
+        {post.content.length > 220 && !expanded ? post.content.slice(0, 220).trimEnd() + '… ' : post.content}
+        {post.content.length > 220 && !expanded && <button className={styles.postSeeMore} onClick={() => setExpanded(true)}>See more</button>}
+      </div>
       {post.activity && <GroupActivityCard groupId={post.group.id} postId={post.id} activity={post.activity} />}
       {post.imageUrl && (
         <div className={styles.postImage}>
@@ -72,18 +81,22 @@ export function GroupPostCard({post, showGroup = true}: {post: GroupPost; showGr
         <span>{post.commentCount} comments</span>
       </div>
       <div className={styles.actions}>
-        <button type="button" className={liked ? styles.actionActive : styles.action} onClick={() => setLiked(v => !v)}>
-          {liked ? <LikeIcon size={18} /> : <LikeOutlineIcon size={18} />}
-          Like
+        <button type="button" className={liked ? styles.actionActive : styles.action} aria-label="Like" aria-pressed={liked} onClick={() => setLiked(v => !v)}>
+          <span className={styles.desktopGroupLabel}>{liked ? <LikeIcon size={18} /> : <LikeOutlineIcon size={18} />}</span>
+          <span className={styles.mobileGroupLabel}><FeedActionIcon name="like" size={22} /></span>
+          <span className={styles.actionLabel}>Like</span><span className={styles.mobileGroupLabel}>{formatCount(likes)}</span>
         </button>
-        <button type="button" className={styles.action}>
-          <CommentIcon size={18} />
-          Comment
+        <button type="button" className={styles.action} aria-label="Comment">
+          <span className={styles.desktopGroupLabel}><CommentIcon size={18} /></span>
+          <span className={styles.mobileGroupLabel}><FeedActionIcon name="comment" size={22} /></span>
+          <span className={styles.actionLabel}>Comment</span><span className={styles.mobileGroupLabel}>{formatCount(post.commentCount)}</span>
         </button>
-        <button type="button" className={styles.action}>
-          <ShareIcon size={18} />
-          Share
+        <button type="button" className={styles.action} aria-label="Share">
+          <span className={styles.desktopGroupLabel}><ShareIcon size={18} /></span>
+          <span className={styles.mobileGroupLabel}><FeedActionIcon name="share" size={22} /></span>
+          <span className={styles.actionLabel}>Share</span>
         </button>
+        <span className={styles.mobileReaction} aria-hidden="true"><LikeIcon size={16} /></span>
       </div>
     </article>
   );

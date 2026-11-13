@@ -3,10 +3,14 @@ import './globals.css';
 import {AuthProvider} from '@/components/auth/AuthProvider';
 import {cookies} from 'next/headers';
 import {Providers} from './providers';
+import {AgentationBar} from '@/components/dev/AgentationBar';
+import {ACTIVITIES_PATH} from '@/lib/activities/mode';
 
 // Resolves the theme before first paint and persists it in a cookie so the server can render the
 // same mode next time (Astryx's Theme wrapper is SSR'd; React does not patch attribute mismatches).
 const THEME_SCRIPT = `try{var t=localStorage.getItem('fb.theme');var m=(t==='dark'||(!t&&matchMedia('(prefers-color-scheme: dark)').matches))?'dark':'light';document.documentElement.dataset.theme=m;document.documentElement.dataset.fbTheme=m;document.cookie='fb.theme='+m+';path=/;max-age=31536000;SameSite=Lax';}catch(e){}`;
+// Activities mode before first paint, so a hard load of /activities never flashes the Facebook chrome (useActivitiesMode keeps it in step afterwards).
+const MODE_SCRIPT = `if(${ACTIVITIES_PATH}.test(location.pathname))document.documentElement.dataset.mode='activities';`;
 
 export const metadata: Metadata = {
   title: 'Facebook',
@@ -28,11 +32,12 @@ export default async function RootLayout({children}: {children: React.ReactNode}
   return (
     <html lang="en" data-theme={mode} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{__html: THEME_SCRIPT}} />
+        <script dangerouslySetInnerHTML={{__html: THEME_SCRIPT + MODE_SCRIPT}} />
       </head>
       <body>
         <Providers initialMode={mode}>
           <AuthProvider>{children}</AuthProvider>
+          <AgentationBar />
         </Providers>
       </body>
     </html>

@@ -91,9 +91,16 @@ Same prompt, JSON schema and rows for every model; results in **[RESULTS.md](RES
 - Five exercises only. Anything else comes back as `other`/`none` and falls to Ember or pending.
 - Served locally at ~690 MHz GPU clock, latency is several seconds per check, slower than hosted Ember.
 
-## Hosting (ready, not in use)
+## Live for clip proof (Nov 13, 2026)
+After the eval, the team chose to run it for **Rally clip proof only**, where it is within noise of Ember (92.7% vs
+93.5% on single exercise photos) and keeps proof stills on our own GPU instead of a third-party API. To avoid a ~10 s
+wait, a clip move is saved **pending** at once and `settleClipProof()` (`lib/rally/queries.ts`, via Next `after()`)
+applies the damage when Glimmer approves; Ember is the fallback on error. Photo proof and dares (workout screens,
+where it scored 28.6%) stay on Ember. Turn it off by removing `GLIMMER_PROOF_URL` in Vercel.
+
+## Hosting
 vLLM 0.33 can't apply LoRA to vision layers or serve bitsandbytes 4-bit, so the adapter is merged into the weights with
 `train/merge_lora.py` (streams one tensor at a time) and served as a plain checkpoint with `--quantization fp8`:
 `finetune/ops/serve.sh` (127.0.0.1:8010, API key in `~/.config/rally/glimmer.key`) and `finetune/ops/tunnel.sh`
-(Cloudflare quick tunnel). The app hookup (`lib/rally/proof.ts`) is on `main` but **off** until `GLIMMER_PROOF_URL` is
-set in Vercel; see [NEXT_STEPS.md](NEXT_STEPS.md). Leave it off unless a future run beats Ember.
+(Cloudflare quick tunnel). The app hookup (`lib/rally/proof.ts`) is active when `GLIMMER_PROOF_URL` is set in Vercel; see
+[NEXT_STEPS.md](NEXT_STEPS.md). It depends on the DGX staying on and the tunnel URL not changing.

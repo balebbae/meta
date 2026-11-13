@@ -6,6 +6,7 @@ import {Card} from '@astryxdesign/core/Card';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
 import {Heading} from '@astryxdesign/core/Heading';
 import {HStack} from '@astryxdesign/core/HStack';
+import {InfoTip} from '@astryxdesign/core/InfoTip';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {SegmentedControl, SegmentedControlItem} from '@astryxdesign/core/SegmentedControl';
 import {Text} from '@astryxdesign/core/Text';
@@ -41,15 +42,15 @@ export function ActivityLeaderboard() {
     <Card aria-label="Leaderboard">
       <VStack gap={3}>
         <HStack gap={2} vAlign="center" justify="between" wrap="wrap">
-          <Heading level={2}>{tab === 'fitness' ? 'Fitness this week' : 'Closeness this week'}</Heading>
+          <HStack gap={1} vAlign="center">
+            <Heading level={2}>Leaderboard</Heading>
+            <InfoTip content={tab === 'fitness' ? 'Rally XP from real moves this week. Only who moved, never how far or how fast.' : 'XP for meaningful contact — comments, voice notes, check-ins.'} label="How XP works" size="xsm" />
+          </HStack>
           <SegmentedControl label="Leaderboard type" value={tab} onChange={v => setTab(v as Tab)} size="sm">
             <SegmentedControlItem value="fitness" label="Fitness" />
             <SegmentedControlItem value="closeness" label="Closeness" />
           </SegmentedControl>
         </HStack>
-        <Text type="supporting" color="secondary">
-          {tab === 'fitness' ? 'Rally XP from real moves this week. Only who moved, never how far or how fast.' : 'XP for meaningful contact — comments, voice notes, check-ins.'}
-        </Text>
         {error ? (
           <EmptyState title="Leaderboard unavailable" description={error} isCompact />
         ) : rows && rows.length === 0 ? (

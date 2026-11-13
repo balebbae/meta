@@ -12,9 +12,11 @@ import {DiscoverPage, type MyGame} from '@/components/activities/DiscoverPage';
 import {listGoals} from '@/lib/activities/goals';
 import {OnboardingGate} from '@/components/activities/OnboardingGate';
 import {CoachMode} from '@/components/activities/CoachMode';
+import {ActivitiesPanels} from '@/components/activities/panels/ActivitiesPanels';
 import {setCoachMode} from '@/lib/activities/coach';
 import {fitnessLevel} from '@/lib/activities/level';
 import {listVaultEvents} from '@/lib/activities/vault';
+import {homeProgress, nearbyEvents} from '@/lib/activities/home';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,7 +26,7 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
   if (!user) redirect('/auth/signin');
   const params = await searchParams;
   // Goals are optional here: if the table isn't migrated yet Discover still renders without the spotlight.
-  const [data, museActions, listings, goals, quests, turf, mirrors, swims] = await Promise.all([
+  const [data, museActions, listings, goals, quests, turf, progress, nearby, mirrors, swims] = await Promise.all([
     getDiscover(user.id),
     listActions(user.id),
     // Gear for the user's tags (no tags: 'fitness' + Sporting Goods); nothing matching falls back to newest listings.
@@ -35,6 +37,8 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
     listGoals(user.id).catch(() => []),
     listQuestsForUser(user.id),
     listActiveGamesForUser(user.id),
+    homeProgress(user.id).catch(() => null),
+    nearbyEvents(user.id).catch(() => null),
     // Mirror Yoga / Mirror Dance and Castle Crossing live in the chat that started them
     listOpenMirrors(user.id).catch(() => []),
     listOpenSwims(user.id).catch(() => []),
@@ -51,14 +55,17 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
     ...turf.map(g => ({key: `t${g.id}`, href: `/games/${g.id}`, title: g.label, subtitle: g.status === 'live' ? 'Turf · live' : 'Turf · starting soon', boss: null})),
     ...mirrors.map(m => ({key: `m${m.id}`, href: `/messages/${m.conversationId}`, title: mirrorTitle(m.mode), subtitle: m.mine != null ? `Your best ${m.mine} · ${m.played}/${m.members} played` : `${m.played}/${m.members} played`, boss: null, hero: 'idle' as const})),
     ...swims.map(j => ({key: `s${j.id}`, href: `/messages/${j.conversationId}`, title: j.title, subtitle: `${j.route} · ${Math.round((j.progressM / j.totalM) * 100)}%`, boss: null, hero: 'run' as const})),
+    // finished quests stay reachable here now that /activities/games redirects to this section
+    ...quests.filter(q => q.status === 'completed').map(q => ({key: `q${q.id}`, href: `/activities/games/${q.id}`, title: q.title, subtitle: 'Boss defeated', boss: {kind: q.bossKind, name: q.spec.boss?.name ?? q.title}})),
   ];
   // The intro modal (§8) is owned by OnboardingGate; DiscoverPage's built-in intro stays off.
   return (
     <>
       <OnboardingGate userId={user.id} searchParams={params} />
       <CoachMode initialOn={coachOn}>
-        <DiscoverPage viewer={{id: user.id, name: user.name, avatarUrl: user.avatarUrl}} data={data} museActions={museActions} listings={listings} start={params.start ?? null} eventId={params.event ? Number(params.event) : null} goal={goals.find(x => x.status === 'active') ?? null} games={games} level={level} />
+        <DiscoverPage viewer={{id: user.id, name: user.name, avatarUrl: user.avatarUrl}} data={data} museActions={museActions} listings={listings} start={params.start ?? null} eventId={params.event ? Number(params.event) : null} goal={goals.find(x => x.status === 'active') ?? null} games={games} level={level} progress={progress} nearby={nearby} />
       </CoachMode>
+      <ActivitiesPanels viewerName={user.name} />
     </>
   );
 }

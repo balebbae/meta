@@ -1,0 +1,22 @@
+.row { display: none; }
+@media (max-width: 700px) {
+  .row { display: flex; position: relative; gap: 12px; align-items: flex-start; padding: 12px; }
+  .unread { background: var(--fb-mobile-active); }
+  .hitArea { position: absolute; inset: 0; }
+  .hitArea:focus-visible { outline: 2px solid var(--fb-blue); outline-offset: -2px; }
+  .avatar { position: relative; pointer-events: none; flex-shrink: 0; }
+  .badge { position: absolute; right: -3px; bottom: -3px; width: 28px; height: 28px; border-radius: 50%; background: var(--fb-blue); color: var(--fb-card); display: grid; place-items: center; box-shadow: var(--fb-shadow-card); }
+  .event { background: var(--fb-red); }
+  .comment { background: var(--fb-online); }
+  .body { flex: 1; min-width: 0; pointer-events: none; padding-top: 4px; }
+  .message { font-size: 15px; line-height: 20px; overflow-wrap: anywhere; }
+  .message strong { font-weight: 600; }
+  .time { color: var(--fb-text-secondary); font-size: 13px; white-space: nowrap; }
+  .actions { display: flex; gap: 8px; margin-top: 8px; margin-right: -36px; position: relative; pointer-events: auto; }
+  .actions button { flex: 1; min-width: 0; height: 36px; border-radius: 7px; font-size: 15px; font-weight: 600; background: var(--fb-blue); color: var(--fb-card); }
+  .actions button + button { background: var(--fb-icon-bg); color: var(--fb-text); }
+  .actions button:disabled { opacity: .6; }
+  .more { position: relative; flex-shrink: 0; }
+  .more > button { width: 24px; height: 32px; display: grid; place-items: center; }
+  .option { padding: 12px; white-space: nowrap; }
+}

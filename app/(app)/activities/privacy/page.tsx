@@ -21,6 +21,7 @@ export const dynamic = 'force-dynamic';
 const QUESTION_LABEL: Record<string, string> = {
   workouts_this_week: 'workouts this week', active_days_this_week: 'active days this week', distance_this_week_km: 'distance this week', completed_move_today: 'completed a move today', completed_run_3km_today: 'ran 3 km today', steps_today: 'steps today', avg_hr_this_week: 'average heart rate this week', sleep_last_night_hours: 'sleep last night', last_workout: 'last workout',
   runs_2w: 'runs in the last 2 weeks', rides_2w: 'rides in the last 2 weeks', strength_2w: 'strength sessions in the last 2 weeks', yoga_2w: 'yoga sessions in the last 2 weeks', workouts_2w: 'workouts in the last 2 weeks',
+  level_4w: 'your level over 4 weeks', steps_avg_7d: 'average daily steps', sleep_avg_7d: 'average sleep this week',
 };
 
 function askerLabel(a: string): string {

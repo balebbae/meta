@@ -1,7 +1,7 @@
 /**
  * Per-activity handicaps (Muse Spark). For each player we ask the Answers API two banded questions at
- * the game_participants level: sessions of THIS game's activity in the last 2 weeks, and all workouts.
- * Spark sees first names + those bands only (what game members may already see), proposes scales and a
+ * the game_participants level: sessions of THIS game's activity in the last 2 weeks, and all workouts, plus the
+ * code-decided 4-week level tier (level_4w). Spark sees first names + those bands only (what game members may already see), proposes scales and a
  * private one-line reason per player; code clamps everything (fairness.ts). Offline -> fixed table.
  */
 import {ask} from '@/lib/activities/answers';
@@ -58,9 +58,9 @@ export async function planHandicaps(source: SpecSource, members: Member[]): Prom
   const what = FOCUS_LABEL[focus];
   const bands = await Promise.all(
     members.map(async m => {
-      const [focusA, generalA] = await Promise.all([safeAsk(m.id, FOCUS_QUESTION[focus]), focus === 'general' ? null : safeAsk(m.id, 'workouts_2w')]);
+      const [focusA, generalA, levelA] = await Promise.all([safeAsk(m.id, FOCUS_QUESTION[focus]), focus === 'general' ? null : safeAsk(m.id, 'workouts_2w'), safeAsk(m.id, 'level_4w')]);
       const focusBand = bandOf(focusA);
-      return {id: m.id, focusBand, generalBand: focus === 'general' ? focusBand : bandOf(generalA)};
+      return {id: m.id, focusBand, generalBand: focus === 'general' ? focusBand : bandOf(generalA), level: typeof levelA?.value === 'string' ? levelA.value : null};
     }),
   );
 
@@ -72,7 +72,7 @@ export async function planHandicaps(source: SpecSource, members: Member[]): Prom
     try {
       const players = members.map(m => {
         const b = bands.find(x => x.id === m.id);
-        return {userId: m.id, firstName: m.name.split(' ')[0], thisActivity: bandText(b?.focusBand ?? null), allWorkouts: bandText(b?.generalBand ?? null)};
+        return {userId: m.id, firstName: m.name.split(' ')[0], thisActivity: bandText(b?.focusBand ?? null), allWorkouts: bandText(b?.generalBand ?? null), usualLevel: b?.level ?? 'not shared'};
       });
       const out = await museJson<{players: {userId: number; targetScale: number; damageScale: number; reason: string}[]; summary: string}>({
         model: MODELS.spark,
@@ -80,13 +80,13 @@ export async function planHandicaps(source: SpecSource, members: Member[]): Prom
         schema: SCHEMA,
         effort: 'low',
         input: `You balance a friendly co-op fitness game in a group chat so every player has a real shot at contributing.
-The game is mostly ${what}. For each player you get how many ${what} sessions and how many workouts overall they did in the last 2 weeks (bands: none lately, 1-2, 3-4, 5+, or not shared).
+The game is mostly ${what}. For each player you get how many ${what} sessions and how many workouts overall they did in the last 2 weeks (bands: none lately, 1-2, 3-4, 5+, or not shared), and usualLevel: their overall level over the last 4 weeks (new, building, regular, strong), measured from their synced workouts. Use usualLevel to tell a regular having a quiet fortnight from someone just starting.
 Players: ${JSON.stringify(players)}
 For every player return:
 - targetScale (0.6-1.4): how big their personal target is. More recent ${what} than the group -> above 1. Less -> below 1.
 - damageScale (0.7-1.6): how hard each of their moves hits. Less recent ${what} -> above 1. More -> below 1. Never raise both for one player.
 - "not shared" -> 1 and 1.
-- reason: one sentence to that player ("you"), max 16 words, about their recent ${what} only.
+- reason: one sentence to that player ("you"), max 16 words, about their recent ${what} only. Never name their level word.
 summary: one sentence for the whole group on how the game is balanced. Name nobody and no one's level.
 Never mention bodies, weight, health, injuries, age, or words like weak, slow, unfit, lazy.`,
       });

@@ -199,6 +199,7 @@ create table if not exists conversations (
   updated_at timestamptz not null default now()
 );
 create index if not exists conversations_updated_idx on conversations (updated_at desc);
+alter table conversations add column if not exists call_state jsonb;
 
 create table if not exists conversation_members (
   conversation_id integer not null references conversations(id) on delete cascade,
@@ -678,4 +679,14 @@ create table if not exists health_sync_tokens (
   token text primary key,
   user_id integer not null references users(id) on delete cascade,
   expires_at timestamptz not null
+);
+
+-- Coach mode (docs/scheduler-coach.md §2): opt-in, one stored report per user per day
+alter table activity_profiles add column if not exists coach_mode boolean not null default false;
+create table if not exists coach_reports (
+  user_id integer not null references users(id) on delete cascade,
+  day date not null,
+  report jsonb not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, day)
 );

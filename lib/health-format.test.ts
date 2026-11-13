@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {cleanHealthSample, formatHealthValue, layoutHealth} from './health-format.ts';
+import {cleanHealthSample, formatHealthValue, healthToEvents, layoutHealth} from './health-format.ts';
 import {whoopReadings} from './whoop-readings.ts';
 
 test('health values read as hours, distance, and counts', () => {
@@ -46,4 +46,20 @@ test('sync only stores plain metric names', () => {
   assert.equal(cleanHealthSample({metric: 'steps', value: 10, unit: 'count', recordedAt: '2026-11-12T20:00:00Z'})?.metric, 'steps');
   assert.equal(cleanHealthSample({metric: 'steps;drop', value: 10, unit: 'count', recordedAt: '2026-11-12T20:00:00Z'}), null);
   assert.equal(cleanHealthSample({metric: 'steps', value: 0, unit: 'count', recordedAt: '2026-11-12T20:00:00Z'}), null);
+});
+
+test('healthToEvents keeps workouts, steps, sleep and WHOOP recovery as vault history, never heart rate', () => {
+  const at = '2026-11-12T08:00:00.000Z';
+  const events = healthToEvents(7, 'whoop', [
+    {metric: 'workout_1', value: 32, unit: 'Running · 6.1 strain · 140–171 bpm · 5.20 km · +40 m', recordedAt: at},
+    {metric: 'workout_2', value: 20, unit: 'Cycling · 850 m · +12 m', recordedAt: at},
+    {metric: 'workout_3', value: 3, unit: 'Walking', recordedAt: at},
+    {metric: 'sleep_hours', value: 7.5, unit: 'hours', recordedAt: at},
+    {metric: 'recovery_score', value: 22, unit: 'score', recordedAt: at},
+    {metric: 'resting_hr', value: 52, unit: 'bpm', recordedAt: at},
+  ]);
+  assert.deepEqual(events.map(e => [e.kind, e.distanceKm, e.displayScope]), [['run', 5.2, 'normal'], ['ride', 0.85, 'normal'], ['sleep', undefined, 'owner_only'], ['recovery', undefined, 'owner_only']]);
+  assert.equal(events[0].startedAt, '2026-11-12T07:28:00.000Z');
+  const phone = healthToEvents(7, 'apple_health', [{metric: 'steps', value: 8123, unit: 'count', recordedAt: at}, {metric: 'sleep_hours', value: 6, unit: 'hours', recordedAt: at}]);
+  assert.deepEqual(phone.map(e => [e.kind, e.externalId, e.displayScope]), [['steps', 'apple_health:7:steps:2026-11-12', 'normal'], ['sleep', 'apple_health:7:sleep:2026-11-12', 'normal']]);
 });

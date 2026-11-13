@@ -59,3 +59,10 @@ export const MODELS = {
   image: 'muse-image-1.0',
   voice: 'muse-voice-transcribe-1.0',
 } as const;
+
+export async function museText(input: string): Promise<string> {
+  const response = await getMuseClient().responses.create({model: MODELS.ember, input});
+  const text = response.output_text?.trim();
+  if (!text) throw new Error('empty Muse response');
+  return text;
+}

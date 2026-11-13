@@ -1,4 +1,5 @@
 import {sql} from '@/lib/db';
+import {describeLevel, fitnessLevel, isSession} from '@/lib/activities/level';
 import {getPolicies} from '@/lib/activities/policies';
 import {listVaultEvents, type VaultEvent} from '@/lib/activities/vault';
 import {QUESTION_CATEGORY, TRUST_RANK, type Answer, type Audience, type QuestionType, type ShareLevel, type Trust} from '@/lib/activities/types';
@@ -50,13 +51,20 @@ function visibleEvents(events: VaultEvent[], audience: Audience): VaultEvent[] {
   return events.filter(e => e.displayScope !== 'owner_only').map(e => (e.source === 'whoop' ? {...e, avgHr: undefined} : e));
 }
 
-const WORKOUT_KINDS = new Set(['run', 'walk', 'ride', 'strength', 'yoga', 'swim', 'other']);
 const KIND_2W: Partial<Record<QuestionType, string>> = {runs_2w: 'run', rides_2w: 'ride', strength_2w: 'strength', yoga_2w: 'yoga'};
 
-function compute(question: QuestionType, events: VaultEvent[], level: ShareLevel): Answer['value'] {
+/** `all` = the last 4 weeks; everything except the level reads the last 2. */
+function compute(question: QuestionType, all: VaultEvent[], level: ShareLevel): Answer['value'] {
+  if (question === 'level_4w' || question === 'steps_avg_7d' || question === 'sleep_avg_7d') {
+    const l = fitnessLevel(all);
+    if (question === 'level_4w') return level === 'exact' ? describeLevel(l) : level === 'rounded' ? l.tier : l.tier !== 'new';
+    if (question === 'steps_avg_7d') return l.stepsPerDay == null ? null : level === 'exact' ? l.stepsPerDay : level === 'rounded' ? `about ${Math.round(l.stepsPerDay / 1000)}k` : l.stepsPerDay >= 5000;
+    return l.sleepHours == null ? null : level === 'exact' ? l.sleepHours : level === 'rounded' ? `about ${Math.round(l.sleepHours)} h` : l.sleepHours >= 7;
+  }
+  const events = all.filter(e => new Date(e.startedAt).getTime() >= Date.now() - 2 * WEEK_MS);
   const weekStart = startOfWeek().getTime();
   const todayStart = startOfToday().getTime();
-  const workouts = events.filter(e => WORKOUT_KINDS.has(e.kind));
+  const workouts = events.filter(isSession);
   const thisWeek = workouts.filter(e => new Date(e.startedAt).getTime() >= weekStart);
   const today = workouts.filter(e => new Date(e.startedAt).getTime() >= todayStart);
   // rolling window for "a few months ahead" matching, so Mondays don't read as zero
@@ -77,7 +85,6 @@ function compute(question: QuestionType, events: VaultEvent[], level: ShareLevel
     case 'strength_2w':
     case 'yoga_2w':
     case 'workouts_2w': {
-      // ask() and museContext() already limit events to the last 14 days.
       const kind = KIND_2W[question];
       const n = kind ? workouts.filter(e => e.kind === kind).length : workouts.length;
       return level === 'exact' ? n : level === 'rounded' ? bandCount(n) : n > 0;
@@ -132,7 +139,7 @@ export async function ask(ownerId: number, audience: Audience, question: Questio
   if (level === 'none' || (level === 'muse_only' && audience !== 'only_me')) {
     answer = {question, value: null, level, sourceTrust: null, withheld: true};
   } else {
-    const events = visibleEvents(await listVaultEvents(ownerId, {since: new Date(Date.now() - 2 * WEEK_MS).toISOString(), limit: 300}), audience);
+    const events = visibleEvents(await listVaultEvents(ownerId, {since: new Date(Date.now() - 4 * WEEK_MS).toISOString(), limit: 500}), audience);
     answer = {question, value: compute(question, events, level), level, sourceTrust: bestTrust(events), withheld: false};
   }
   await sql`insert into answers_log (owner_id, asker, audience, question, answer, level)
@@ -146,12 +153,21 @@ export async function ask(ownerId: number, audience: Audience, question: Questio
  */
 export async function museContext(ownerId: number): Promise<Record<string, Answer['value']>> {
   const policies = await getPolicies(ownerId);
-  const events = await listVaultEvents(ownerId, {since: new Date(Date.now() - 2 * WEEK_MS).toISOString(), limit: 300});
+  const all = await listVaultEvents(ownerId, {since: new Date(Date.now() - 4 * WEEK_MS).toISOString(), limit: 500});
+  // same filter as any shared audience: no owner_only rows (Strava, WHOOP sleep/recovery) and no WHOOP heart rate
+  const events = visibleEvents(all, 'game_participants');
   const out: Record<string, Answer['value']> = {};
   for (const q of Object.keys(QUESTION_CATEGORY) as QuestionType[]) {
     const level = policies[QUESTION_CATEGORY[q]].only_me;
     if (level === 'none') continue;
-    out[q] = compute(q, events.filter(e => e.displayScope !== 'owner_only'), 'rounded');
+    out[q] = compute(q, events, 'rounded');
+  }
+  if (policies.workouts.only_me !== 'none') {
+    out.level_detail = describeLevel(fitnessLevel(events));
+    // decided in code from everything, WHOOP recovery included; the Muse only learns yes/no, never why.
+    // Recovery and sleep reasons count only if the owner lets their Muse use heart / sleep data at all.
+    const why = fitnessLevel(all).easyWeek;
+    out.easy_week = why === 'spike' || (why === 'recovery' && policies.heart.only_me !== 'none') || (why === 'sleep' && policies.sleep.only_me !== 'none');
   }
   return out;
 }

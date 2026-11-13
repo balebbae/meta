@@ -478,8 +478,34 @@ async function postRecap(game: Game, user: Actor, result: OutingResult, players:
 }
 
 /** GPX upload: a whole route through the same pipeline as live points. */
-export async function importRoute(game: Game, user: Actor, points: GpsPoint[], source: 'gpx' | 'replay', finish = true): Promise<PointsResult> {
+export async function importRoute(game: Game, user: Actor, points: GpsPoint[], source: 'gpx' | 'replay' | 'strava', finish = true, externalId?: string): Promise<PointsResult> {
   if (points.length < 2) throw new TurfError('No track points found in that file');
+  if (source === 'strava') {
+    if (!externalId) throw new TurfError('Missing Strava activity id');
+    if (game.status !== 'live') throw new TurfError('This game is not live', 409);
+    await requirePlayer(game, user.id);
+    const tx = db();
+    const [, rows] = await tx.transaction([
+      tx`select pg_advisory_xact_lock(${game.id}::int, ${user.id}::int)`,
+      tx`insert into turf_outings (game_id, user_id, source, result)
+        select ${game.id}, ${user.id}, 'strava', ${JSON.stringify({stravaActivityId: externalId})}::jsonb
+        where not exists (select 1 from turf_outings where game_id = ${game.id} and user_id = ${user.id}
+          and source = 'strava' and result->>'stravaActivityId' = ${externalId}) returning *`,
+    ]);
+    if (!rows.length) {
+      const [existing] = await sql`select * from turf_outings where game_id = ${game.id} and user_id = ${user.id}
+        and source = 'strava' and result->>'stravaActivityId' = ${externalId} order by id limit 1`;
+      return {outing: toMyOuting(mapOuting(existing)), gained: 0, cut: false, recap: null};
+    }
+    // shortcut: reserve before processing for at-most-once claims; failed imports need a board reset to retry.
+    const outingId = Number(rows[0].id);
+    try {
+      return await addPoints(game, user, outingId, points.slice(0, MAX_POINTS), true);
+    } catch (e) {
+      await sql`update turf_outings set status = 'discarded', ended_at = now() where id = ${outingId} and status = 'open'`;
+      throw e;
+    }
+  }
   const outing = await startOuting(game, user, source);
   return addPoints(game, user, outing.id, points.slice(0, MAX_POINTS), finish, {ongoingRecap: !finish});
 }

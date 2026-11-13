@@ -1,6 +1,6 @@
 /**
- * GLB export with a re-import check. Exports the rig's current pose as static geometry: merged voxel meshes,
- * vertex colours and the nearest-filtered pixel textures. Procedural animations are not exported (there are no
+ * GLB export with a re-import check. Exports the rig's current pose as static geometry: the soft-toy meshes,
+ * shared soft materials. Procedural animations are not exported (there are no
  * keyframe tracks; pivots move in code), so the GLB is a posed model, not an animated one.
  */
 import type {Object3D} from 'three';

@@ -5,6 +5,15 @@
   margin-bottom: 16px;
   position: relative;
 }
+.mobileOnly,
+.mobileContent,
+.mobileMetaName,
+.mobileReactionBubble {
+  display: none;
+}
+.desktopAction {
+  display: contents;
+}
 .header {
   display: flex;
   align-items: center;
@@ -598,5 +607,96 @@
   }
   .actionBtn {
     height: 44px;
+  }
+  .mobileFeed {
+    border-top: 0;
+    border-bottom: 5px solid var(--fb-divider-soft);
+  }
+  .mobileFeed .header {
+    padding: 10px 12px 6px;
+  }
+  .mobileFeed .name {
+    display: block;
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .mobileFeed .headerActions {
+    flex-shrink: 0;
+    margin-right: -4px;
+  }
+  .mobileFeed .iconBtn {
+    width: 32px;
+  }
+  .mobileFeed .sub {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .mobileFeed .mobileMetaName {
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 52%;
+  }
+  .mobileFeed .mobileOnly {
+    display: inline-flex;
+  }
+  .mobileFeed .desktopTime,
+  .mobileFeed .desktopContent,
+  .mobileFeed .desktopAction,
+  .mobileFeed .summary,
+  .mobileFeed > .divider {
+    display: none;
+  }
+  .mobileFeed .mobileContent {
+    display: block;
+    padding: 0 12px 8px;
+    font-size: 16px;
+    line-height: 19px;
+  }
+  .mobileFeed .mobileContent:empty {
+    display: none;
+  }
+  .mobileFeed .image {
+    max-height: none;
+  }
+  .mobileFeed .actions {
+    position: relative;
+    align-items: center;
+    padding: 4px 12px;
+    gap: 20px;
+  }
+  .mobileFeed .likeWrap {
+    position: static;
+  }
+  .mobileFeed .picker {
+    z-index: 60;
+  }
+  .mobileFeed .actionBtn {
+    height: 36px;
+    min-width: 0;
+    padding: 0;
+    gap: 5px;
+    color: var(--fb-text-secondary);
+  }
+  .mobileFeed .actionActive {
+    color: var(--fb-blue);
+  }
+  .mobileFeed .actionCount {
+    font-size: 13px;
+    font-weight: 400;
+  }
+  .mobileFeed .shareButton .actionCount {
+    display: none;
+  }
+  .mobileFeed .mobileReactionBubble {
+    position: absolute;
+    right: 12px;
+    top: 4px;
+    width: 28px;
+    height: 36px;
+    display: grid;
+    place-items: center;
   }
 }

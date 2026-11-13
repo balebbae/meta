@@ -166,6 +166,23 @@ export function MobileHelpIcon(props: IconProps) {
   return <Svg {...props} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M9 9a3 3 0 1 1 4.3 2.7c-1 .5-1.3 1-1.3 2.3M12 17h.01" /></Svg>;
 }
 
+export function FeedPhotoIcon(props: IconProps) {
+  return <Svg {...props}><rect x="4" y="2" width="16" height="20" rx="3" /><circle cx="9" cy="7" r="2" fill="var(--fb-card)" /><path d="m6 18 4-6 3 3 3-5 2 8z" fill="var(--fb-card)" /></Svg>;
+}
+
+export function FeedActionIcon({name, ...props}: IconProps & {name: 'like' | 'comment' | 'share'}) {
+  const paths = {
+    like: 'M8 10l4-8c3 0 3 3 2 7h6a2 2 0 0 1 2 2l-2 9a2 2 0 0 1-2 2H8zM2 10h6v12H2z',
+    comment: 'M21 11a9 9 0 1 0-5 8l5 2-1.5-5A9 9 0 0 0 21 11z',
+    share: 'M3 20c0-7 3-11 10-11V3l9 9-9 9v-6c-5 0-7 1-10 5z',
+  };
+  return <Svg {...props} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={paths[name]} /></Svg>;
+}
+
+export function FeedPersonPlusIcon(props: IconProps) {
+  return <Svg {...props}><circle cx="9" cy="6" r="4" /><path d="M1 21v-3a8 8 0 0 1 15-4v7zM19 8h2v4h3v2h-3v4h-2v-4h-3v-2h3z" /></Svg>;
+}
+
 export function MoreCircleIcon(props: IconProps) {
   return (
     <Svg {...props} fill="none" stroke="currentColor" strokeWidth="1.5">

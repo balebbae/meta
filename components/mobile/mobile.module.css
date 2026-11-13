@@ -141,14 +141,14 @@
 .composer {
   align-items: center;
   gap: 10px;
-  padding: 10px 16px 14px 12px;
+  padding: 12px;
   background: var(--fb-card);
-  border-bottom: 1px solid var(--fb-divider-soft);
+  border-bottom: 5px solid var(--fb-divider-soft);
 }
 .composerText {
   flex: 1;
   text-align: left;
-  font-size: 18px;
+  font-size: 16px;
   color: var(--fb-text);
   padding: 0 4px;
 }
@@ -164,13 +164,14 @@
 /* ---- stories ---- */
 .stories {
   background: var(--fb-card);
-  padding: 12px 0 12px;
+  padding: 8px 0;
+  border-bottom: 5px solid var(--fb-divider-soft);
 }
 .storiesTrack {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding: 0 12px;
+  padding: 0 4px;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
 }
@@ -180,9 +181,9 @@
 .storyCard {
   position: relative;
   flex: 0 0 auto;
-  width: 112px;
-  height: 196px;
-  border-radius: 14px;
+  width: 114px;
+  height: 204px;
+  border-radius: 12px;
   overflow: hidden;
   background: var(--fb-card);
   border: 1px solid var(--fb-divider-soft);
@@ -192,7 +193,6 @@
 }
 .musicCard {
   background: linear-gradient(170deg, #5fc39c 0%, #4fa2cf 100%);
-  border: 0;
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -223,7 +223,7 @@
   top: 0;
   left: 0;
   width: 100%;
-  height: 66%;
+  height: 70%;
   object-fit: cover;
 }
 .createBottom {
@@ -231,14 +231,14 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 34%;
+  height: 30%;
   background: var(--fb-card);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-end;
   padding-bottom: 10px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   line-height: 18px;
 }
@@ -256,6 +256,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+.createLabel {
+  max-width: 50px;
 }
 .requestCard {
   display: flex;

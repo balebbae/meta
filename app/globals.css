@@ -87,6 +87,13 @@ html {
   scrollbar-gutter: stable;
   color-scheme: light;
 }
+
+@media (max-width: 700px) {
+  body:has([data-home-feed]) {
+    height: auto;
+    min-height: 100%;
+  }
+}
 [data-theme='dark'] {
   color-scheme: dark;
   --fb-bg: #1c1c1d;

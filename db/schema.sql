@@ -595,3 +595,19 @@ create table if not exists muse_actions (
 );
 create index if not exists muse_actions_user_idx on muse_actions (user_id, status);
 alter table activity_profiles add column if not exists muse_actions_at timestamptz;
+
+-- "A few months ahead": advice runs instantly; connecting opens a Muse-relayed thread; names hidden until both reveal
+alter table mentor_requests add column if not exists connect_status text not null default 'none' check (connect_status in ('none', 'requested', 'connected', 'declined'));
+alter table mentor_requests add column if not exists reveal jsonb not null default '{}'::jsonb;
+create table if not exists muse_relay_messages (
+  id bigserial primary key,
+  request_id integer not null references mentor_requests(id) on delete cascade,
+  sender_id integer references users(id) on delete cascade,
+  from_role text not null check (from_role in ('seeker', 'mentor')),
+  kind text not null check (kind in ('relay', 'data_answer')),
+  raw_text text,
+  relayed_text text not null,
+  muse_used boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists muse_relay_messages_request_idx on muse_relay_messages (request_id, id);

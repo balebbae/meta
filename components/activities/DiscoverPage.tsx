@@ -153,11 +153,11 @@ export function DiscoverPage({viewer, data, museActions, interests: initialInter
           </span>
           <span className={sec.rowLabel}>Discover</span>
         </Link>
-        <Link href="/activities/mentor" className={sec.row}>
+        <Link href="/activities/ahead" className={sec.row}>
           <span className={sec.rowIcon}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z"/></svg>
           </span>
-          <span className={sec.rowLabel}>Mentors</span>
+          <span className={sec.rowLabel}>A few months ahead</span>
         </Link>
         <Link href="/reels" className={sec.row}>
           <span className={sec.rowIcon}>
@@ -246,7 +246,7 @@ export function DiscoverPage({viewer, data, museActions, interests: initialInter
         <section key={s.id} className={styles.section} aria-label={s.title}>
           <div className={styles.sectionHead}>
             <h2 className={styles.sectionTitle}>{s.title}</h2>
-            {s.id === 'mentors' && <span className={styles.sectionSub}>Identity hidden until they accept · 18+</span>}
+            {s.id === 'mentors' && <span className={styles.sectionSub}>Talk through your Muses · names stay hidden · 18+</span>}
             {s.id === 'friends' && <span className={styles.sectionSub}>Yes/no answers only</span>}
           </div>
           <div className={s.id === 'first_move' ? undefined : styles.grid}>
@@ -319,10 +319,10 @@ export function DiscoverPage({viewer, data, museActions, interests: initialInter
           <ul>
             <li>Play Rally and Turf with friends — games built from real workouts.</li>
             <li>Your Muse keeps the details private and only answers yes/no on your behalf.</li>
-            <li>You choose what friends, games and mentors can see. Nothing is on by default.</li>
+            <li>You choose what friends, games and other people's Muses can see. Nothing is on by default.</li>
           </ul>
           <div className={styles.actions}>
-            <Link href="/activities/setup" className={styles.primary} onClick={() => setIntro(false)}>
+            <Link href="/activities/onboarding/tags" className={styles.primary} onClick={() => setIntro(false)}>
               Set up Activities
             </Link>
             <button
@@ -357,7 +357,7 @@ function Card({card, hero, viewer, onNotInterested, onStart, busy}: {card: Disco
         </div>
       ) : card.kind === 'mentor' ? (
         <div className={styles.avatarWrap}>
-          <span className={styles.pill}>Anonymous until accept</span>
+          <span className={styles.pill}>Muse to Muse · name hidden</span>
         </div>
       ) : null}
       <div className={styles.body}>

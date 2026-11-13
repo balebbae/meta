@@ -1,5 +1,6 @@
 import {sql} from '@/lib/db';
 import {ask} from '@/lib/activities/answers';
+import {aheadFit, levelValue, type AheadFit, type Level} from '@/lib/activities/ahead';
 import {MODELS, museConfigured, museJson} from '@/lib/muse/client';
 
 /** A Discover card. Everything about other people here came from ask() answers or public rows (events/groups/reels). */
@@ -243,13 +244,13 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   groupCards.sort((a, b) => b.score - a.score);
   if (groupCards.length) sections.push({id: 'groups', title: 'Groups & clubs', cards: groupCards});
 
-  // --- Mentors (identity hidden until accept) ---
+  // --- A few months ahead (names hidden; talk only through Muses) ---
   const mentorMatches = await matchMentors(userId, tags);
   const mentorCards: DiscoverCard[] = [];
-  for (const m of mentorMatches) {
-    mentorCards.push(await build({id: `mentor-${m.mentorId}`, kind: 'mentor', title: `${m.metric}: ${m.fromValue} → ${m.toValue}`, subtitle: `in ${m.weeks} weeks · ${m.anonymous ? 'anonymous mentor' : 'a friend of a friend'}`, href: `/activities/mentor?offer=${m.mentorId}`, cta: 'Ask their Muse', tag: m.goalTag, score: m.score, meta: {mentorId: m.mentorId, requestId: m.requestId, status: m.status}}, `Their growth record matches your goal to ${m.goalTag.toLowerCase()}.`));
+  for (const m of mentorMatches.slice(0, 6)) {
+    mentorCards.push(build({id: `mentor-${m.mentorId}`, kind: 'mentor', title: m.title, subtitle: m.subtitle, href: `/activities/ahead?offer=${m.mentorId}`, cta: 'Ask their Muse', tag: m.goalTag ?? undefined, score: m.score, meta: {mentorId: m.mentorId, requestId: m.requestId, status: m.status}}, m.why));
   }
-  if (mentorCards.length) sections.push({id: 'mentors', title: 'Mentors who did what you want', cards: mentorCards});
+  if (mentorCards.length) sections.push({id: 'mentors', title: 'A few months ahead of you', cards: mentorCards});
 
   // --- Learn (reels for the user's tags) ---
   const reels = await sql`select id, caption, poster_url, tags, difficulty, plays from reels where is_fitness order by plays desc, id desc limit 60`.catch(() => []);
@@ -275,7 +276,7 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   return {sections, tags, museOffline: offline, generatedAt: new Date().toISOString()};
 }
 
-export type MentorMatch = {mentorId: number; metric: string; fromValue: string; toValue: string; weeks: number; anonymous: boolean; goalTag: string; score: number; requestId: number | null; status: string | null};
+export type MentorMatch = {mentorId: number; title: string; subtitle: string; why: string; goalTag: string | null; score: number; requestId: number | null; status: string | null; connect: string | null};
 
 const METRIC_GOALS: Record<string, string[]> = {
   '5k time': ['Get faster', 'Train for an event', 'Running'],
@@ -285,24 +286,52 @@ const METRIC_GOALS: Record<string, string[]> = {
   'Active days': ['Be consistent', 'Get started'],
 };
 
-/** Matching runs in code on aggregate growth records only: metric ↔ seeker goal/activity tags. Never reads the mentor's vault. */
+/**
+ * "A few months ahead": opted-in people whose level now ≈ where the seeker could be in ~3 months.
+ * Their side is read only through ask(…, 'mentor_match') (rounded, their policy, audit-logged as 'ahead:match' with no
+ * seeker id); their vault is never read here. Opt-in records + goal tags still match when activity data is thin.
+ * shortcut: 2 ask() calls per opted-in person per page load; cache or precompute once the pool is more than a few dozen.
+ */
 export async function matchMentors(seekerId: number, tags: string[]): Promise<MentorMatch[]> {
   const offers = await sql`
-    select o.user_id, o.metric, o.from_value, o.to_value, o.weeks, o.anonymous,
+    select o.user_id, o.metric, o.from_value, o.to_value, o.weeks, o.consent,
            (select d.birthday from user_details d where d.user_id = o.user_id) as birthday,
-           r.id as request_id, r.status as request_status
+           r.id as request_id, r.status as request_status, r.connect_status
     from mentor_offers o
-    left join lateral (select id, status from mentor_requests where mentor_id = o.user_id and seeker_id = ${seekerId} order by id desc limit 1) r on true
+    left join lateral (select id, status, connect_status from mentor_requests where mentor_id = o.user_id and seeker_id = ${seekerId} order by id desc limit 1) r on true
     where o.user_id <> ${seekerId}`.catch(() => []);
-  return offers
-    .map(o => {
-      const goals = METRIC_GOALS[o.metric as string] ?? [];
-      const matched = goals.filter(g => tags.includes(g));
-      const goalTag = matched[0] ?? goals[0] ?? (o.metric as string);
-      const bday = o.birthday ? new Date(o.birthday as string) : null;
-      const adult = !bday || Number.isNaN(bday.getTime()) || Date.now() - bday.getTime() >= 18 * 365.25 * 86_400_000;
-      return {mentorId: o.user_id as number, metric: o.metric as string, fromValue: (o.from_value as string) ?? '', toValue: (o.to_value as string) ?? '', weeks: Number(o.weeks ?? 0), anonymous: !!o.anonymous, goalTag, score: matched.length * 5 + (adult ? 1 : -100), requestId: (o.request_id as number) ?? null, status: (o.request_status as string) ?? null};
-    })
-    .filter(m => m.score > 0)
-    .sort((a, b) => b.score - a.score);
+  if (!offers.length) return [];
+  const [myKm, myDays] = await Promise.all([ask(seekerId, 'only_me', 'distance_last_7_days_km', 'ahead:self'), ask(seekerId, 'only_me', 'active_days_last_7_days', 'ahead:self')]);
+  const me: Level = {km: levelValue(myKm.value), days: levelValue(myDays.value)};
+  const out: MentorMatch[] = [];
+  await Promise.all(offers.map(async o => {
+    const bday = o.birthday ? new Date(o.birthday as string) : null;
+    if (bday && !Number.isNaN(bday.getTime()) && Date.now() - bday.getTime() < 18 * 365.25 * 86_400_000) return;
+    const metric = ((o.metric as string) ?? '').trim();
+    const goals = METRIC_GOALS[metric] ?? [];
+    const matched = goals.filter(g => tags.includes(g));
+    const record = metric ? `${metric}: ${o.from_value ?? ''} → ${o.to_value ?? ''}` : null;
+    let fit: AheadFit | null = null;
+    let theirs = '';
+    if ((o.consent as {workouts?: boolean} | null)?.workouts) {
+      const uid = o.user_id as number;
+      const [km, days] = await Promise.all([ask(uid, 'mentor_match', 'distance_last_7_days_km', 'ahead:match'), ask(uid, 'mentor_match', 'active_days_last_7_days', 'ahead:match')]);
+      fit = aheadFit(me, {km: levelValue(km.value), days: levelValue(days.value)});
+      theirs = fit?.metric === 'km' ? `Covers ${km.value} a week` : fit ? `Active ${days.value} days a week` : '';
+    }
+    if (!fit && !matched.length) return;
+    const mine = fit?.metric === 'km' ? `about ${Math.round(fit.me)} km` : fit ? `${Math.round(fit.me)} ${Math.round(fit.me) === 1 ? 'day' : 'days'}` : '';
+    out.push({
+      mentorId: o.user_id as number,
+      title: fit ? theirs : (record as string),
+      subtitle: fit ? `You're at ${mine} now${record ? ` · ${record}` : ''}` : `Got there in ${Number(o.weeks ?? 0)} weeks`,
+      why: fit ? "That's about where you could be in 3 months." : `Their record matches your goal to ${matched[0].toLowerCase()}.`,
+      goalTag: matched[0] ?? null,
+      score: (fit ? fit.fit * 10 : 0) + matched.length * 3 + (record ? 1 : 0),
+      requestId: (o.request_id as number) ?? null,
+      status: (o.request_status as string) ?? null,
+      connect: (o.connect_status as string) ?? null,
+    });
+  }));
+  return out.sort((a, b) => b.score - a.score);
 }

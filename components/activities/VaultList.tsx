@@ -2,13 +2,10 @@
 import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 import type {VaultEvent} from '@/lib/activities/vault';
+import {sourceLabel} from '@/lib/activities/source-label';
 import styles from './activities.module.css';
 
-const SOURCE_LABEL: Record<string, string> = {apple_health: 'Apple Health', health_connect: 'Health Connect', google_health: 'Google Health', strava: 'Strava', oura: 'Oura', whoop: 'WHOOP', garmin: 'Garmin', phone_steps: 'Phone steps', proof_photo: 'Photo proof', manual: 'Manual', mock: 'Demo watch', aggregator: 'Aggregator'};
-
-export function sourceLabel(s: string): string {
-  return SOURCE_LABEL[s] ?? s;
-}
+export {sourceLabel};
 
 function fmt(e: VaultEvent): string {
   const bits = [e.distanceKm ? `${e.distanceKm} km` : null, e.durationMin ? `${Math.round(e.durationMin)} min` : null, e.steps ? `${e.steps.toLocaleString()} steps` : null, e.avgHr ? `${e.avgHr} bpm avg` : null].filter(Boolean);
@@ -59,7 +56,7 @@ export function VaultList({events, deletable = true}: {events: VaultEvent[]; del
               <div className={styles.small}>
                 {new Date(e.startedAt).toLocaleString(undefined, {weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'})} · {sourceLabel(e.source)} · {e.trust.replace('_', ' ')}
                 {e.displayScope === 'owner_only' ? ' · only you' : ''}
-                {e.duplicateOf ? ' · duplicate' : ''}
+                {e.duplicateOf ? ` · merged into ${sourceLabel(events.find(x => x.id === e.duplicateOf)?.source ?? 'another')} entry` : ''}
               </div>
             </div>
           </li>

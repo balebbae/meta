@@ -84,6 +84,8 @@ export type QuestionType =
   | 'workouts_this_week'
   | 'active_days_this_week'
   | 'distance_this_week_km'
+  | 'distance_last_7_days_km'
+  | 'active_days_last_7_days'
   | 'completed_move_today'
   | 'completed_run_3km_today'
   | 'steps_today'
@@ -95,6 +97,8 @@ export const QUESTION_CATEGORY: Record<QuestionType, Category> = {
   workouts_this_week: 'workouts',
   active_days_this_week: 'workouts',
   distance_this_week_km: 'workouts',
+  distance_last_7_days_km: 'workouts',
+  active_days_last_7_days: 'workouts',
   completed_move_today: 'workouts',
   completed_run_3km_today: 'workouts',
   last_workout: 'workouts',

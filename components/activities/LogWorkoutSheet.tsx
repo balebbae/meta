@@ -1,5 +1,6 @@
 'use client';
 import {Glyph} from './glyphs';
+import {blobToWav16k} from '@/lib/wav';
 import {useEffect, useRef, useState} from 'react';
 import {Dialog} from '@/components/ui/Dialog';
 import {fileToDataUrlFit} from '@/lib/image-upload';
@@ -294,10 +295,10 @@ function VoiceTab({onLogged}: {onLogged: (e: LoggedEvent) => void}) {
       r.ondataavailable = e => chunks.current.push(e.data);
       r.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(chunks.current, {type: r.mimeType || 'audio/webm'});
         setBusy(true);
+        const wav = await blobToWav16k(new Blob(chunks.current, {type: r.mimeType || 'audio/webm'}));
         const fd = new FormData();
-        fd.append('file', new File([blob], 'note.webm', {type: blob.type}));
+        fd.append('file', new File([wav], 'note.wav', {type: 'audio/wav'}));
         const res = await fetch('/api/muse/transcribe', {method: 'POST', body: fd});
         setBusy(false);
         if (!res.ok) {

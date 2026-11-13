@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         message = fallback;
       }
     }
-    const url = quest?.id ? `/activities/quests/${quest.id}` : '/activities';
+    const url = quest?.id ? `/activities/games/${quest.id}` : '/activities';
     const [row] = await sql`insert into notifications (user_id, actor_id, type, message) values (${user.id}, null, ${`activities_${kind}`}, ${message}) returning id`;
     await sendPushToUser(user.id, {title: 'Activities', body: message, url, tag: `activities-${kind}`}).catch(() => {});
     return NextResponse.json({id: row.id, message, museOffline, url}, {status: 201});

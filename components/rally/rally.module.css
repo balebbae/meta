@@ -200,7 +200,8 @@
   display: flex;
   gap: 12px;
   padding: 12px;
-  background: linear-gradient(135deg, #e7f0fd, #fff4e5);
+  /* token tint so the title stays readable in dark mode (a fixed light gradient hid --fb-text there) */
+  background: linear-gradient(135deg, color-mix(in srgb, var(--fb-blue) 16%, var(--fb-card)), var(--fb-card));
   align-items: center;
 }
 .questTitle {

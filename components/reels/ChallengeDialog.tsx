@@ -11,7 +11,8 @@ import styles from './reels.module.css';
 type Props = {
   reel: Reel;
   onClose: () => void;
-  onSent: (groupName: string, conversationId: number) => void;
+  /** game: what Muse made of the Reel ('quest' boss fight, 'mirror' dance/yoga, 'swim' crossing). */
+  onSent: (groupName: string, conversationId: number, game: string) => void;
   onError: (text: string) => void;
 };
 
@@ -55,11 +56,9 @@ export default function ChallengeDialog({reel, onClose, onSent, onError}: Props)
       onClose();
       return;
     }
-    if (!res.ok) {
-      const data = (await res.json().catch(() => ({}))) as {error?: string};
-      throw new Error(data.error || `Could not send (${res.status})`);
-    }
-    onSent(name, conversationId);
+    const data = (await res.json().catch(() => ({}))) as {error?: string; game?: string};
+    if (!res.ok) throw new Error(data.error || `Could not send (${res.status})`);
+    onSent(name, conversationId, data.game ?? 'quest');
   };
 
   const pick = async (c: Conversation) => {
@@ -97,12 +96,7 @@ export default function ChallengeDialog({reel, onClose, onSent, onError}: Props)
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className={styles.dlgPoster} src={reel.posterUrl ?? undefined} alt="" />
           <div>
-            Send this Reel as a Rally quest.{' '}
-            {reel.exercises.length > 0 && (
-              <>
-                Everyone in the group does <strong>{reel.exercises.map(e => e.name).join(', ')}</strong>.
-              </>
-            )}
+            Send this Reel as a Rally game.
           </div>
         </div>
 
@@ -138,7 +132,7 @@ export default function ChallengeDialog({reel, onClose, onSent, onError}: Props)
                 </span>
               </button>
             </div>
-            {busy !== null && <div className={styles.dlgRowSub} style={{padding: '8px 16px 0'}}>Building the quest with Muse… this can take up to a minute.</div>}
+            {busy !== null && <div className={styles.dlgRowSub} style={{padding: '8px 16px 0'}}>Muse is picking the game…</div>}
             {error && <div className={styles.dlgError}>{error}</div>}
           </>
         ) : (

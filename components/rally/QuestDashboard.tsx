@@ -1,4 +1,5 @@
 'use client';
+import {WORLDS, worldFor} from '@/lib/kingdom/scenes/worlds';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {IconChevronLeft} from '@tabler/icons-react';
@@ -126,7 +127,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
       <Link href="/activities#games" className={`${ah.pill} ${ah.pillSm} ${ah.pillIcon} ${ah.pillOutline} ${ah.phoneOnly}`} aria-label="Back to Activities" title="Back to Activities">
         <IconChevronLeft size={18} aria-hidden />
       </Link>
-      <Card aria-label="Boss arena">
+      <VStack aria-label="Boss arena">
         <VStack gap={4}>
           <HStack gap={3} vAlign="start" justify="between" wrap="wrap">
             <VStack gap={2} maxWidth={560}>
@@ -136,6 +137,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
                 <Token label={spec.template} size="sm" />
                 <Token label={`Day ${state.levelDay} of ${spec.levels.length}`} size="sm" color="blue" />
                 {q.buffed && <Token label="Boss buffed +10%" size="sm" color="orange" />}
+                {worldFor(q.conversationId) !== 'kingdom' && <Token label={`World: ${WORLDS[worldFor(q.conversationId)].name}`} size="sm" color="blue" />}
                 {!state.museUsed && <Token label="Muse offline · template quest" size="sm" color="gray" />}
                 {state.myReadiness && <Token label={state.myReadiness.fit === 'good' ? 'Good match for you' : 'A stretch for you'} size="sm" color={state.myReadiness.fit === 'good' ? 'green' : 'orange'} />}
               </HStack>
@@ -147,13 +149,15 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
           </HStack>
 
           {spec.boss && (
-            <VStack hAlign="center" className={s.arenaStage}>
+            <VStack gap={4} hAlign="center">
               {!arenaFailed && (
-                <div className={s.arenaCanvas} role="img" aria-label={`${spec.boss.name}${done ? ', defeated,' : ''} facing the squad: ${state.members.map(m => m.name.split(' ')[0]).join(', ')}`}>
-                  <Arena boss={bossCast} bossName={spec.boss.name} hp={q.bossHp} hpLeft={done ? 0 : q.bossHpLeft} heroes={arenaHeroes} strikes={strikes} reducedMotion={reducedMotion} onError={() => setArenaFailed(true)} />
-                </div>
+                <VStack hAlign="center" width="100%" className={s.arenaStage}>
+                  <div className={s.arenaCanvas} role="img" aria-label={`${spec.boss.name}${done ? ', defeated,' : ''} facing the squad: ${state.members.map(m => m.name.split(' ')[0]).join(', ')}`}>
+                    <Arena boss={bossCast} bossName={spec.boss.name} hp={q.bossHp} hpLeft={done ? 0 : q.bossHpLeft} heroes={arenaHeroes} strikes={strikes} world={worldFor(q.conversationId)} reducedMotion={reducedMotion} onError={() => setArenaFailed(true)} />
+                  </div>
+                </VStack>
               )}
-              <VStack gap={4} hAlign="center" width="100%" padding={4} className={s.arenaHud}>
+              <VStack gap={4} hAlign="center" width="100%">
                 <VStack gap={2} hAlign="center" width="100%" maxWidth={560}>
                   {arenaFailed && <BossArt kind={q.bossKind} name={spec.boss.name} size={150} hurt={Boolean(anim?.hurt)} down={done} />}
                   <Heading level={3}>{spec.boss.name}</Heading>
@@ -223,7 +227,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
             </HStack>
           </VStack>
         </VStack>
-      </Card>
+      </VStack>
 
       <Card aria-label="Quest map">
         <VStack gap={3}>

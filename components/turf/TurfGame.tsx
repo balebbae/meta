@@ -1,10 +1,12 @@
 'use client';
+import {WORLDS, worldFor} from '@/lib/kingdom/scenes/worlds';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {AlertDialog} from '@astryxdesign/core/AlertDialog';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {ArrowLeftIcon} from '@/components/icons';
 import {NEUTRAL} from '@/lib/turf/colors';
+import {fmtPace} from '@/lib/turf/engine';
 import type {TurfState} from '@/lib/turf/types';
 import {ConsentCopy} from './ConsentSheet';
 import {HexMap} from './HexMap';
@@ -47,7 +49,9 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
 
   const onResult = (r: PointsResult) => {
     setMyOuting(r.outing);
-    if (r.recap) setNote(r.recap);
+    const slow = r.outing.result.slow;
+    if (slow && r.gained === 0 && state.pace) setNote(`Too slow for this game: ${slow.secPerKm ? `${fmtPace(slow.secPerKm)} per km` : 'no pace could be read'} against ${fmtPace(state.pace.secPerKm)}. That loop claims nothing.`);
+    else if (r.recap) setNote(r.recap);
     else if (r.cut) setNote('Your trail was cut. This outing claims nothing.');
     else if (r.outing.status !== 'open' && r.gained === 0) setNote('Outing finished. No loop was closed, so no cells were claimed.');
     void refresh();
@@ -91,7 +95,19 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
             <div className={styles.sub}>
               {(state.arena.radiusKm * 2).toFixed(1)} km arena · {state.lengthDays} day{state.lengthDays === 1 ? '' : 's'}
               {state.endsAt && state.status !== 'ended' ? ` · ends ${endsLabel(state.endsAt)}` : ''}
+              {worldFor(state.conversationId) !== 'kingdom' ? ` · ${WORLDS[worldFor(state.conversationId)].name}` : ''}
             </div>
+            {(state.pace || state.reelId) && (
+              <div className={styles.sub}>
+                {state.pace ? `Paced: a loop only counts at ${fmtPace(state.pace.secPerKm)} per km or faster${state.pace.distanceKm ? ` · the Reel runs ${state.pace.distanceKm} km` : ''}${state.pace.assumed ? ' · the Reel names no pace, so this is an easy one' : ''}` : 'Any pace counts'}
+                {state.reelId ? (
+                  <>
+                    {' · '}
+                    <Link href={`/reels?feed=${state.reelId}`}>Watch the Reel</Link>
+                  </>
+                ) : null}
+              </div>
+            )}
           </div>
           <span className={live ? styles.pillLive : styles.pill} aria-live="polite">
             {live ? timeLeft(state.endsAt, now) : STATUS[state.status]}
@@ -107,7 +123,7 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
         </div>
         {view === 'kingdom' ? (
           <div className={styles.kingdomWrap} role="img" aria-label={`Kingdom board of ${state.title}: ${players.map(p => `${p.name.split(' ')[0]} ${cellsOf[p.id]?.cells ?? 0} cells`).join(', ')}`}>
-            <KingdomView arena={state.arena} players={state.players} cells={state.cells} trail={trail} viewerId={me.id} reducedMotion={reducedMotion} onError={() => setView('map')} />
+            <KingdomView arena={state.arena} players={state.players} cells={state.cells} trail={trail} viewerId={me.id} world={worldFor(state.conversationId)} reducedMotion={reducedMotion} onError={() => setView('map')} />
           </div>
         ) : (
           <div className={styles.mapWrap}>

@@ -9,7 +9,7 @@ import {C} from '../palette';
 import {setState} from '../rig';
 import {PX, box, softMaterial} from '../factories/soft';
 import type {AnimState, Rig} from '../types';
-import {SKY, Stage, type Host} from './stage';
+import {Stage, type Host} from './stage';
 
 export type Fighter = {id: number; name: string; cast: Cast};
 export type BossFightOpts = {boss: Cast; name: string; hp: number; hpLeft: number; fighters: Fighter[]};
@@ -30,7 +30,7 @@ const BLOOD: Record<string, number> = {'creature-slime': C.slime, 'creature-gobl
 const ease = (k: number): number => k * k * (3 - 2 * k);
 
 export function createBossFight(host: Host, o: BossFightOpts): BossFight {
-  const st = new Stage(host, {fov: 30, sun: [-5, 11, 8], radius: 15, far: -13});
+  const st = new Stage(host, {fov: 30, sun: [-5, 11, 8], radius: 15, far: -13, row: -6.4});
   st.ground(70, 40); st.block(22, 0.125, 9, 'rock', C.stoneLight, 0.5, -0.05, 0.4); // the plaza the fight happens on
   // the kingdom the squad defends on the left, the wild on the right
   st.place(st.make('world-castle-starter'), -12.5, 0, -6, 0.45).group.scale.setScalar(1.5);
@@ -70,7 +70,7 @@ export function createBossFight(host: Host, o: BossFightOpts): BossFight {
   };
 
   return {
-    group: st.group, background: SKY,
+    group: st.group, background: st.sky,
     strike: (memberId, damage, reps = 1, critical = false) => { if (down || !squad.length) return; const n = Math.max(1, Math.round(reps)); queue.push({slot: squad.find((x) => x.id === memberId) ?? squad[squad.length - 1], damage: Math.max(0, Math.round(damage)), reps: n, swings: Math.min(MAX_SWINGS, n), critical, phase: 'run', t: 0, landed: 0}); },
     setHp: (hpLeft) => { hpTarget = Math.max(0, hpLeft); },
     dispose: () => st.dispose(),

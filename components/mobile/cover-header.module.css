@@ -2,7 +2,7 @@
 
 @media (max-width: 700px) {
   :global(body:has([data-mobile-cover])) :global([data-mobile-shell-header]) { display: none; }
-  .header { position: sticky; top: 0; height: 56px; margin-bottom: -56px; display: flex; align-items: center; gap: 4px; padding: 0 8px; z-index: 45; color: var(--fb-on-media); background: linear-gradient(var(--fb-scrim), transparent); }
+  .header { position: sticky; top: 0; height: calc(56px + env(safe-area-inset-top)); margin-bottom: calc(-56px - env(safe-area-inset-top)); display: flex; align-items: center; gap: 4px; padding: env(safe-area-inset-top) 8px 0; z-index: 45; color: var(--fb-on-media); background: linear-gradient(var(--fb-scrim), transparent); }
   .solid { background: var(--fb-card); color: var(--fb-text); }
   .button { width: 36px; height: 40px; flex-shrink: 0; display: inline-flex; justify-content: center; align-items: center; }
   .button > span { border-radius: 50%; border: 1px solid var(--fb-card); }

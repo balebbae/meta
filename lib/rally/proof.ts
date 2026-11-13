@@ -10,12 +10,21 @@ import type {ExerciseCheck} from './proof-fusion.ts';
 
 export type ProofResult = {approved: boolean; verdict: string; status: 'approved' | 'rejected' | 'pending'; museUsed: boolean};
 
-/** One photo, or 2-3 still frames from a clip (then the question is about the clip). */
-export async function verifyProofImage(opts: {image: string; task: string; frames?: string[]}): Promise<ProofResult> {
-  if (process.env.GLIMMER_PROOF_URL?.trim()) {
+/** True when the self-hosted fine-tuned Glimmer endpoint is configured (GLIMMER_PROOF_URL). */
+export function glimmerConfigured(): boolean {
+  return Boolean(process.env.GLIMMER_PROOF_URL?.trim());
+}
+
+/**
+ * One photo, or 2-3 still frames from a clip (then the question is about the clip).
+ * `glimmer: true` asks the fine-tuned Glimmer first (clip proof only: it was trained on exercise stills and loses to
+ * Ember on workout screens), falling back to Ember on error or after `timeoutMs`.
+ */
+export async function verifyProofImage(opts: {image: string; task: string; frames?: string[]}, backend: {glimmer?: boolean; timeoutMs?: number} = {}): Promise<ProofResult> {
+  if (backend.glimmer && glimmerConfigured()) {
     const t0 = Date.now();
     try {
-      const r = await glimmerCheck(opts);
+      const r = await glimmerCheck(opts, backend.timeoutMs);
       console.info('[rally] proof check', {backend: 'glimmer', ms: Date.now() - t0, status: r.status});
       return r;
     } catch (err) {
@@ -52,13 +61,13 @@ export async function verifyProofImage(opts: {image: string; task: string; frame
 }
 
 /** Self-hosted fine-tuned Muse Glimmer (finetune/rally_ft exercise_check) on an OpenAI-compatible chat endpoint. Throws on timeout, HTTP error or bad JSON so the caller falls back to Ember. */
-async function glimmerCheck(opts: {image: string; task: string; frames?: string[]}): Promise<ProofResult> {
+async function glimmerCheck(opts: {image: string; task: string; frames?: string[]}, timeoutMs?: number): Promise<ProofResult> {
   const base = process.env.GLIMMER_PROOF_URL!.trim().replace(/\/+$/, '');
   const key = process.env.GLIMMER_PROOF_KEY?.trim();
   const res = await fetch(`${base}/chat/completions`, {
     method: 'POST',
     headers: {'content-type': 'application/json', ...(key ? {authorization: `Bearer ${key}`} : {})},
-    signal: AbortSignal.timeout(Number(process.env.GLIMMER_PROOF_TIMEOUT_MS) || 6000),
+    signal: AbortSignal.timeout(timeoutMs ?? (Number(process.env.GLIMMER_PROOF_TIMEOUT_MS) || 30_000)),
     body: JSON.stringify({
       model: process.env.GLIMMER_PROOF_MODEL?.trim() || 'exercise_check',
       temperature: 0,

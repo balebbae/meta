@@ -9,13 +9,16 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:setup": "node scripts/db-setup.mjs",
-    "test": "node --test \"lib/**/*.test.ts\""
+    "test": "node --test \"lib/**/*.test.ts\"",
+    "test:kingdom": "node --test \"lib/kingdom/**/*.test.ts\""
   },
   "dependencies": {
     "@astryxdesign/core": "^0.7.15",
     "@astryxdesign/theme-neutral": "^0.7.15",
     "@huggingface/transformers": "^3.8.1",
     "@neondatabase/serverless": "^1.2.0",
+    "@react-three/drei": "^10.7.6",
+    "@react-three/fiber": "^9.3.0",
     "@stylexjs/stylex": "^0.19.2",
     "clsx": "^2.1.1",
     "h3-js": "^4.5.0",
@@ -29,7 +32,9 @@
     "supertokens-node": "^24.1.0",
     "supertokens-web-js": "^0.16.0",
     "tailwind-merge": "^3.7.0",
-    "web-push": "^3.6.7"
+    "three": "^0.180.0",
+    "web-push": "^3.6.7",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@astryxdesign/cli": "^0.7.15",
@@ -38,6 +43,7 @@
     "@types/node": "^24.19.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/three": "^0.180.0",
     "@types/web-push": "^3.6.4",
     "tailwindcss": "^4.3.5",
     "typescript": "^5.9.3"

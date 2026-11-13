@@ -16,7 +16,10 @@ import {
   fallbackReason,
   fallbackScales,
   predictFairness,
+  readiness,
+  type Readiness,
   type Band,
+  type Focus,
   type HandicapPlan,
 } from '@/lib/rally/fairness';
 import {HANDICAP_NOTE, type Member, type SpecSource} from '@/lib/rally/spec';
@@ -53,16 +56,22 @@ async function safeAsk(userId: number, question: Parameters<typeof ask>[2]) {
   }
 }
 
+async function bandsFor(userId: number, focus: Focus) {
+  const [focusA, generalA, levelA] = await Promise.all([safeAsk(userId, FOCUS_QUESTION[focus]), focus === 'general' ? null : safeAsk(userId, 'workouts_2w'), safeAsk(userId, 'level_4w')]);
+  const focusBand = bandOf(focusA);
+  return {id: userId, focusBand, generalBand: focus === 'general' ? focusBand : bandOf(generalA), level: typeof levelA?.value === 'string' ? levelA.value : null};
+}
+
+/** Good match or stretch for someone joining a game that already exists (its focus is in quests.muse_meta). */
+export async function readinessFor(userId: number, focus: Focus): Promise<Readiness | null> {
+  const b = await bandsFor(userId, focus);
+  return readiness(focus, b.focusBand, b.generalBand, b.level);
+}
+
 export async function planHandicaps(source: SpecSource, members: Member[]): Promise<HandicapPlan> {
   const focus = activityFocus(sourceText(source));
   const what = FOCUS_LABEL[focus];
-  const bands = await Promise.all(
-    members.map(async m => {
-      const [focusA, generalA, levelA] = await Promise.all([safeAsk(m.id, FOCUS_QUESTION[focus]), focus === 'general' ? null : safeAsk(m.id, 'workouts_2w'), safeAsk(m.id, 'level_4w')]);
-      const focusBand = bandOf(focusA);
-      return {id: m.id, focusBand, generalBand: focus === 'general' ? focusBand : bandOf(generalA), level: typeof levelA?.value === 'string' ? levelA.value : null};
-    }),
-  );
+  const bands = await Promise.all(members.map(m => bandsFor(m.id, focus)));
 
   const base = new Map(bands.map(b => [b.id, {...fallbackScales(b.focusBand, b.generalBand), reason: fallbackReason(focus, b.focusBand)}]));
   let summary = `Balanced on recent ${what}: newer players hit harder, regulars aim higher.`;
@@ -111,6 +120,7 @@ Never mention bodies, weight, health, injuries, age, or words like weak, slow, u
     focus,
     handicaps,
     reasons: Object.fromEntries(members.map(m => [m.id, base.get(m.id)!.reason])),
+    readiness: Object.fromEntries(bands.flatMap(b => { const r = readiness(focus, b.focusBand, b.generalBand, b.level); return r ? [[b.id, r] as [number, Readiness]] : []; })),
     fairness: {...fairness, summary},
     museUsed,
   };

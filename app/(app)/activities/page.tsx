@@ -8,6 +8,10 @@ import {listListings} from '@/lib/secondary-queries';
 import {DiscoverPage, type MyGame} from '@/components/activities/DiscoverPage';
 import {listGoals} from '@/lib/activities/goals';
 import {OnboardingGate} from '@/components/activities/OnboardingGate';
+import {CoachMode} from '@/components/activities/CoachMode';
+import {setCoachMode} from '@/lib/activities/coach';
+import {fitnessLevel} from '@/lib/activities/level';
+import {listVaultEvents} from '@/lib/activities/vault';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,17 +33,24 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
     listQuestsForUser(user.id),
     listActiveGamesForUser(user.id),
   ]);
+  // Coach mode always opens off; only an explicit ?coach=on (Your Muse link, old /activities/coach) opens it on
+  const coachOn = params.coach === 'on';
+  if (coachOn) await setCoachMode(user.id, true).catch(() => {});
+  const recent = await listVaultEvents(user.id, {since: new Date(Date.now() - 28 * 86_400_000).toISOString(), limit: 500}).catch(() => []);
+  const level = recent.length ? fitnessLevel(recent) : null;
   const games: MyGame[] = [
     ...quests
       .filter(q => q.status === 'active')
-      .map(q => ({key: `q${q.id}`, href: `/activities/games/${q.id}`, title: q.title, subtitle: q.bossHp ? `${q.bossHpLeft} / ${q.bossHp} HP` : `Rally · ${q.template}`, boss: {kind: q.bossKind, imageUrl: q.bossImageUrl, name: q.spec.boss?.name ?? q.title}})),
+      .map(q => ({key: `q${q.id}`, href: `/activities/games/${q.id}`, title: q.title, subtitle: q.bossHp ? `${q.bossHpLeft} / ${q.bossHp} HP` : `Rally · ${q.template}`, boss: {kind: q.bossKind, name: q.spec.boss?.name ?? q.title}})),
     ...turf.map(g => ({key: `t${g.id}`, href: `/games/${g.id}`, title: g.label, subtitle: g.status === 'live' ? 'Turf · live' : 'Turf · starting soon', boss: null})),
   ];
   // The intro modal (§8) is owned by OnboardingGate; DiscoverPage's built-in intro stays off.
   return (
     <>
       <OnboardingGate userId={user.id} searchParams={params} />
-      <DiscoverPage viewer={{id: user.id, name: user.name, avatarUrl: user.avatarUrl}} data={data} museActions={museActions} listings={listings} start={params.start ?? null} eventId={params.event ? Number(params.event) : null} goal={goals.find(x => x.status === 'active') ?? null} games={games} />
+      <CoachMode initialOn={coachOn}>
+        <DiscoverPage viewer={{id: user.id, name: user.name, avatarUrl: user.avatarUrl}} data={data} museActions={museActions} listings={listings} start={params.start ?? null} eventId={params.event ? Number(params.event) : null} goal={goals.find(x => x.status === 'active') ?? null} games={games} level={level} />
+      </CoachMode>
     </>
   );
 }

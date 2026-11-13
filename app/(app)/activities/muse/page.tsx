@@ -1,6 +1,7 @@
 import {Ban, EyeOff, MessageCircle} from 'lucide-react';
 import {redirect} from 'next/navigation';
 import {OnboardingGate} from '@/components/activities/OnboardingGate';
+import {DevicesPanel} from '@/components/activities/DevicesPanel';
 import {SourcesPanel} from '@/components/activities/SourcesPanel';
 import {VaultList} from '@/components/activities/VaultList';
 import {listConnections, publicConnection} from '@/lib/activities/connections';
@@ -47,7 +48,7 @@ export default async function MusePage({searchParams}: {searchParams: Promise<Re
               This week vs last week: what improved, the gaps, and a plan to bridge them.
             </Text>
           </VStack>
-          <Button label="Open Coach" variant="primary" href="/activities/coach" />
+          <Button label="Turn on Coach mode" variant="primary" href="/activities?coach=on" />
         </HStack>
       </Card>
       <Card variant="blue">
@@ -94,6 +95,7 @@ export default async function MusePage({searchParams}: {searchParams: Promise<Re
           <VaultList events={events} />
         </VStack>
       </Card>
+      <DevicesPanel />
       <SourcesPanel connections={connections.map(publicConnection)} counts={counts} />
     </VStack>
   );

@@ -63,6 +63,23 @@ export function fallbackReason(focus: Focus, focusBand: Band | null): string {
   return `You're right in the middle of the group for ${what}, so you play at the standard level.`;
 }
 
+export type Readiness = {fit: 'good' | 'stretch'; note: string};
+
+/**
+ * Is this game a good match for the player right now, or a stretch? From the same banded answers as the handicap:
+ * recent sessions of the game's activity, and the 4-week level. Null when nothing was shared: no light either way.
+ */
+export function readiness(focus: Focus, focusBand: Band | null, generalBand: Band | null, level: string | null): Readiness | null {
+  const what = FOCUS_LABEL[focus];
+  const band = focusBand ?? generalBand;
+  if (band == null && level == null) return null;
+  const steady = level === 'regular' || level === 'strong';
+  if (level === 'new' && (band ?? 0) <= 1) return {fit: 'stretch', note: `This one is mostly ${what} and you're just getting going. Start with the easy levels and build up.`};
+  if (band === 0 && !steady) return {fit: 'stretch', note: `This one is mostly ${what} and you haven't done much of that lately. Ease in: your target is already scaled down.`};
+  if (focus !== 'general' && focusBand === 0) return {fit: 'stretch', note: `You've been active, but not with ${what} lately. Take the first level easy.`};
+  return {fit: 'good', note: `Good match: this is mostly ${what}, and that fits your recent weeks.`};
+}
+
 export const HANDICAP_RANGE = {targetScale: [0.6, 1.4], damageScale: [0.7, 1.6]} as const;
 
 const clampTo = (n: number, [lo, hi]: readonly [number, number]) => Math.min(hi, Math.max(lo, Number.isFinite(n) ? n : 1));
@@ -96,6 +113,8 @@ export type HandicapPlan = {
   handicaps: GameSpec['handicaps'];
   /** userId -> private one-liner, shown only to that player. */
   reasons: Record<number, string>;
+  /** userId -> good match or stretch, shown only to that player. Missing when they share nothing. */
+  readiness: Record<number, Readiness>;
   fairness: {label: string; spread: number; summary: string};
   museUsed: boolean;
 };

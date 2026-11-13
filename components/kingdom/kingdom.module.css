@@ -1,0 +1,80 @@
+/* Beta Kingdom gallery + games. Chrome on the --fb tokens; the 3D palette lives in lib/kingdom/palette.ts. */
+.page { min-height: 100dvh; padding: 16px; display: flex; flex-direction: column; gap: 16px; background: var(--fb-bg); color: var(--fb-text); font-family: var(--fb-font); }
+.boot { min-height: 100dvh; display: grid; place-items: center; color: var(--fb-text-secondary); font-family: var(--fb-font); }
+.header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.title { margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+.tagline { margin: 2px 0 0; color: var(--fb-text-secondary); }
+.headerNav { display: flex; gap: 8px; flex-wrap: wrap; }
+.grid { display: grid; grid-template-columns: 240px minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+.side { display: flex; flex-direction: column; gap: 10px; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tab { border: 0; padding: 8px 12px; border-radius: var(--fb-radius-pill); background: var(--fb-icon-bg); color: var(--fb-text); font: inherit; font-weight: 600; cursor: pointer; }
+.tab:hover { background: var(--fb-icon-bg-hover); }
+.tab[aria-selected='true'] { background: var(--fb-blue); color: #fff; }
+.list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 60vh; overflow: auto; }
+.item { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border: 1px solid var(--fb-divider); border-radius: var(--fb-radius); background: var(--fb-card); color: var(--fb-text); font: inherit; cursor: pointer; }
+.item:hover { background: var(--fb-hover); }
+.item[aria-current='true'] { border-color: var(--fb-blue); background: var(--fb-blue-soft); }
+.itemName { font-weight: 700; }
+.itemSub { font-size: 12px; color: var(--fb-text-secondary); }
+.stage { position: relative; min-height: 480px; aspect-ratio: 4 / 3; border-radius: var(--fb-radius); overflow: hidden; background: var(--fb-card); box-shadow: var(--fb-shadow-card); }
+.canvas { position: absolute; inset: 0; }
+.caption { position: absolute; left: 12px; bottom: 12px; display: flex; flex-direction: column; padding: 8px 12px; border-radius: var(--fb-radius); background: var(--fb-glass); backdrop-filter: blur(8px); pointer-events: none; }
+.caption span { font-size: 12px; color: var(--fb-text-secondary); }
+.overlay { position: absolute; inset: 0; display: grid; place-items: center; gap: 8px; text-align: center; padding: 24px; background: var(--fb-overlay); color: var(--fb-text); }
+.panel { display: flex; flex-direction: column; gap: 14px; padding: 14px; border-radius: var(--fb-radius); background: var(--fb-card); box-shadow: var(--fb-shadow-card); max-height: calc(100dvh - 32px); overflow: auto; }
+.section { display: flex; flex-direction: column; gap: 8px; padding-bottom: 12px; border-bottom: 1px solid var(--fb-divider-soft); }
+.section:last-child { border-bottom: 0; }
+.section h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fb-text-secondary); }
+.section h4 { margin: 4px 0 0; font-size: 12px; color: var(--fb-text-tertiary); }
+.assetName { margin: 0; font-size: 20px; }
+.assetSub { margin: 0; display: flex; gap: 8px; align-items: center; color: var(--fb-text-secondary); font-size: 13px; }
+.assetDesc { margin: 0; font-size: 14px; line-height: 1.4; }
+.chip { padding: 2px 8px; border-radius: var(--fb-radius-pill); background: var(--fb-ember-soft); color: var(--fb-ember-text); font-size: 11px; font-weight: 700; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 4px 0 0; }
+.stats div { padding: 6px; border-radius: 8px; background: var(--fb-input-bg); text-align: center; }
+.stats dt { font-size: 11px; color: var(--fb-text-tertiary); }
+.stats dd { margin: 0; font-weight: 700; }
+.row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.btn { min-height: 36px; padding: 6px 12px; border: 0; border-radius: var(--fb-radius-pill); background: var(--fb-icon-bg); color: var(--fb-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 120ms var(--fb-ease); }
+.btn:hover { background: var(--fb-icon-bg-hover); }
+.btn:focus-visible { outline: 2px solid var(--fb-blue); outline-offset: 2px; }
+.btn[aria-pressed='true'] { background: var(--fb-blue); color: #fff; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.swatch { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--fb-divider); cursor: pointer; }
+.swatch[aria-pressed='true'] { outline: 3px solid var(--fb-blue); outline-offset: 1px; }
+.hint { margin: 0; font-size: 12px; color: var(--fb-text-secondary); line-height: 1.4; }
+.srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.games { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.gameCard { padding: 14px; border-radius: var(--fb-radius); background: var(--fb-card); box-shadow: var(--fb-shadow-card); display: flex; flex-direction: column; gap: 8px; }
+.gameCard h3 { margin: 0; font-size: 16px; }
+.gameCard p { margin: 0; font-size: 13px; color: var(--fb-text-secondary); line-height: 1.4; }
+
+/* Games */
+.arena { position: relative; min-height: 520px; height: calc(100dvh - 120px); border-radius: var(--fb-radius); overflow: hidden; background: var(--fb-card); box-shadow: var(--fb-shadow-card); touch-action: none; user-select: none; -webkit-user-select: none; }
+.hud { position: absolute; left: 12px; right: 12px; top: 12px; display: flex; justify-content: space-between; gap: 8px; pointer-events: none; }
+.hudBox { padding: 8px 12px; border-radius: var(--fb-radius); background: var(--fb-glass); backdrop-filter: blur(8px); font-weight: 700; font-variant-numeric: tabular-nums; }
+.hudMsg { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); padding: 6px 14px; border-radius: var(--fb-radius-pill); background: var(--fb-glass); backdrop-filter: blur(8px); font-weight: 600; pointer-events: none; white-space: nowrap; max-width: 90%; overflow: hidden; text-overflow: ellipsis; }
+.card { position: absolute; inset: 0; display: grid; place-items: center; padding: 16px; background: var(--fb-overlay); }
+.cardInner { width: min(520px, 100%); display: flex; flex-direction: column; gap: 12px; padding: 20px; border-radius: var(--fb-radius-sheet); background: var(--fb-card); box-shadow: var(--fb-shadow-popover); }
+.cardInner h2 { margin: 0; font-size: 24px; }
+.cardInner ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; line-height: 1.4; }
+.touch { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; pointer-events: none; }
+.touch > * { pointer-events: auto; }
+.pad { display: grid; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(3, 56px); gap: 4px; }
+.padBtn { border: 0; border-radius: 14px; background: var(--fb-glass); color: var(--fb-text); font-size: 20px; font-weight: 800; backdrop-filter: blur(8px); touch-action: none; }
+.padBtn:active { background: var(--fb-blue); color: #fff; }
+.bigBtn { min-width: 96px; min-height: 72px; padding: 0 18px; border: 0; border-radius: 18px; background: var(--fb-ember); color: #fff; font: inherit; font-size: 16px; font-weight: 800; letter-spacing: 0.04em; touch-action: none; box-shadow: var(--fb-shadow-card); }
+.bigBtn:active { filter: brightness(0.9); }
+.tapLayer { position: absolute; inset: 0; }
+
+@media (max-width: 1100px) { .grid { grid-template-columns: 220px minmax(0, 1fr); } .panel { grid-column: 1 / -1; max-height: none; } }
+@media (max-width: 760px) {
+  .page { padding: 12px; }
+  .grid { grid-template-columns: 1fr; }
+  .stage { order: -1; min-height: 360px; aspect-ratio: 1 / 1; }
+  .list { flex-direction: row; overflow-x: auto; max-height: none; padding-bottom: 4px; }
+  .item { min-width: 150px; }
+  .arena { height: calc(100dvh - 140px); min-height: 420px; }
+}
+@media (hover: hover) and (pointer: fine) { .touch { display: none; } .touch.always { display: flex; } }

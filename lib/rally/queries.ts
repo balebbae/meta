@@ -8,8 +8,6 @@ import {ask} from '@/lib/activities/answers';
 import type {GameSpec, QuestCardPayload, RallyGamePayload, Trust} from '@/lib/activities/types';
 import {insertXpEvent} from '@/lib/closeness-queries';
 import {sendMessage} from '@/lib/messaging-queries';
-import {museConfigured} from '@/lib/muse/client';
-import {generateBadgeArt} from '@/lib/muse/image';
 import {sendPushToUser} from '@/lib/push';
 import {narrate, recapText} from '@/lib/rally/narration';
 import {verifyProofImage} from '@/lib/rally/proof';
@@ -32,6 +30,7 @@ import {
   type BossEvent,
 } from '@/lib/rally/scoring';
 import {bossKindFor, generateGameSpec, thisMonday, type Member, type SpecSource} from '@/lib/rally/spec';
+import type {Readiness} from '@/lib/rally/fairness';
 import {planHandicaps} from '@/lib/rally/handicap';
 
 export type QuestRow = {
@@ -47,7 +46,6 @@ export type QuestRow = {
   endsAt: string;
   bossHp: number;
   bossHpLeft: number;
-  bossImageUrl: string | null;
   bossKind: string;
   museUsed: boolean;
   buffed: boolean;
@@ -72,7 +70,6 @@ function mapQuest(r: Record<string, unknown>): QuestRow {
     endsAt: new Date((r.ends_at as string) ?? spec.endsAt).toISOString(),
     bossHp: (r.boss_hp as number) ?? spec.boss?.hp ?? 0,
     bossHpLeft: (r.boss_hp_left as number) ?? 0,
-    bossImageUrl: (r.boss_image_url as string | null) ?? null,
     bossKind: String(meta.bossKind ?? bossKindFor(spec.boss?.name ?? spec.title)),
     museUsed: Boolean(meta.museUsed),
     buffed: Boolean(meta.buffed),
@@ -114,9 +111,10 @@ export async function listQuestsForConversation(conversationId: number): Promise
   return rows.map(mapQuest);
 }
 
-export async function listQuestsForUser(userId: number): Promise<QuestRow[]> {
-  const rows = await sql`select q.* from quests q join quest_progress p on p.quest_id = q.id where p.user_id = ${userId} and q.template is not null order by q.created_at desc limit 20`;
-  return rows.map(mapQuest);
+/** `fit` is the viewer's own good-match / stretch light for each quest. */
+export async function listQuestsForUser(userId: number): Promise<(QuestRow & {fit: Readiness['fit'] | null})[]> {
+  const rows = await sql`select q.*, p.progress->'readiness'->>'fit' as fit from quests q join quest_progress p on p.quest_id = q.id where p.user_id = ${userId} and q.template is not null order by q.created_at desc limit 20`;
+  return rows.map(r => ({...mapQuest(r), fit: (r.fit as Readiness['fit'] | null) ?? null}));
 }
 
 export async function isQuestMember(questId: number, userId: number): Promise<boolean> {
@@ -157,24 +155,16 @@ export async function createQuest(opts: {source: SpecSource; conversationId: num
   const spec: GameSpec = {...generated.spec, handicaps: plan.handicaps};
   const museUsed = generated.museUsed;
   const bossKind = bossKindFor(spec.boss?.name ?? spec.title);
-  let bossImageUrl: string | null = null;
-  if (museConfigured() && spec.boss) {
-    try {
-      bossImageUrl = await generateBadgeArt(`${spec.boss.artPrompt}. Cartoon game boss, friendly villain`);
-    } catch (err) {
-      console.error('[rally] boss art failed', err instanceof Error ? err.message : err);
-    }
-  }
   const hp = spec.boss?.hp ?? 0;
   const meta = JSON.stringify({museUsed, bossKind, buffed: false, focus: plan.focus, fairness: plan.fairness, handicapsByMuse: plan.museUsed, ...(opts.goalId ? {goalId: opts.goalId} : {})});
   const [row] = await sql`
-    insert into quests (title, description, xp_reward, goal_type, goal_count, week_start, muse_meta, template, spec, conversation_id, reel_id, created_by, status, starts_at, ends_at, boss_hp, boss_hp_left, boss_image_url)
-    values (${spec.title}, ${spec.story}, 100, 'rally', ${spec.levels.length}, ${thisMonday().toISOString().slice(0, 10)}, ${meta}::jsonb, ${spec.template}, ${JSON.stringify(spec)}::jsonb, ${opts.conversationId}, ${opts.source.kind === 'reel' ? opts.source.reelId : null}, ${opts.creator.id}, 'active', ${spec.startsAt}, ${spec.endsAt}, ${hp}, ${hp}, ${bossImageUrl})
+    insert into quests (title, description, xp_reward, goal_type, goal_count, week_start, muse_meta, template, spec, conversation_id, reel_id, created_by, status, starts_at, ends_at, boss_hp, boss_hp_left)
+    values (${spec.title}, ${spec.story}, 100, 'rally', ${spec.levels.length}, ${thisMonday().toISOString().slice(0, 10)}, ${meta}::jsonb, ${spec.template}, ${JSON.stringify(spec)}::jsonb, ${opts.conversationId}, ${opts.source.kind === 'reel' ? opts.source.reelId : null}, ${opts.creator.id}, 'active', ${spec.startsAt}, ${spec.endsAt}, ${hp}, ${hp})
     returning *`;
   const quest = mapQuest(row);
   for (const m of members) {
     // handicapWhy is private to that player: getQuestState only returns it to them.
-    const progress = JSON.stringify({handicapWhy: plan.reasons[m.id] ?? null});
+    const progress = JSON.stringify({handicapWhy: plan.reasons[m.id] ?? null, readiness: plan.readiness[m.id] ?? null});
     await sql`insert into quest_progress (quest_id, user_id, status, progress) values (${quest.id}, ${m.id}, 'active', ${progress}::jsonb) on conflict (quest_id, user_id) do nothing`;
   }
   const payload: QuestCardPayload = {questId: quest.id, title: spec.title, template: spec.template, bossName: spec.boss?.name, bossHp: hp, ...(quest.reelId ? {reelId: quest.reelId} : {})};
@@ -400,7 +390,7 @@ async function completeQuest(quest: QuestRow, members: QuestMember[]) {
   const days = Math.max(1, Math.ceil((Date.now() - new Date(quest.startsAt).getTime()) / 86_400_000));
   const {text} = await recapText({title: quest.title, bossName, finishers: finishers.map(f => f.name), moves: moves.length, days});
   const author = quest.createdBy ?? finisherIds[0];
-  if (author) await sql`insert into posts (author_id, content, image_url, audience) values (${author}, ${`Muse Game Master · ${text}`}, ${quest.bossImageUrl && !quest.bossImageUrl.startsWith('data:') ? quest.bossImageUrl : null}, 'friends')`;
+  if (author) await sql`insert into posts (author_id, content, audience) values (${author}, ${`Muse Game Master · ${text}`}, 'friends')`;
 }
 
 // ---- State for the dashboard (§17.2) ----------------------------------------------
@@ -427,6 +417,8 @@ export type QuestState = {
   fairness: {label: string; summary: string} | null;
   /** The viewer's own handicap and private reason; never other players'. */
   myHandicap: {targetScale: number; damageScale: number; why: string | null} | null;
+  /** The viewer's own good-match / stretch light; never other players'. Null for older quests or nothing shared. */
+  myReadiness: Readiness | null;
 };
 
 export async function getQuestState(questId: number, viewerId: number): Promise<QuestState | null> {
@@ -437,7 +429,7 @@ export async function getQuestState(questId: number, viewerId: number): Promise<
     listMoves(questId),
     sql`select g.user_id, g.slug, g.label, g.description from avatar_gear g join quest_progress p on p.user_id = g.user_id where p.quest_id = ${questId}`,
     sql`select id, user_id, tier, label, sponsor, code, status from reward_claims where quest_id = ${questId} order by id`,
-    sql`select q.muse_meta->'fairness' as fairness, p.progress->>'handicapWhy' as why from quests q left join quest_progress p on p.quest_id = q.id and p.user_id = ${viewerId} where q.id = ${questId}`,
+    sql`select q.muse_meta->'fairness' as fairness, p.progress->>'handicapWhy' as why, p.progress->'readiness' as readiness from quests q left join quest_progress p on p.quest_id = q.id and p.user_id = ${viewerId} where q.id = ${questId}`,
   ]);
   const fairnessRaw = (mine?.fairness ?? null) as {label?: string; summary?: string} | null;
   const myScale = quest.spec.handicaps.find(x => x.userId === viewerId);
@@ -480,6 +472,7 @@ export async function getQuestState(questId: number, viewerId: number): Promise<
     museUsed: quest.museUsed,
     fairness: fairnessRaw?.label ? {label: fairnessRaw.label, summary: fairnessRaw.summary ?? ''} : null,
     myHandicap: myScale ? {targetScale: myScale.targetScale, damageScale: myScale.damageScale, why: (mine?.why as string | null) ?? null} : null,
+    myReadiness: (mine?.readiness as Readiness | null) ?? null,
   };
 }
 

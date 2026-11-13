@@ -1,36 +1,44 @@
-/** Mounts: chunky ponies with layered manes, tails and saddles. The `rider` pivot sits on the saddle; parent a hero there. */
-import {Group, Object3D} from 'three';
-import {C, shade} from '../palette';
+/** Ponies in the soft-toy style. Pivots: root, head, tail, legFL/FR/BL/BR and `rider` on the saddle (catalog.ts seats a hero there). */
+import {CapsuleGeometry, Group, Mesh, Object3D, SphereGeometry, ConeGeometry} from 'three';
+import {RoundedBoxGeometry} from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import {C} from '../palette';
 import {makeRig} from '../rig';
 import type {MountKind, Rig} from '../types';
-import {VOXEL, Vox, meshPart} from '../voxel';
-
-const piv = (name: string, parent: Object3D, x: number, y: number, z: number) => { const o = new Object3D(); o.name = name; o.position.set(x * VOXEL, y * VOXEL, z * VOXEL); parent.add(o); return o; };
+import {blob, capsule, cutaway, geo, mesh, piv, softBlush, softEyes, softMaterial, softSmile} from './soft';
 
 export function buildMount(kind: MountKind = 'chestnut'): Rig {
-  const royal = kind === 'royal', coat = royal ? C.whitePony : C.chestnut, mane = royal ? C.hairBlonde : C.mane, hoof = C.hoof;
-  const group = new Group(); group.name = `mount:${kind}`; group.position.y = VOXEL / 2;
+  const royal = kind === 'royal', coat = royal ? C.whitePony : C.chestnut, mane = royal ? C.hairBlonde : C.mane;
+  const sk = softMaterial('skin', coat), mn = softMaterial('cloth', mane), leather = softMaterial('leather', C.leather);
+  const group = new Group(); group.name = `mount:${kind}`;
   const root = piv('root', group, 0, 0, 0);
-  const body = new Vox();
-  body.ellipsoid(0, 8, 0, 3.6, 3.4, 6.6, coat, 'skin');
-  if (royal) { body.ellipsoid(0, 7, 0, 4.2, 3.4, 7, C.blue, 'cloth', (x, y, z) => y <= 8 && y >= 4 && Math.abs(z) <= 6); body.box(-4, 4, -6, 4, 4, 6, C.gold, 'gold'); for (const s of [-1, 1]) { body.box(s * 4, 6, 2, s * 4, 7, 2, C.gold, 'gold'); body.box(s * 4, 5, 1, s * 4, 5, 3, C.gold, 'gold'); } }
-  // saddle: blanket, seat, pommel
-  body.box(-4, 10, -3, 4, 10, 3, royal ? C.gold : C.leather, royal ? 'gold' : 'leather'); body.box(-2, 11, -2, 2, 11, 2, royal ? C.blue : C.leatherDark, 'leather'); body.box(-1, 12, -2, 1, 12, 2, royal ? C.blueDark : C.leatherDark, 'leather'); body.box(0, 13, 2, 0, 13, 2, royal ? C.gold : C.leather, royal ? 'gold' : 'leather');
-  for (const s of [-1, 1]) body.box(s * 4, 7, 0, s * 4, 9, 0, royal ? C.gold : C.leatherDark, 'leather');
-  body.jitter(royal ? 11 : 12, 0.03, ['skin']);
-  root.add(meshPart(body, [0, 0, 0], 'body'));
-  const leg = (name: string, x: number, z: number) => { const p = piv(name, root, x, 5, z), v = new Vox(); v.box(-1, -4, -1, 1, 0, 1, coat, 'skin'); v.box(-1, -5, -1, 1, -5, 1, hoof, 'leather'); if (royal) v.box(-1, -1, -1, 1, 0, 1, C.blue, 'cloth'); p.add(meshPart(v, [0, 0, 0], 'leg')); };
-  leg('legFL', -2, 4); leg('legFR', 2, 4); leg('legBL', -2, -4); leg('legBR', 2, -4);
-  const head = piv('head', root, 0, 10, 5), hv = new Vox();
-  hv.box(-1, -1, 0, 1, 3, 2, coat, 'skin'); hv.ellipsoid(0, 4.5, 3, 2.6, 2.3, 3.4, coat, 'skin'); hv.box(-1, 3.5, 6, 1, 4.5, 7, shade(coat, 1.05), 'skin');
-  hv.box(-1, 3, 7, 1, 3, 7, C.ink, 'ink'); hv.paint(-1, 3, 7, C.ink); hv.decal(-1, 3, C.mouth, 'ink'); hv.box(-2, 6, 3, -2, 7, 3, coat, 'skin'); hv.box(2, 6, 3, 2, 7, 3, coat, 'skin');
-  for (const s of [-1, 1]) { hv.box(s * 3, 5, 3, s * 3, 6, 3, C.ink, 'ink'); hv.paint(s * 3, 6, 3, C.white); hv.box(s * 3, 4, 4, s * 3, 4, 4, C.blush, 'skin'); hv.paint(s * 1, 4, 7, C.ink, 'ink'); }
-  for (let i = 0; i < 6; i++) hv.box(0, 3 + Math.floor(i * 0.6), -1 + i, 0, 7 - Math.floor(i * 0.4), -1 + i, mane, 'cloth'); hv.box(-1, 7, 2, 1, 7, 4, mane, 'cloth'); hv.box(0, 7, 1, 0, 8, 2, mane, 'cloth');
-  if (royal) { hv.box(-1, 8, 3, 1, 8, 3, C.gold, 'gold'); hv.box(0, 9, 3, 0, 11, 3, C.blue, 'cloth'); hv.box(0, 2, 2, 0, 2, 2, C.gold, 'gold'); }
-  else hv.box(-1, 2, 4, 1, 2, 4, C.leatherDark, 'leather');
-  head.add(meshPart(hv, [0, 0, 0], 'head'));
-  const tail = piv('tail', root, 0, 8, -7), tv = new Vox(); tv.box(0, -1, 0, 0, 1, 0, mane, 'cloth'); tv.box(0, -5, -1, 0, -2, -1, mane, 'cloth'); tv.box(-1, -4, -1, 1, -3, -1, mane, 'cloth'); tail.add(meshPart(tv, [0, 0, 0], 'tail'));
-  piv('rider', root, 0, 13, 0);
-  const pivots: Record<string, Object3D> = {}; group.traverse((o) => { if (o.name && o !== group) pivots[o.name] = o; });
-  return makeRig(group, 'pony', pivots, 18 * VOXEL, ['idle', 'walk', 'trot', 'run', 'jump', 'attack', 'hit', 'celebrate']);
+  const body = mesh(geo('ponyBody', () => new CapsuleGeometry(0.27, 0.46, 8, 24).rotateX(Math.PI / 2)), sk); body.position.set(0, 0.62, 0); root.add(body);
+  blob(root, sk, 0.26, 0.21, 0.3, 0, 0.55, 0.04);
+  for (const [name, x, z] of [['legFL', -0.16, 0.3], ['legFR', 0.16, 0.3], ['legBL', -0.16, -0.3], ['legBR', 0.16, -0.3]] as const) {
+    const leg = piv(name, root, x, 0.44, z); const lm = mesh(capsule(0.09, 0.2), sk); lm.position.y = -0.2; leg.add(lm); blob(leg, softMaterial('leather', C.hoof), 0.1, 0.06, 0.11, 0, -0.4, 0.01);
+  }
+  const neck = mesh(capsule(0.15, 0.22), sk); neck.position.set(0, 0.84, 0.42); neck.rotation.x = -0.55; root.add(neck);
+  for (const [y, z] of [[1.02, 0.33], [0.97, 0.2], [0.9, 0.08]]) blob(root, mn, 0.1, 0.09, 0.14, 0, y, z);
+  const head = piv('head', root, 0, 1.0, 0.52);
+  blob(head, sk, 0.27, 0.25, 0.3, 0, 0.1, 0.06); blob(head, sk, 0.18, 0.14, 0.17, 0, 0.0, 0.33);
+  for (const s of [-1, 1]) blob(head, softMaterial('skin', C.hoof), 0.02, 0.015, 0.012, s * 0.06, 0.02, 0.49, false);
+  softSmile(head, -0.07, 0.49, 0.035, -0.03, 0.01);
+  softEyes(head, {x: 0.22, y: 0.17, z: 0.17, w: 0.055, h: 0.08, yaw: 1.0}); softBlush(head, 0.25, 0.06, 0.16, 0.06, 0.035, 1.1);
+  for (const s of [-1, 1]) { const ear = mesh(geo('ponyEar', () => new ConeGeometry(0.05, 0.14, 12).translate(0, 0.07, 0)), sk); ear.position.set(s * 0.14, 0.3, -0.02); ear.rotation.z = s * -0.3; head.add(ear); }
+  blob(head, mn, 0.12, 0.08, 0.12, 0.04, 0.33, 0.1); blob(head, mn, 0.1, 0.07, 0.1, -0.06, 0.31, 0.15);
+  const tail = piv('tail', root, 0, 0.74, -0.5); const tm = mesh(capsule(0.08, 0.26), mn); tm.rotation.x = 0.7; tm.position.set(0, -0.2 * Math.cos(0.7), -0.2 * Math.sin(0.7)); tail.add(tm); blob(tail, mn, 0.1, 0.09, 0.1, 0, -0.33, -0.29);
+  // saddle: blanket, seat shell, pommel and cantle; the rider pivot sits on top
+  const blanket = mesh(geo('blanket', () => new RoundedBoxGeometry(0.58, 0.05, 0.5, 2, 0.02)), softMaterial('cloth', royal ? C.blue : C.crimson)); blanket.position.set(0, 0.84, 0); root.add(blanket);
+  const seat = mesh(geo('saddleSeat', () => { const g = new SphereGeometry(1, 28, 20); g.scale(0.26, 0.12, 0.3); return cutaway(g, (_x, y) => y > 0); }), royal ? softMaterial('gold', C.gold) : leather); seat.position.set(0, 0.86, 0); root.add(seat);
+  blob(root, royal ? softMaterial('gold', C.gold) : leather, 0.05, 0.07, 0.05, 0, 0.95, 0.22); blob(root, royal ? softMaterial('gold', C.gold) : leather, 0.09, 0.06, 0.05, 0, 0.94, -0.23);
+  piv('rider', root, 0, 0.96, 0);
+  if (royal) {
+    const cap = mesh(geo('caparison', () => cutaway(new CapsuleGeometry(0.3, 0.46, 8, 24).rotateX(Math.PI / 2), (_x, y) => y < 0.06)), softMaterial('cloth', C.blue)); cap.position.set(0, 0.62, 0); root.add(cap);
+    for (const s of [-1, 1]) for (const z of [-0.3, -0.1, 0.1, 0.3]) blob(root, softMaterial('gold', C.gold), 0.03, 0.03, 0.03, s * 0.29, 0.42, z);
+    const plume = mesh(capsule(0.05, 0.14), softMaterial('cloth', C.blue)); plume.position.set(0, 0.46, 0.02); plume.rotation.x = -0.3; head.add(plume);
+    blob(head, softMaterial('gold', C.gold), 0.045, 0.045, 0.03, 0, 0.3, 0.22);
+  }
+  const pivots: Record<string, Object3D> = {}; group.traverse((o) => { if (o.name && o !== group && !(o as Mesh).isMesh) pivots[o.name] = o; });
+  const rig = makeRig(group, 'pony', pivots, 1.34, ['idle', 'walk', 'trot', 'run', 'jump', 'attack', 'hit', 'celebrate']);
+  rig.dispose = () => { group.removeFromParent(); };
+  return rig;
 }

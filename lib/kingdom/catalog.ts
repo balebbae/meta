@@ -32,8 +32,8 @@ function seatRider(mount: Rig, options: BuildOptions): Rig {
   const rider = buildHero({tier: 'iron', gender: 'masc', ...options.hero});
   const seat = mount.pivots.rider;
   if (seat) {
-    rider.group.position.set(0, -0.27, 0); // avatar hips are 0.30 m up; sit them on the saddle
-    for (const [name, spread] of [['legL', 0.55], ['legR', -0.55]] as const) { const leg = rider.pivots[name]; if (leg) { leg.rotation.x = -1.35; leg.rotation.z = spread; } }
+    rider.group.scale.setScalar(0.85); rider.group.position.set(0, -0.3, 0.02); // a slightly smaller rider; hips (0.30 m up) land on the saddle
+    for (const [name, spread] of [['legL', 0.9], ['legR', -0.9]] as const) { const leg = rider.pivots[name]; if (leg) { leg.rotation.x = -1.2; leg.rotation.z = spread; } }
     seat.add(rider.group);
     rider.rest = 'idle';
     mount.attached = [rider];

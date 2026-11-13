@@ -1,127 +1,106 @@
 /**
- * Creatures: slime, goblin, cyclops, stone giant, baby dragon, elder dragon. Each returns a Rig with the pivots its
- * animator moves (root, head, armL/armR, legL/legR, wingL/wingR, tail, flame). Variants change size and anatomy.
+ * Kaijus in the soft-toy style: Moss Slime, Goblin, Cyclops, Stone Giant, Baby Dragon, Elder Dragon.
+ * Species, pivot names and states match the animator (rig.ts) and the game scenes; only the look changed.
  */
-import {Group, Object3D} from 'three';
-import {C, shade} from '../palette';
-import {makeRig} from '../rig';
-import type {CreatureKind, Rig, Variant} from '../types';
-import {VOXEL, Vox, meshPart} from '../voxel';
-
-export {DIFFICULTY, type Difficulty} from '../difficulty';
+import {ConeGeometry, CylinderGeometry, DoubleSide, Group, LatheGeometry, Mesh, MeshStandardMaterial, Object3D, Shape, ShapeGeometry, SphereGeometry, TorusGeometry, Vector2} from 'three';
+import {C} from '../palette';
 import {DIFFICULTY} from '../difficulty';
-const SCALE: Record<Variant, number> = {small: 0.78, medium: 1, boss: 1.3};
+import {makeRig} from '../rig';
+import type {AnimState, CreatureKind, Rig, Species, Variant} from '../types';
+import {BLUSH, blob, capsule, cutaway, flower, geo, mesh, piv, softBlush, softEyes, softMaterial, softSmile} from './soft';
+export {DIFFICULTY, type Difficulty} from '../difficulty';
 
-const piv = (name: string, parent: Object3D, x: number, y: number, z: number) => { const o = new Object3D(); o.name = name; o.position.set(x * VOXEL, y * VOXEL, z * VOXEL); parent.add(o); return o; };
-function finish(group: Group, species: Rig['species'], heightVox: number, states: Rig['states'], variant: Variant, kind: CreatureKind): Rig {
-  const pivots: Record<string, Object3D> = {}; group.traverse((o) => { if (o.name && o !== group) pivots[o.name] = o; });
-  group.scale.setScalar(SCALE[variant]); group.position.y = VOXEL / 2 * SCALE[variant];
-  const rig = makeRig(group, species, pivots, heightVox * VOXEL * SCALE[variant], states);
+const SCALE: Record<Variant, number> = {small: 0.78, medium: 1, boss: 1.3};
+function finish(group: Group, species: Species, height: number, states: AnimState[], variant: Variant, kind: CreatureKind, base = 1): Rig {
+  const pivots: Record<string, Object3D> = {}; group.traverse((o) => { if (o.name && o !== group && !(o as Mesh).isMesh) pivots[o.name] = o; });
+  group.scale.setScalar(SCALE[variant] * base);
+  const rig = makeRig(group, species, pivots, height * SCALE[variant] * base, states);
+  rig.dispose = () => { group.removeFromParent(); }; // geometry and materials are shared caches (soft.ts)
   group.userData.creature = {kind, variant, difficulty: DIFFICULTY[kind][variant]};
   return rig;
 }
-function eyes(v: Vox, ex: number, ey: number, w = 2, h = 2, blushGap = 1, mouthDrop = 2, mouthW = 1, single = false): void {
-  const xs = single ? [0] : [-1, 1];
-  for (const s of xs) for (let i = 0; i < w; i++) for (let j = 0; j < h; j++) v.decal(s * ex + (s <= 0 ? -i : i) + (single ? i : 0), ey + j, C.ink, 'ink');
-  for (const s of xs) v.decal(s * ex, ey + h - 1, C.white, 'ink');
-  for (const s of [-1, 1]) v.decal(s * (ex + w + blushGap), ey - 1, C.blush, 'skin');
-  const my = ey - mouthDrop; v.decal(0, my, C.mouth, 'ink'); if (mouthW) { v.decal(-1, my + 1, C.mouth, 'ink'); v.decal(1, my + 1, C.mouth, 'ink'); }
+function club(hand: Object3D, len: number, r: number, color: number, spikes = false): void {
+  const g = new Group(); g.rotation.z = -2.05; hand.add(g); const wood = softMaterial('wood', color);
+  const shaft = mesh(geo(`club:${len}:${r}`, () => new CylinderGeometry(r * 1.7, r, len, 14)), wood); shaft.position.y = len / 2; g.add(shaft);
+  blob(g, wood, r * 2, r * 1.7, r * 2, 0, len, 0);
+  if (spikes) for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2, sp = mesh(geo('clubSpike', () => new ConeGeometry(0.018, 0.07, 8)), softMaterial('metal', C.iron)); sp.position.set(Math.cos(a) * r * 1.9, len + r * 0.2, Math.sin(a) * r * 1.9); sp.rotation.set(0, -a, -Math.PI / 2); g.add(sp); }
 }
+function crown(parent: Object3D, x: number, y: number, z: number, R: number, jewel: number): void {
+  const g = new Group(); g.position.set(x, y, z); g.rotation.z = -0.12; parent.add(g); const gold = softMaterial('gold', C.gold);
+  g.add(mesh(geo(`crownRing:${R}`, () => { const t = new TorusGeometry(R, R * 0.2, 10, 40); t.rotateX(Math.PI / 2); return t; }), gold));
+  for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2, s = mesh(geo(`crownSpike:${R}`, () => new ConeGeometry(R * 0.2, R * 0.6, 8)), gold); s.position.set(Math.cos(a) * R, R * 0.4, Math.sin(a) * R); g.add(s); if (i % 2 === 0) blob(g, softMaterial('gloss', jewel), R * 0.16, R * 0.16, R * 0.16, Math.cos(a) * R * 1.05, 0, Math.sin(a) * R * 1.05); }
+}
+const horn = (parent: Object3D, x: number, y: number, z: number, r: number, h: number, color: number, rx: number, rz: number): void => { const m = mesh(geo(`horn:${r}:${h}`, () => new ConeGeometry(r, h, 12).translate(0, h / 2, 0)), softMaterial('skin', color)); m.position.set(x, y, z); m.rotation.set(rx, 0, rz); parent.add(m); };
+const wingShape = (): ShapeGeometry => { const s = new Shape(); s.moveTo(0, 0); s.quadraticCurveTo(0.1, 0.4, 0.42, 0.38); s.quadraticCurveTo(0.44, 0.22, 0.37, 0.12); s.quadraticCurveTo(0.46, 0.0, 0.34, -0.1); s.quadraticCurveTo(0.18, -0.1, 0, -0.08); s.closePath(); return new ShapeGeometry(s, 12); };
 
 export function buildCreature(kind: CreatureKind, variant: Variant = 'medium'): Rig {
-  const group = new Group(); group.name = `creature:${kind}:${variant}`;
+  const boss = variant === 'boss', group = new Group(); group.name = `creature:${kind}:${variant}`;
   const root = piv('root', group, 0, 0, 0);
-  const boss = variant === 'boss';
+  const walkers: AnimState[] = ['idle', 'walk', 'run', 'jump', 'attack', 'hit', 'celebrate'];
+
   if (kind === 'slime') {
-    const v = new Vox();
-    v.ellipsoid(0, 5, 0, 7.5, 5.2, 7, C.slime, 'slime', (x, y) => y >= 1); v.ellipsoid(0, 4, 0, 8, 3.8, 7.5, C.slime, 'slime', (x, y) => y >= 1 && y <= 4);
-    v.ellipsoid(-3, 8, -2, 2.2, 1.6, 2.2, shade(C.slime, 1.15), 'slime');
-    v.box(0, 10, 0, 0, 11, 0, C.greenDark, 'leaf'); v.box(-1, 12, 0, 1, 12, 0, C.white, 'cloth'); v.box(0, 12, -1, 0, 12, 1, C.white, 'cloth'); v.box(0, 12, 0, 0, 12, 0, C.gold, 'gold'); v.box(1, 11, 0, 2, 11, 0, C.greenDark, 'leaf');
-    if (boss) { v.cylY(0, 0, 3.4, 10, 10, C.gold, 'gold'); for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; v.box(Math.round(Math.sin(a) * 3.2), 11, Math.round(Math.cos(a) * 3.2), Math.round(Math.sin(a) * 3.2), 11 + (i % 2), Math.round(Math.cos(a) * 3.2), C.gold, 'gold'); } v.ellipsoid(4, 7, 3, 2.2, 1.6, 2.2, shade(C.slime, 1.12), 'slime'); v.ellipsoid(-2, 3, 6, 1.8, 1.4, 1.8, shade(C.slime, 1.1), 'slime'); }
-    eyes(v, 2, 5, 2, 3, 1, 2);
-    root.add(meshPart(v, [0, 0, 0], 'body'));
-    return finish(group, 'slime', 13, ['idle', 'walk', 'run', 'jump', 'squash', 'attack', 'hit', 'celebrate'], variant, kind);
+    const col = boss ? C.slimeDark : C.slime, m = softMaterial('slime', col);
+    root.add(mesh(geo('slimeDome', () => new LatheGeometry([[0, 0], [0.3, 0], [0.42, 0.07], [0.46, 0.2], [0.45, 0.38], [0.38, 0.54], [0.24, 0.65], [0, 0.7]].map(([r, y]) => new Vector2(r, y)), 40)), m));
+    softEyes(root, {x: 0.16, y: 0.42, z: 0.4, w: 0.06, h: 0.085, yaw: 0.35}); softBlush(root, 0.3, 0.33, 0.3, 0.07, 0.04, 0.75); softSmile(root, 0.3, 0.445, 0.045, -0.05, 0.012);
+    const n = boss ? 6 : 3; for (let i = 0; i < n; i++) { const a = (i / n) * Math.PI * 2 + 0.4; blob(root, m, 0.075, 0.05, 0.075, Math.cos(a) * 0.44, 0.03, Math.sin(a) * 0.44); }
+    flower(root, 0.1, 0.68, 0.1, C.pink, C.gold, 1.1);
+    if (boss) crown(root, -0.08, 0.66, -0.06, 0.13, C.crimson);
+    return finish(group, 'slime', 0.72, ['idle', 'walk', 'run', 'jump', 'squash', 'attack', 'hit', 'celebrate'], variant, kind);
   }
   if (kind === 'goblin') {
-    const sk = C.goblin, body = new Vox();
-    body.ellipsoid(0, 7, 0, 4.2, 4, 3.6, sk, 'skin', (x, y) => y >= 4);
-    body.box(-4, 5, -3, 4, 9, 3, C.leatherDark, 'leather', ); body.box(-2, 5, 3, 2, 9, 4, sk, 'skin'); body.del(-2, 9, 4); body.del(2, 9, 4);
-    body.box(-4, 4, -3, 4, 4, 3, C.leather, 'leather'); body.box(0, 4, 4, 0, 4, 4, C.gold, 'gold');
-    body.box(-3, 1, -1, -2, 3, 1, sk, 'skin'); body.box(2, 1, -1, 3, 3, 1, sk, 'skin'); body.box(-3, 0, -2, -1, 0, 2, C.leatherDark, 'leather'); body.box(1, 0, -2, 3, 0, 2, C.leatherDark, 'leather');
-    root.add(meshPart(body, [0, 0, 0], 'body'));
-    const head = piv('head', root, 0, 11, 0), hv = new Vox();
-    hv.ellipsoid(0, 5, 0, 5.4, 4.6, 4.8, sk, 'skin');
-    for (const s of [-1, 1]) { for (let i = 0; i < 6; i++) hv.box(s * (5 + i), 5 + Math.floor(i / 2), -1, s * (5 + i), 7 + Math.floor(i / 2), 1, sk, 'skin'); hv.box(s * 6, 6, 0, s * 8, 7, 0, C.blush, 'skin'); }
-    hv.ellipsoid(0, 3, 5, 1.6, 1.3, 1.3, shade(sk, 0.9), 'skin');
-    if (boss) { hv.shell(0, 5.3, -0.2, 6.4, 5.6, 5.6, 1.3, C.ironDark, 'metal', (x, y, z) => y >= 5 && !(z > 2 && y <= 8 && Math.abs(x) <= 3)); hv.box(0, 11, 0, 0, 13, 0, C.ironDark, 'metal'); }
-    eyes(hv, 2, 4, 2, 2, 1, 3); hv.decal(1, 1, C.white, 'ink'); hv.decal(-2, 7, C.ink, 'ink'); hv.decal(-3, 7, C.ink, 'ink'); hv.decal(2, 7, C.ink, 'ink'); hv.decal(3, 7, C.ink, 'ink');
-    head.add(meshPart(hv, [0, 0, 0], 'head'));
-    const arm = (s: -1 | 1) => { const a = piv(s < 0 ? 'armL' : 'armR', root, s * 5, 10, 0), v = new Vox(); v.box(-1, -5, -1, 1, 0, 1, sk, 'skin'); if (boss) v.box(-2, -1, -1, 2, 0, 1, C.leatherDark, 'leather'); a.add(meshPart(v, [0, 0, 0], 'arm')); return a; };
-    arm(-1); const armR = arm(1); armR.rotation.z = 2.0; (root.getObjectByName('armL') as Object3D).rotation.z = -0.5;
-    const club = new Vox(); club.box(0, -8, 0, 0, -2, 0, C.wood, 'wood'); club.ellipsoid(0, -10, 0, 2.4, 2.8, 2.4, C.woodDark, 'wood'); if (boss) for (const [x, y, z] of [[-3, -10, 0], [3, -10, 0], [0, -13, 0], [0, -10, 3], [0, -10, -3]]) club.box(x, y, z, x, y, z, C.silver, 'metal');
-    const cm = meshPart(club, [0, 0, 0], 'club'); cm.position.y = -5 * VOXEL; armR.add(cm);
-    return finish(group, 'goblin', 16, ['idle', 'walk', 'run', 'jump', 'attack', 'hit', 'celebrate'], variant, kind);
+    const skin = softMaterial('skin', C.goblin);
+    for (const s of [-1, 1]) { const leg = piv(s < 0 ? 'legL' : 'legR', root, s * 0.1, 0.24, 0); const lm = mesh(capsule(0.07, 0.1), skin); lm.position.y = -0.12; leg.add(lm); blob(leg, softMaterial('leather', C.leatherDark), 0.085, 0.045, 0.1, 0, -0.22, 0.02); }
+    const torso = piv('torso', root, 0, 0.24, 0); blob(torso, skin, 0.25, 0.23, 0.22, 0, 0.2, 0);
+    const vest = mesh(geo('goblinVest', () => { const g = new SphereGeometry(1, 28, 20); g.scale(0.27, 0.25, 0.24); return cutaway(g, (x, y, z) => y < 0.17 && y > -0.2 && !(z > 0.1 && Math.abs(x) < 0.12)); }), softMaterial('leather', C.leather)); vest.position.y = 0.2; torso.add(vest);
+    const belt = mesh(geo('goblinBelt', () => { const t = new TorusGeometry(0.25, 0.022, 8, 40); t.scale(1, 1, 0.9); t.rotateX(Math.PI / 2); return t; }), softMaterial('leather', C.leatherDark)); belt.position.y = 0.06; torso.add(belt);
+    for (const s of [-1, 1]) { const arm = piv(s < 0 ? 'armL' : 'armR', torso, s * 0.25, 0.32, 0); arm.rotation.z = s * 0.3; const am = mesh(capsule(0.055, 0.16), skin); am.position.y = -0.13; arm.add(am); const hand = piv(s < 0 ? 'handL' : 'handR', arm, 0, -0.26, 0); blob(hand, skin, 0.06, 0.06, 0.06, 0, 0, 0); if (s > 0) club(hand, 0.34, 0.03, C.wood, boss); }
+    const head = piv('head', torso, 0, 0.44, 0); blob(head, skin, 0.3, 0.27, 0.28, 0, 0.2, 0);
+    for (const s of [-1, 1]) { const ear = blob(head, skin, 0.17, 0.085, 0.045, s * 0.34, 0.3, 0); ear.rotation.z = s * 0.45; const inner = blob(head, softMaterial('skin', 0xf0b7b0), 0.11, 0.05, 0.02, s * 0.35, 0.305, 0.03, false); inner.rotation.z = s * 0.45; }
+    softEyes(head, {x: 0.11, y: 0.22, z: 0.25, w: 0.055, h: 0.075}); softBlush(head, 0.2, 0.14, 0.2, 0.07, 0.04, 0.5); softSmile(head, 0.11, 0.27, 0.045, -0.045, 0.012);
+    blob(head, softMaterial('skin', C.goblinDark), 0.04, 0.03, 0.035, 0, 0.17, 0.28);
+    const fang = mesh(geo('fang', () => new ConeGeometry(0.012, 0.035, 8)), softMaterial('flat', 0xffffff), false); fang.position.set(0.03, 0.085, 0.275); fang.rotation.x = Math.PI; head.add(fang);
+    if (boss) { const cap = mesh(geo('goblinCap', () => { const g = new SphereGeometry(1, 28, 20); g.scale(0.33, 0.3, 0.31); return cutaway(g, (_x, y) => y > 0.1); }), softMaterial('metal', C.iron)); cap.position.y = 0.2; head.add(cap); const rim = mesh(geo('goblinRim', () => { const t = new TorusGeometry(0.31, 0.025, 8, 40); t.rotateX(Math.PI / 2); return t; }), softMaterial('metal', C.ironDark)); rim.position.y = 0.3; head.add(rim); }
+    const rig = finish(group, 'goblin', 1.12, walkers, variant, kind); rig.scratch.armRest = 1.75; return rig;
   }
   if (kind === 'cyclops') {
-    const sk = C.cyclops, dk = C.cyclopsDark, body = new Vox();
-    body.ellipsoid(0, 7, 0, 5.8, 5.2, 4.8, sk, 'skin', (x, y) => y >= 3); body.box(-5, 3, -4, 5, 4, 4, C.leatherDark, 'leather'); body.box(-3, 4, 4, 3, 4, 5, C.gold, 'gold');
-    body.box(-4, 0, -2, -2, 2, 2, sk, 'skin'); body.box(2, 0, -2, 4, 2, 2, sk, 'skin'); body.box(-5, 0, -3, -1, 0, 3, dk, 'skin'); body.box(1, 0, -3, 5, 0, 3, dk, 'skin');
-    if (boss) { body.box(-6, 8, -1, -5, 9, 1, C.iron, 'metal'); body.box(5, 8, -1, 6, 9, 1, C.iron, 'metal'); }
-    root.add(meshPart(body, [0, 0, 0], 'body'));
-    const head = piv('head', root, 0, 12, 0), hv = new Vox();
-    hv.ellipsoid(0, 5, 0, 6.2, 5.4, 5.4, sk, 'skin');
-    for (const s of [-1, 1]) { const hh = boss ? 5 : 3; for (let i = 0; i < hh; i++) hv.box(s * (3 + Math.floor(i / 2)), 10 + i, -1, s * (3 + Math.floor(i / 2)), 10 + i, 0, C.cream, 'cloth'); hv.box(s * 7, 4, -1, s * 7, 5, 0, sk, 'skin'); }
-    for (let x = -2; x <= 2; x++) for (let y = 3; y <= 7; y++) hv.decal(x, y, Math.abs(x) <= 1 && y >= 4 && y <= 6 ? C.ink : C.white, 'ink'); hv.decal(-1, 6, C.white, 'ink');
-    hv.decal(-4, 3, C.blush, 'skin'); hv.decal(4, 3, C.blush, 'skin'); hv.decal(-1, 1, C.mouth, 'ink'); hv.decal(0, 1, C.mouth, 'ink'); hv.decal(1, 1, C.mouth, 'ink'); hv.decal(-2, 2, C.mouth, 'ink'); hv.decal(2, 2, C.mouth, 'ink');
-    head.add(meshPart(hv, [0, 0, 0], 'head'));
-    const arm = (s: -1 | 1) => { const a = piv(s < 0 ? 'armL' : 'armR', root, s * 6.5, 10, 0), v = new Vox(); v.box(-1, -7, -1, 1, 0, 1, sk, 'skin'); v.box(-2, -9, -2, 2, -8, 2, sk, 'skin'); a.add(meshPart(v, [0, 0, 0], 'arm')); return a; };
-    arm(-1); const armR = arm(1); armR.rotation.z = 1.6; (root.getObjectByName('armL') as Object3D).rotation.z = -0.4;
-    const club = new Vox(); club.box(0, -9, 0, 0, -2, 0, C.wood, 'wood'); club.box(-1, -14, -1, 1, -10, 1, C.woodDark, 'wood'); if (boss) for (const [x, y, z] of [[-2, -12, 0], [2, -12, 0], [0, -12, 2], [0, -12, -2], [0, -15, 0]]) club.box(x, y, z, x, y, z, C.silver, 'metal');
-    const cm = meshPart(club, [0, 0, 0], 'club'); cm.position.y = -8 * VOXEL; armR.add(cm);
-    return finish(group, 'cyclops', 18, ['idle', 'walk', 'run', 'jump', 'attack', 'hit', 'celebrate'], variant, kind);
+    const skin = softMaterial('skin', C.cyclops);
+    for (const s of [-1, 1]) { const leg = piv(s < 0 ? 'legL' : 'legR', root, s * 0.14, 0.32, 0); const lm = mesh(capsule(0.09, 0.14), skin); lm.position.y = -0.16; leg.add(lm); blob(leg, softMaterial('skin', C.cyclopsDark), 0.1, 0.05, 0.12, 0, -0.3, 0.02); }
+    const torso = piv('torso', root, 0, 0.32, 0); blob(torso, skin, 0.34, 0.4, 0.3, 0, 0.36, 0);
+    torso.add(mesh(geo('loincloth', () => { const l = new LatheGeometry([[0.26, 0.12], [0.31, 0.02], [0.34, -0.1], [0, -0.1]].map(([r, y]) => new Vector2(r, y)), 36); l.scale(1, 1, 0.85); return l; }), softMaterial('leather', C.leather)));
+    for (const s of [-1, 1]) { const arm = piv(s < 0 ? 'armL' : 'armR', torso, s * 0.34, 0.5, 0); arm.rotation.z = s * 0.3; const am = mesh(capsule(0.08, 0.22), skin); am.position.y = -0.17; arm.add(am); const hand = piv(s < 0 ? 'handL' : 'handR', arm, 0, -0.34, 0); blob(hand, skin, 0.085, 0.085, 0.085, 0, 0, 0); if (s > 0) club(hand, 0.46, 0.04, C.woodDark, boss); }
+    const head = piv('head', torso, 0, 0.74, 0); blob(head, skin, 0.26, 0.24, 0.25, 0, 0.2, 0);
+    softEyes(head, {x: 0, y: 0.22, z: 0.21, w: 0.085, h: 0.085, single: true, white: true}); softBlush(head, 0.19, 0.1, 0.18, 0.06, 0.035, 0.5); softSmile(head, 0.08, 0.25, 0.04, -0.04, 0.011);
+    const tooth = mesh(geo('fang', () => new ConeGeometry(0.012, 0.035, 8)), softMaterial('flat', 0xffffff), false); tooth.position.set(-0.025, 0.055, 0.25); head.add(tooth);
+    for (const s of [-1, 1]) horn(head, s * 0.16, 0.38, 0, 0.045, boss ? 0.26 : 0.15, C.belly, 0, s * -0.55);
+    const rig = finish(group, 'cyclops', 1.46, walkers, variant, kind); rig.scratch.armRest = 1.75; return rig;
   }
   if (kind === 'giant') {
-    // A walking boulder stack: stout stone legs, a round torso, a head boulder with the face, moss and a flower on top.
-    const rk = C.giant, dk = C.giantDark, body = new Vox();
-    for (const s of [-1, 1]) { body.box(s * 5 - 1, 2, -2, s * 5 + 1, 8, 2, dk, 'stone'); body.box(s * 5 - 2, 0, -3, s * 5 + 2, 1, 3, dk, 'stone'); }
-    body.ellipsoid(0, 14, 0, 8, 7.5, 5.5, rk, 'stone'); body.box(-6, 8, -3, 6, 19, 3, rk, 'stone');
-    body.ellipsoid(0, 24, 0, 5.5, 4.8, 4.6, rk, 'stone'); body.box(-4, 21, -3, 4, 27, 3, rk, 'stone');
-    const mossAt: [number, number, number][] = [[-3, 28, 0], [2, 28, -2], [-6, 19, 1], [5, 18, -3], [0, 19, 3], [-2, 20, 4]];
-    if (boss) { body.ellipsoid(-10, 19, 0, 3.4, 3, 3.4, rk, 'stone'); body.ellipsoid(10, 19, 0, 3.4, 3, 3.4, rk, 'stone'); mossAt.push([-10, 22, 0], [10, 22, 1], [4, 27, 2]); }
-    for (const [x, y, z] of mossAt) { body.box(x, y, z, x + 1, y, z + 1, C.moss, 'moss'); body.box(x, y, z + 1, x, y, z + 1, C.leafLight, 'moss'); }
-    body.box(0, 29, 0, 0, 29, 0, C.greenDark, 'leaf'); body.box(-1, 30, 0, 1, 30, 0, C.pink, 'cloth'); body.box(0, 30, -1, 0, 30, 1, C.pink, 'cloth'); body.box(0, 30, 0, 0, 30, 0, C.gold, 'gold');
-    if (boss) { body.box(5, 29, 2, 5, 29, 2, C.greenDark, 'leaf'); body.box(4, 30, 2, 6, 30, 2, C.white, 'cloth'); body.box(5, 30, 1, 5, 30, 3, C.white, 'cloth'); body.box(5, 30, 2, 5, 30, 2, C.gold, 'gold'); }
-    for (const [x, y, z] of [[2, 12, 5], [-4, 10, 5], [-5, 16, -5], [7, 13, 0], [3, 23, 4], [-4, 26, -4]]) body.paint(x, y, z, shade(rk, 0.75));
-    for (const s of [-1, 1]) { body.decal(s * 2, 24, C.ink, 'ink'); body.decal(s * 3, 24, C.ink, 'ink'); body.decal(s * 2, 25, C.ink, 'ink'); body.decal(s * 3, 25, C.ink, 'ink'); body.decal(s * 3, 25, C.white, 'ink'); body.decal(s * 5, 23, C.blush, 'stone'); }
-    body.decal(-1, 22, C.ink, 'ink'); body.decal(0, 22, C.ink, 'ink'); body.decal(1, 22, C.ink, 'ink'); body.decal(-2, 23, C.ink, 'ink'); body.decal(2, 23, C.ink, 'ink');
-    body.jitter(7, 0.06, ['stone']);
-    root.add(meshPart(body, [0, 0, 0], 'body'));
-    const arm = (s: -1 | 1) => { const a = piv(s < 0 ? 'armL' : 'armR', root, s * (boss ? 11 : 9), 18, 0), v = new Vox(); v.box(-1, -8, -1, 1, 0, 1, rk, 'stone'); v.box(-2, -11, -2, 2, -9, 2, dk, 'stone'); v.jitter(9 + s, 0.06); a.add(meshPart(v, [0, 0, 0], 'arm')); return a; };
-    arm(-1); arm(1); (root.getObjectByName('armL') as Object3D).rotation.z = -0.2; (root.getObjectByName('armR') as Object3D).rotation.z = 0.2;
-    const legR = piv('legR', root, 5, 8, 0); // the stomp animator lifts this pivot; the leg cubes stay in the body for silhouette, the pivot carries a foot overlay
-    const foot = new Vox(); foot.box(-2, -8, -3, 2, -7, 3, dk, 'stone'); legR.add(meshPart(foot, [0, 0, 0], 'foot'));
-    return finish(group, 'giant', 31, ['idle', 'walk', 'jump', 'attack', 'stomp', 'hit', 'celebrate'], variant, kind);
+    const rock = softMaterial('stone', C.giant), dark = softMaterial('stone', C.giantDark), moss = softMaterial('cloth', C.moss);
+    for (const s of [-1, 1]) { const leg = piv(s < 0 ? 'legL' : 'legR', root, s * 0.3, 0.6, 0); const lm = mesh(capsule(0.2, 0.2), dark); lm.position.y = -0.3; leg.add(lm); }
+    const torso = piv('torso', root, 0, 0.6, 0); blob(torso, rock, 0.64, 0.56, 0.52, 0, 0.48, 0);
+    for (const [x, y, z, w] of [[-0.36, 0.95, 0.08, 0.24], [0.3, 0.98, -0.1, 0.2], [0.05, 0.9, 0.42, 0.16]]) blob(torso, moss, w, 0.07, w * 0.8, x, y, z);
+    for (const s of [-1, 1]) { const arm = piv(s < 0 ? 'armL' : 'armR', torso, s * 0.68, 0.8, 0); arm.rotation.z = s * 0.25; const am = mesh(capsule(0.14, 0.34), rock); am.position.y = -0.3; arm.add(am); const hand = piv(s < 0 ? 'handL' : 'handR', arm, 0, -0.62, 0); blob(hand, dark, 0.18, 0.16, 0.18, 0, 0.02, 0); }
+    if (boss) for (const s of [-1, 1]) { blob(torso, rock, 0.28, 0.24, 0.26, s * 0.72, 0.9, 0); blob(torso, moss, 0.18, 0.06, 0.15, s * 0.72, 1.12, 0.02); }
+    const head = piv('head', torso, 0, 1.02, 0); blob(head, rock, 0.42, 0.38, 0.4, 0, 0.34, 0);
+    softEyes(head, {x: 0.15, y: 0.4, z: 0.37, w: 0.06, h: 0.08}); softBlush(head, 0.27, 0.3, 0.3, 0.07, 0.04, 0.6); softSmile(head, 0.26, 0.4, 0.06, -0.06, 0.013);
+    blob(head, moss, 0.3, 0.1, 0.28, 0.05, 0.7, -0.02); flower(head, 0.12, 0.75, 0.08, C.pink, C.gold, 1.6); if (boss) flower(head, -0.18, 0.72, 0.02, C.white, C.gold, 1.3);
+    const rig = finish(group, 'giant', 2.36, ['idle', 'walk', 'jump', 'attack', 'stomp', 'hit', 'celebrate'], variant, kind); rig.scratch.armRest = 0.3; return rig;
   }
-
-  // dragons
-  const elder = kind === 'elderDragon', sk = elder ? C.dragonElder : C.dragonBaby, dk = elder ? C.dragonElderDark : C.dragonBabyDark, belly = elder ? C.bellyGold : C.belly, horn = C.cream;
-  const sc = elder ? 1.15 : 0.9;
-  const body = new Vox();
-  body.ellipsoid(0, 7, 0, 5.4 * sc, 4.6 * sc, 6.5 * sc, sk, 'scale', (x, y) => y >= 3); body.ellipsoid(0, 6, 4 * sc, 3.4 * sc, 3.4 * sc, 3.6 * sc, belly, 'skin', (x, y, z) => z >= 4 * sc && y >= 3 && y <= 8);
-  for (let i = 0; i < (elder ? 6 : 4); i++) body.box(0, 11 + Math.round(sc) - i, -1 - i * 1.5, 0, 12 + Math.round(sc) - i, -1 - i * 1.5, dk, 'scale');
-  root.add(meshPart(body, [0, 0, 0], 'body'));
-  const leg = (s: -1 | 1) => { const l = piv(s < 0 ? 'legL' : 'legR', root, s * 3, 3, 0), v = new Vox(); v.box(-1, -2, -2, 1, 0, 1, sk, 'scale'); v.box(-2, -3, -2, 2, -3, 2, dk, 'scale'); l.add(meshPart(v, [0, 0, 0], 'leg')); };
-  leg(-1); leg(1);
-  const tail = piv('tail', root, 0, 6, -6 * sc), tv = new Vox();
-  for (let i = 0; i < (elder ? 10 : 8); i++) { const r = Math.max(1, 2.6 - i * 0.28); tv.ellipsoid(0, Math.floor(i * 0.4), -i * 1.4, r, r, 1.2, sk, 'scale'); if (i % 2) tv.box(0, Math.floor(i * 0.4) + Math.round(r), -i * 1.4, 0, Math.floor(i * 0.4) + Math.round(r), -i * 1.4, dk, 'scale'); }
-  tail.add(meshPart(tv, [0, 0, 0], 'tail'));
-  const head = piv('head', root, 0, 11, 3 * sc), hv = new Vox();
-  hv.ellipsoid(0, 4, 0, 4.8 * sc, 3.8 * sc, 4.2 * sc, sk, 'scale'); hv.ellipsoid(0, 2.5, 4, 3.2, 2.2, 2.6, sk, 'scale'); hv.box(-1, 2, 6, 1, 2, 6, shade(sk, 0.85), 'scale'); hv.box(-1, 1, 6, 1, 1, 6, C.mouth, 'ink'); hv.box(-2, 2, 6, -2, 2, 6, C.ink, 'ink'); hv.box(2, 2, 6, 2, 2, 6, C.ink, 'ink');
-  for (const s of [-1, 1]) { if (elder) { hv.box(s * 2, 7, -2, s * 2, 9, -2, horn, 'cloth'); hv.box(s * 3, 9, -3, s * 3, 10, -3, horn, 'cloth'); if (boss) hv.box(s * 3, 11, -4, s * 3, 11, -4, horn, 'cloth'); } else { hv.ellipsoid(s * 2.5, 8, -1.5, 1.4, 1.4, 1.4, horn, 'cloth'); } hv.box(s * 5, 4, -1, s * 5, 5, 0, sk, 'scale'); }
-  eyes(hv, 2, 4, 2, 2, 1, 99, 0);
-  head.add(meshPart(hv, [0, 0, 0], 'head'));
-  const flame = piv('flame', head, 0, 1, 7); const fv = new Vox(); fv.box(0, 0, 0, 0, 0, 3, C.flame, 'glow'); fv.box(-1, 0, 1, 1, 0, 2, C.flameCore, 'glow'); fv.box(0, 1, 1, 0, 1, 2, C.flameCore, 'glow'); fv.box(0, -1, 2, 0, -1, 3, C.flame, 'glow'); flame.add(meshPart(fv, [0, 0, 0], 'flame')); flame.scale.setScalar(0.01);
-  const wing = (s: -1 | 1) => { const w = piv(s < 0 ? 'wingL' : 'wingR', root, s * 3, 10, -2), v = new Vox(); const span = elder ? (boss ? 14 : 11) : 7; for (let i = 0; i < span; i++) { const h = Math.min(elder ? 9 : 6, 2 + i); v.box(s * i, 0, 0, s * i, h, 0, i % 3 === 0 ? dk : sk, 'scale'); v.box(s * i, h + 1, 0, s * i, h + 1, 0, dk, 'scale'); } for (let i = span; i < span + 3; i++) v.box(s * i, Math.max(1, (elder ? 7 : 4) - (i - span)), 0, s * i, (elder ? 9 : 6) - (i - span), 0, dk, 'scale'); w.add(meshPart(v, [0, 0, 0], 'wing')); return w; };
-  wing(-1); wing(1);
-  return finish(group, 'dragon', elder ? 19 : 16, ['idle', 'walk', 'run', 'jump', 'flap', 'puff', 'attack', 'hit', 'celebrate'], variant, kind);
+  // dragons: built at baby proportions, the elder is the same body scaled up with longer horns, back spikes and bigger wings
+  const elder = kind === 'elderDragon', k = elder ? 1.55 : 1;
+  const col = elder ? C.dragonElder : C.dragonBaby, dk = elder ? C.dragonElderDark : C.dragonBabyDark, bellyC = elder ? C.bellyGold : C.belly;
+  const sc = softMaterial('scale', col), scd = softMaterial('scale', dk);
+  for (const s of [-1, 1]) { const leg = piv(s < 0 ? 'legL' : 'legR', root, s * 0.15, 0.2, 0.05); const lm = mesh(capsule(0.07, 0.06), sc); lm.position.y = -0.09; leg.add(lm); blob(leg, scd, 0.09, 0.045, 0.11, 0, -0.18, 0.03); }
+  blob(root, sc, 0.3, 0.3, 0.32, 0, 0.42, 0); blob(root, softMaterial('skin', bellyC), 0.2, 0.24, 0.06, 0, 0.38, 0.27);
+  const tail = piv('tail', root, 0, 0.36, -0.26); const tm = mesh(geo('dragonTail', () => new ConeGeometry(0.1, 0.5, 14).translate(0, 0.25, 0).rotateX(-Math.PI / 2)), sc); tm.rotation.x = 0.5; tail.add(tm); const tip = blob(tail, scd, 0.07, 0.06, 0.05, 0, 0.24, -0.44); void tip;
+  for (const s of [-1, 1]) { const wing = piv(s < 0 ? 'wingL' : 'wingR', root, s * 0.2, 0.56, -0.08); const wm = mesh(geo('wing', wingShape), new MeshStandardMaterial({color: dk, roughness: 0.85, side: DoubleSide})); const ws = elder ? 1.6 : 1; wm.scale.set(s * ws, ws, 1); wm.rotation.y = s * 0.35; wing.add(wm); }
+  for (const s of [-1, 1]) { const arm = piv(s < 0 ? 'armL' : 'armR', root, s * 0.28, 0.44, 0.12); arm.rotation.set(-0.6, 0, s * 0.6); const am = mesh(capsule(0.05, 0.06), sc); am.position.y = -0.07; arm.add(am); }
+  const head = piv('head', root, 0, 0.64, 0.12); blob(head, sc, 0.3, 0.27, 0.28, 0, 0.2, 0); blob(head, sc, 0.17, 0.12, 0.13, 0, 0.1, 0.26);
+  for (const s of [-1, 1]) blob(head, scd, 0.018, 0.014, 0.012, s * 0.05, 0.14, 0.375, false);
+  softEyes(head, {x: 0.13, y: 0.27, z: 0.24, w: 0.055, h: 0.08}); softBlush(head, 0.23, 0.17, 0.16, 0.06, 0.035, 0.5); softSmile(head, 0.06, 0.375, 0.045, -0.04, 0.011);
+  for (const s of [-1, 1]) horn(head, s * 0.12, 0.42, -0.04, 0.04, elder ? 0.26 : 0.12, bellyC, -0.5, s * -0.25);
+  const flame = piv('flame', head, 0, 0.08, 0.4); flame.scale.setScalar(0.01); const fm = mesh(geo('flame', () => new ConeGeometry(0.06, 0.24, 12).translate(0, 0.12, 0).rotateX(Math.PI / 2)), softMaterial('glow', C.flame), false); flame.add(fm); blob(flame, softMaterial('glow', C.flameCore), 0.035, 0.035, 0.08, 0, 0, 0.08, false);
+  if (elder) for (const [y, z] of [[0.7, -0.04], [0.63, -0.18], [0.52, -0.3]]) horn(root, 0, y, z, 0.035, 0.11, bellyC, -0.9, 0);
+  return finish(group, 'dragon', 1.1, ['idle', 'walk', 'run', 'jump', 'flap', 'puff', 'attack', 'hit', 'celebrate'], variant, kind, k);
 }
+void BLUSH;

@@ -3,7 +3,8 @@
  * with costumes layered on named slots (hat, torso wear, cape, hands). Smooth geometry, no voxels.
  * Proportions follow the approved SVG turnaround (640×800 sheet → 1.8 m tall, ground at y = 0, face toward +z).
  */
-import {BufferGeometry, CapsuleGeometry, CircleGeometry, Shape, ShapeGeometry, ConeGeometry, CylinderGeometry, DoubleSide, Float32BufferAttribute, Group, LatheGeometry, Mesh, MeshBasicMaterial, MeshPhysicalMaterial, MeshStandardMaterial, Object3D, PlaneGeometry, QuadraticBezierCurve3, SphereGeometry, TorusGeometry, TubeGeometry, Vector2, Vector3, type Material} from 'three';
+import {BufferGeometry, CapsuleGeometry, CircleGeometry, ConeGeometry, CylinderGeometry, DoubleSide, Group, LatheGeometry, Mesh, MeshStandardMaterial, Object3D, PlaneGeometry, QuadraticBezierCurve3, TorusGeometry, TubeGeometry, Vector2, Vector3} from 'three';
+import {cutaway, disposeSoftResources, geo, mesh, piv, softMaterial, sphere, star, type MatKind} from './soft';
 import {RoundedBoxGeometry} from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import {C, shade} from '../palette';
 import {makeRig} from '../rig';
@@ -15,8 +16,8 @@ export const HAIR_COLORS = [C.hairBrown, C.hairAuburn, C.hairBlack, C.hairBlonde
 export const AVATAR_STATES: AnimState[] = ['idle', 'walk', 'run', 'jump', 'attack', 'hit', 'celebrate', 'dance', 'flex', 'wave', 'poke'];
 export const EXPRESSIONS: Expression[] = ['smile', 'happy', 'curious', 'sparkle'];
 const EYE = 0x1b1518, MOUTH = 0x3a2630, MOUTH_IN = 0xd9475a, BLUSH = 0xf3a7a1;
+export const HEAD = {w: 1.16, h: 1.10, d: 1.0, r: 0.42}; // rounder than the sheet's 0.31: the user asked for a softer head from every angle
 
-type MatKind = 'skin' | 'gloss' | 'eye' | 'flat' | 'cloth' | 'quilt' | 'leather' | 'metal' | 'gold' | 'wood' | 'blush';
 export type Kit = {
   tunic?: number; tunicKind?: MatKind; skirt?: 'short' | 'robe'; trim?: number; belt?: number; buckle?: number; boots?: number; gloves?: number;
   plate?: number; plateKind?: 'metal' | 'gold'; pads?: number; padsKind?: MatKind;
@@ -42,41 +43,8 @@ export function presetFor(tier: Tier | Royal, gender: Gender, over: Partial<Hero
   return {...base, ...over, tier};
 }
 
-// ---- shared geometry + materials ------------------------------------------------------------------------------------
-const geos = new Map<string, BufferGeometry>(), mats = new Map<string, Material>();
-const geo = (key: string, make: () => BufferGeometry): BufferGeometry => { let g = geos.get(key); if (!g) { g = make(); geos.set(key, g); } return g; };
-export function avatarMaterial(kind: MatKind, color: number): Material {
-  const key = `${kind}:${color}`; let m = mats.get(key); if (m) return m;
-  switch (kind) {
-    case 'skin': m = new MeshPhysicalMaterial({color, roughness: 0.62, clearcoat: 0.18, clearcoatRoughness: 0.55, sheen: 0.3, sheenColor: 0xffd8c9, sheenRoughness: 0.8}); break;
-    case 'gloss': m = new MeshPhysicalMaterial({color, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.1}); break;
-    case 'eye': m = new MeshStandardMaterial({color, roughness: 0.32, metalness: 0}); break;
-    case 'flat': m = new MeshBasicMaterial({color}); break;
-    case 'blush': m = new MeshStandardMaterial({color, roughness: 1, transparent: true, opacity: 0.85}); break;
-    case 'metal': m = new MeshStandardMaterial({color, roughness: 0.38, metalness: 0.7}); break;
-    case 'gold': m = new MeshStandardMaterial({color, roughness: 0.3, metalness: 0.85}); break;
-    case 'quilt': m = new MeshStandardMaterial({color, roughness: 0.95}); break;
-    case 'leather': m = new MeshStandardMaterial({color, roughness: 0.7}); break;
-    case 'wood': m = new MeshStandardMaterial({color, roughness: 0.8}); break;
-    default: m = new MeshStandardMaterial({color, roughness: 0.88});
-  }
-  mats.set(key, m); return m;
-}
-export function disposeAvatarResources(): void { for (const g of geos.values()) g.dispose(); geos.clear(); for (const m of mats.values()) m.dispose(); mats.clear(); }
-const mesh = (g: BufferGeometry, m: Material, shadow = true): Mesh => { const o = new Mesh(g, m); o.castShadow = shadow; o.receiveShadow = shadow; return o; };
-const piv = (name: string, parent: Object3D, x: number, y: number, z: number): Object3D => { const o = new Object3D(); o.name = name; o.position.set(x, y, z); parent.add(o); return o; };
-const sphere = () => geo('sphere', () => new SphereGeometry(1, 28, 20));
-
-/** Keep only the triangles whose centroid passes `keep`: shells (helmets, chest plates) are cut from closed solids. */
-function cutaway(g: BufferGeometry, keep: (x: number, y: number, z: number) => boolean): BufferGeometry {
-  const src = g.index ? g.toNonIndexed() : g, pos = src.getAttribute('position'), nor = src.getAttribute('normal'), P: number[] = [], N: number[] = [];
-  for (let i = 0; i < pos.count; i += 3) {
-    const cx = (pos.getX(i) + pos.getX(i + 1) + pos.getX(i + 2)) / 3, cy = (pos.getY(i) + pos.getY(i + 1) + pos.getY(i + 2)) / 3, cz = (pos.getZ(i) + pos.getZ(i + 1) + pos.getZ(i + 2)) / 3;
-    if (!keep(cx, cy, cz)) continue;
-    for (let j = 0; j < 3; j++) { P.push(pos.getX(i + j), pos.getY(i + j), pos.getZ(i + j)); N.push(nor.getX(i + j), nor.getY(i + j), nor.getZ(i + j)); }
-  }
-  const out = new BufferGeometry(); out.setAttribute('position', new Float32BufferAttribute(P, 3)); out.setAttribute('normal', new Float32BufferAttribute(N, 3)); return out;
-}
+// ---- shared toolkit (soft.ts) --------------------------------------------------------------------------------------
+export const avatarMaterial = softMaterial, disposeAvatarResources = disposeSoftResources;
 const torsoProfile = (scale: number, yFrom: number, yTo: number): BufferGeometry => {
   const pts = [[0, 0.22], [0.12, 0.22], [0.17, 0.26], [0.195, 0.36], [0.19, 0.5], [0.165, 0.62], [0.13, 0.70], [0.07, 0.745], [0, 0.75]].map(([r, y]) => new Vector2(r * scale, (y - 0.30) * (1 + (scale - 1) * 0.5)));
   const g = new LatheGeometry(pts, 40); g.scale(1, 1, 0.78);
@@ -84,7 +52,6 @@ const torsoProfile = (scale: number, yFrom: number, yTo: number): BufferGeometry
 };
 const smileCurve = (x0: number, x1: number, y: number, dip: number, z: number) => new TubeGeometry(new QuadraticBezierCurve3(new Vector3(x0, y, z), new Vector3((x0 + x1) / 2, y + dip, z), new Vector3(x1, y, z)), 12, 0.013, 8, false);
 
-const star = (R: number, r: number): BufferGeometry => { const sh = new Shape(); for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 + Math.PI / 2, rad = i % 2 ? r : R; if (i === 0) sh.moveTo(Math.cos(a) * rad, Math.sin(a) * rad); else sh.lineTo(Math.cos(a) * rad, Math.sin(a) * rad); } sh.closePath(); return new ShapeGeometry(sh); };
 const EYE_X = 0.26, EYE_Y = -0.07, MOUTH_Y = -0.205;
 /** Face parts on the flat front of the head. Groups are toggled by setExpression; eyeL/eyeR pivots also scale for blinks. */
 function buildFace(face: Group): void {
@@ -98,7 +65,7 @@ function buildFace(face: Group): void {
     const sparkle = new Group(); sparkle.name = s < 0 ? 'hlStarL' : 'hlStarR'; sparkle.visible = false; eye.add(sparkle);
     const big = mesh(geo('starBig', () => star(0.042, 0.013)), white, false); big.position.set(-0.012, 0.02, 0.052); sparkle.add(big);
     const small = mesh(geo('starSmall', () => star(0.02, 0.007)), white, false); small.position.set(0.034, -0.05, 0.052); sparkle.add(small);
-    const b = mesh(sphere(), blush, false); b.scale.set(0.1, 0.052, 0.012); b.position.set(s * 0.33, -0.2, 0.485); face.add(b);
+    const b = mesh(sphere(), blush, false); b.scale.set(0.1, 0.052, 0.03); b.position.set(s * 0.33, -0.2, 0.455); face.add(b);
   }
   const closed = new Group(); closed.name = 'eyesClosed'; closed.visible = false; face.add(closed);
   for (const s of [-1, 1]) { const arc = mesh(geo('eyeArc', () => new TubeGeometry(new QuadraticBezierCurve3(new Vector3(-0.095, -0.03, 0), new Vector3(0, 0.13, 0), new Vector3(0.095, -0.03, 0)), 14, 0.019, 8, false)), ink, false); arc.position.set(s * EYE_X, EYE_Y, 0.49); closed.add(arc); for (const e of [-0.095, 0.095]) { const cap = mesh(sphere(), ink, false); cap.scale.setScalar(0.019); cap.position.set(s * EYE_X + e, EYE_Y - 0.03, 0.49); closed.add(cap); } }
@@ -141,7 +108,7 @@ function dress(kit: Kit, slots: {torso: Object3D; hat: Object3D; cape: Object3D;
   if (kit.cape) { const long = kit.cape.size === 'long', h = long ? 0.62 : 0.42, g = geo(`cape:${kit.cape.size}`, () => { const pg = new PlaneGeometry(0.52, h, 6, 8); const pos = pg.getAttribute('position'); for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), y = pos.getY(i); pos.setZ(i, -0.06 * (x / 0.26) ** 2 + 0.04 * (y / h)); pos.setX(i, x * (1 + 0.25 * (0.5 - y / h))); } pg.computeVertexNormals(); return pg; }); const c = mesh(g, new MeshStandardMaterial({color: kit.cape.color, roughness: 0.9, side: DoubleSide})); c.position.set(0, -h / 2 + 0.02, -0.02); cape.add(c); if (kit.cape.trim !== undefined) { const clasp = mesh(sphere(), avatarMaterial('gold', kit.cape.trim)); clasp.scale.setScalar(0.035); clasp.position.set(0, 0.0, 0.0); cape.add(clasp); } }
   if (kit.helmet !== undefined) {
     const hk = kit.helmetKind ?? 'metal';
-    hat.add(mesh(geo('helmet', () => cutaway(new RoundedBoxGeometry(1.24, 1.17, 1.08, 7, 0.34), (_x, y, z) => y > -0.33 && !(z > -0.02 && y < 0.24))), avatarMaterial(hk, kit.helmet)));
+    hat.add(mesh(geo('helmet', () => cutaway(new RoundedBoxGeometry(1.24, 1.17, 1.08, 8, 0.46), (_x, y, z) => y > -0.33 && !(z > -0.02 && y < 0.24))), avatarMaterial(hk, kit.helmet)));
     const rim = mesh(geo('helmetRim', () => { const t = new TorusGeometry(0.59, 0.03, 10, 60); t.rotateX(Math.PI / 2); return t; }), avatarMaterial(hk, shade(kit.helmet, 0.8))); rim.position.y = 0.25; rim.scale.set(1.0, 1, 0.9); hat.add(rim);
     if (kit.nasal) { const n = mesh(geo('nasal', () => new RoundedBoxGeometry(0.07, 0.34, 0.05, 2, 0.02)), avatarMaterial(hk, kit.helmet)); n.position.set(0, 0.09, 0.555); hat.add(n); }
     if (kit.plume !== undefined) { const pl = mesh(geo('plume', () => new CapsuleGeometry(0.055, 0.22, 6, 14)), avatarMaterial('cloth', kit.plume)); pl.position.set(0, 0.7, -0.08); pl.rotation.x = 0.55; hat.add(pl); }
@@ -197,7 +164,7 @@ export function buildHero(presetIn: Partial<HeroPreset> = {}): Rig {
     if (kit.gloves !== undefined) { const gl = mesh(sphere(), avatarMaterial('leather', kit.gloves)); gl.scale.setScalar(0.085); gl.position.y = 0.02; hand.add(gl); }
   }
   const head = piv('head', torso, 0, 0.40, 0);
-  const hm = mesh(geo('head', () => new RoundedBoxGeometry(1.16, 1.10, 1.0, 7, 0.31)), skinMat); hm.position.y = 0.55; head.add(hm);
+  const hm = mesh(geo('head', () => new RoundedBoxGeometry(HEAD.w, HEAD.h, HEAD.d, 8, HEAD.r)), skinMat); hm.position.y = 0.55; head.add(hm);
   const face = new Group(); face.name = 'face'; face.position.y = 0.55; head.add(face); buildFace(face);
   const hat = piv('hat', head, 0, 0.55, 0), cape = piv('cape', torso, 0, 0.36, -0.14);
   dress(kit, {torso, hat, cape, handL: hands.handL, handR: hands.handR, legs, arms});

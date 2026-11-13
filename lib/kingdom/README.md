@@ -1,6 +1,6 @@
 # Beta Kingdom · `lib/kingdom`
 
-Kaiju's characters and world pieces plus the pure game logic. Heroes are the smooth soft-toy avatar (one gender-neutral base body with costume layers, `factories/hero.ts`); creatures, mounts and world props are still the earlier voxel builds and are due for the same smooth treatment.
+Kaiju's characters and world pieces plus the pure game logic. Heroes, kaijus and ponies are smooth soft-toy builds (`factories/hero.ts`, `creatures.ts`, `mounts.ts`, shared helpers in `soft.ts`); castles, props and terrain in `world.ts` / `terrain.ts` are still voxel builds and are due for the same treatment.
 Rendered by `components/kingdom` (React Three Fiber) at `/kingdom`.
 
 ## Units and conventions

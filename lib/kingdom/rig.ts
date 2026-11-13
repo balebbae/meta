@@ -72,8 +72,6 @@ export function animate(rig: Rig, dt: number, motion = 1): void {
     scl('armL', armScale, 1, armScale, 10); scl('armR', armScale, 1, armScale, 10); rot('handR', 0, 0, handWave, 20);
     rot('legL', lL, 0, 0, 14); rot('legR', lR, 0, 0, 14);
     if (p.cape) rot('cape', 0.12 + 0.08 * Math.sin(clock * 2) * m + (s === 'run' ? 0.5 : s === 'walk' || s === 'dance' ? 0.2 : 0), 0, 0, 6);
-    sc.blinkT = (sc.blinkT ?? 2 + Math.random() * 3) - dt; const blink = sc.blinkT < 0.13 ? 0.1 : 1; if (sc.blinkT < 0) sc.blinkT = 2.5 + Math.random() * 3.5;
-    scl('eyeL', 1, blink, 1, 40); scl('eyeR', 1, blink, 1, 40);
   } else if (rig.species === 'hero' || rig.species === 'goblin' || rig.species === 'cyclops' || rig.species === 'giant') {
     const heavy = rig.species === 'giant', bob = heavy ? 0.5 : 1;
     const armRest = rig.scratch.armRest ?? 0.12; // sword arm rest angle is set by the factory
@@ -133,7 +131,12 @@ export function animate(rig: Rig, dt: number, motion = 1): void {
     else if (s === 'attack') { const k = sm(t, 0.1, 0.35) * (1 - sm(t, 0.6, 0.9)); rot('root', -0.5 * k, 0, 0, 30); rot('legFL', -1.2 * k, 0, 0, 30); rot('legFR', -1.4 * k, 0, 0, 30); pos('root', 0, 0.15 * k, 0, 30); }
     else if (s === 'hit') { const k = 1 - sm(t, 0, 0.6); pos('root', 0.05 * Math.sin(t * 60) * k, 0, -0.1 * k, 40); rot('head', 0.4 * k, 0.2 * k, 0, 30); }
     else if (s === 'celebrate') { const j = Math.abs(Math.sin(t * 6)); pos('root', 0, 0.25 * j, 0, 40); rot('head', -0.3 * j, 0.3 * Math.sin(t * 6), 0, 30); rot('tail', 0.5, 0.5 * Math.sin(t * 12), 0, 30); }
-  } else if (rig.species === 'prop') {
+  }
+  if (p.eyeL || p.eye) { // every soft character blinks
+    const sc = rig.scratch; sc.blinkT = (sc.blinkT ?? 2 + Math.random() * 3) - dt; const blink = sc.blinkT < 0.13 ? 0.1 : 1; if (sc.blinkT < 0) sc.blinkT = 2.5 + Math.random() * 3.5;
+    scl('eyeL', 1, blink, 1, 40); scl('eyeR', 1, blink, 1, 40); scl('eye', 1, blink, 1, 40);
+  }
+  if (rig.species === 'prop') {
     // props only animate explicit pivots: 'lid' (chest), 'flag' (banners), 'bridge' (drawbridge)
     if (p.lid) rot('lid', s === 'celebrate' ? -1.9 : 0, 0, 0, 8);
     if (p.flag) rot('flag', 0, 0.25 * Math.sin(clock * 4) * m, 0, 30);

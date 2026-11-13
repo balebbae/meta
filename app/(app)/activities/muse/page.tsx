@@ -1,7 +1,7 @@
-import {Ban, EyeOff, MessageCircle} from 'lucide-react';
 import {redirect} from 'next/navigation';
 import {OnboardingGate} from '@/components/activities/OnboardingGate';
 import {DevicesPanel} from '@/components/activities/DevicesPanel';
+import {MusePolicyList} from '@/components/activities/MusePolicyList';
 import {SourcesPanel} from '@/components/activities/SourcesPanel';
 import {VaultList} from '@/components/activities/VaultList';
 import {listConnections, publicConnection} from '@/lib/activities/connections';
@@ -15,8 +15,6 @@ import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
 import {Heading} from '@astryxdesign/core/Heading';
 import {HStack} from '@astryxdesign/core/HStack';
-import {Icon} from '@astryxdesign/core/Icon';
-import {List, ListItem} from '@astryxdesign/core/List';
 import {Text} from '@astryxdesign/core/Text';
 import {Token} from '@astryxdesign/core/Token';
 import {VStack} from '@astryxdesign/core/VStack';
@@ -59,15 +57,7 @@ export default async function MusePage({searchParams}: {searchParams: Promise<Re
               {summary.headline}
             </Text>
           </VStack>
-          <List density="compact">
-            {summary.shares.map(s => (
-              <ListItem key={s} startContent={<Icon icon={MessageCircle} size="sm" color="accent" />} label={s} />
-            ))}
-            {summary.secrets.map(s => (
-              <ListItem key={s} startContent={<Icon icon={EyeOff} size="sm" color="secondary" />} label={s} />
-            ))}
-            <ListItem startContent={<Icon icon={Ban} size="sm" color="secondary" />} label={summary.nobody} />
-          </List>
+          <MusePolicyList summary={summary} />
           <HStack gap={2} wrap="wrap">
             <Button label="Change what it shares" href="/activities/privacy" />
             <Button label="Who asked my Muse what" variant="ghost" href="/activities/privacy#audit" />

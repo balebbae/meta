@@ -10,7 +10,7 @@ import {TURF_RES} from '../lib/turf/engine.ts';
 
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required');
 const sql = neon(process.env.DATABASE_URL);
-const JUDGE_EMAIL = process.env.JUDGE_EMAIL ?? 'judge@example.com';
+const JUDGE_EMAIL = process.env.JUDGE_EMAIL ?? 'judge@demo.com';
 const DAY = 86_400_000;
 const now = Date.now();
 const ago = (days, hours = 0) => new Date(now - days * DAY - hours * 3_600_000).toISOString();

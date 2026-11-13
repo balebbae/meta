@@ -122,9 +122,11 @@ export function Thread({
           <div className={styles.messagesIntro}>
             <ConversationAvatar c={conversation} size={80} viewerId={viewerId} />
             <div className={styles.messagesIntroName}>{conversation.title}</div>
-            <div className={styles.messagesIntroSub}>
-              {conversation.isGroup ? `${others.map(m => m.name.split(' ')[0]).join(', ')} and you are in this chat` : "You're friends on Facebook"}
-            </div>
+            {conversation.isGroup && (
+              <div className={styles.messagesIntroSub}>
+                {`${others.map(m => m.name.split(' ')[0]).join(', ')} and you are in this chat`}
+              </div>
+            )}
           </div>
         )}
         {loading && (

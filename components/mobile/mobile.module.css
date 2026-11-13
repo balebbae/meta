@@ -526,6 +526,12 @@
   margin-top: 8px;
   padding-bottom: calc(96px + env(safe-area-inset-bottom));
 }
+.searchSection {
+  padding: 12px 4px 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fb-text-secondary);
+}
 .searchHit {
   display: flex;
   align-items: center;

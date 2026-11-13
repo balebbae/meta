@@ -1,5 +1,5 @@
 import {PageSkeleton} from '@/components/ui/Skeleton';
 
 export default function Loading() {
-  return <PageSkeleton variant="panel" />;
+  return <PageSkeleton variant="feed" />;
 }

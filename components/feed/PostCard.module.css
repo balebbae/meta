@@ -568,7 +568,7 @@
     border-radius: 0;
     box-shadow: none;
     margin: 0;
-    border-top: 8px solid var(--fb-divider);
+    border-top: 1px solid var(--fb-divider);
   }
   .header {
     padding: 12px 12px 0 12px;

@@ -18,6 +18,7 @@ export function FriendRequests({initial}: {initial: FriendRequestItem[]}) {
   };
   return (
     <>
+      <div className={styles.rrDivider} />
       <div className={styles.rrHeading}>
         <span>Friend requests</span>
         <Link href="/friends" className={styles.rrSeeAll}>

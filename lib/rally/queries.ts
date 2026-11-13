@@ -423,10 +423,10 @@ export async function getQuestState(questId: number, viewerId: number): Promise<
   };
 }
 
-async function listingsForTags(tags: string[]): Promise<ListingBrief[]> {
+export async function listingsForTags(tags: string[], limit = 4): Promise<ListingBrief[]> {
   if (!tags.length) return [];
   const pattern = tags.map(t => t.toLowerCase().split(/\s+/)[0]).filter(Boolean).map(t => `%${t}%`);
-  const rows = await sql`select id, title, price_cents, image_url, location from marketplace_listings where lower(title) like any(${pattern}::text[]) or lower(category) like any(${pattern}::text[]) or category = 'Sporting Goods' order by case when lower(title) like any(${pattern}::text[]) then 0 else 1 end, created_at desc limit 4`;
+  const rows = await sql`select id, title, price_cents, image_url, location from marketplace_listings where lower(title) like any(${pattern}::text[]) or lower(category) like any(${pattern}::text[]) or category = 'Sporting Goods' order by case when lower(title) like any(${pattern}::text[]) then 0 else 1 end, created_at desc limit ${limit}`;
   return rows.map(r => ({id: r.id as number, title: r.title as string, priceCents: r.price_cents as number, imageUrl: r.image_url as string, location: r.location as string}));
 }
 

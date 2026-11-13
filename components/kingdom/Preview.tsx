@@ -3,9 +3,9 @@
  * The gallery's one WebGL canvas: lights, ground, the selected rig, camera presets and a scale post.
  * Rigs are owned by rigCache; this component only parents, animates and frames them.
  */
-import {Component, useEffect, useMemo, useRef, type ReactNode} from 'react';
+import {Component, useEffect, useMemo, useRef, type ComponentRef, type ReactNode} from 'react';
 import {Canvas, useFrame, useThree} from '@react-three/fiber';
-import {OrbitControls, type OrbitControlsImpl} from '@react-three/drei';
+import {OrbitControls} from '@react-three/drei';
 import {ACESFilmicToneMapping, Box3, DirectionalLight, Group, PCFSoftShadowMap, SRGBColorSpace, Vector3, type WebGLRenderer} from 'three';
 import {animate, setState} from '@/lib/kingdom/rig';
 import {buildFence, buildShrub, buildTile, buildTree} from '@/lib/kingdom/factories/world';
@@ -90,7 +90,7 @@ export function ScalePost({x}: {x: number}) {
 }
 
 function CameraRig({rig, preset, nonce, autoRotate, reducedMotion}: {rig: Rig | null; preset: CameraPreset; nonce: number; autoRotate: boolean; reducedMotion: boolean}) {
-  const controls = useRef<OrbitControlsImpl>(null);
+  const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
   const camera = useThree((s) => s.camera);
   const goal = useRef<{pos: Vector3; target: Vector3; active: boolean}>({pos: new Vector3(3, 2, 4), target: new Vector3(0, 1, 0), active: false});
   useEffect(() => {

@@ -8,8 +8,6 @@ import {ask} from '@/lib/activities/answers';
 import type {GameSpec, QuestCardPayload, RallyGamePayload, Trust} from '@/lib/activities/types';
 import {insertXpEvent} from '@/lib/closeness-queries';
 import {sendMessage} from '@/lib/messaging-queries';
-import {museConfigured} from '@/lib/muse/client';
-import {generateBadgeArt} from '@/lib/muse/image';
 import {sendPushToUser} from '@/lib/push';
 import {narrate, recapText} from '@/lib/rally/narration';
 import {verifyProofImage} from '@/lib/rally/proof';
@@ -45,7 +43,6 @@ export type QuestRow = {
   endsAt: string;
   bossHp: number;
   bossHpLeft: number;
-  bossImageUrl: string | null;
   bossKind: string;
   museUsed: boolean;
   buffed: boolean;
@@ -70,7 +67,6 @@ function mapQuest(r: Record<string, unknown>): QuestRow {
     endsAt: new Date((r.ends_at as string) ?? spec.endsAt).toISOString(),
     bossHp: (r.boss_hp as number) ?? spec.boss?.hp ?? 0,
     bossHpLeft: (r.boss_hp_left as number) ?? 0,
-    bossImageUrl: (r.boss_image_url as string | null) ?? null,
     bossKind: String(meta.bossKind ?? bossKindFor(spec.boss?.name ?? spec.title)),
     museUsed: Boolean(meta.museUsed),
     buffed: Boolean(meta.buffed),
@@ -155,19 +151,11 @@ export async function createQuest(opts: {source: SpecSource; conversationId: num
   const spec: GameSpec = {...generated.spec, handicaps: plan.handicaps};
   const museUsed = generated.museUsed;
   const bossKind = bossKindFor(spec.boss?.name ?? spec.title);
-  let bossImageUrl: string | null = null;
-  if (museConfigured() && spec.boss) {
-    try {
-      bossImageUrl = await generateBadgeArt(`${spec.boss.artPrompt}. Cartoon game boss, friendly villain`);
-    } catch (err) {
-      console.error('[rally] boss art failed', err instanceof Error ? err.message : err);
-    }
-  }
   const hp = spec.boss?.hp ?? 0;
   const meta = JSON.stringify({museUsed, bossKind, buffed: false, focus: plan.focus, fairness: plan.fairness, handicapsByMuse: plan.museUsed, ...(opts.goalId ? {goalId: opts.goalId} : {})});
   const [row] = await sql`
-    insert into quests (title, description, xp_reward, goal_type, goal_count, week_start, muse_meta, template, spec, conversation_id, reel_id, created_by, status, starts_at, ends_at, boss_hp, boss_hp_left, boss_image_url)
-    values (${spec.title}, ${spec.story}, 100, 'rally', ${spec.levels.length}, ${thisMonday().toISOString().slice(0, 10)}, ${meta}::jsonb, ${spec.template}, ${JSON.stringify(spec)}::jsonb, ${opts.conversationId}, ${opts.source.kind === 'reel' ? opts.source.reelId : null}, ${opts.creator.id}, 'active', ${spec.startsAt}, ${spec.endsAt}, ${hp}, ${hp}, ${bossImageUrl})
+    insert into quests (title, description, xp_reward, goal_type, goal_count, week_start, muse_meta, template, spec, conversation_id, reel_id, created_by, status, starts_at, ends_at, boss_hp, boss_hp_left)
+    values (${spec.title}, ${spec.story}, 100, 'rally', ${spec.levels.length}, ${thisMonday().toISOString().slice(0, 10)}, ${meta}::jsonb, ${spec.template}, ${JSON.stringify(spec)}::jsonb, ${opts.conversationId}, ${opts.source.kind === 'reel' ? opts.source.reelId : null}, ${opts.creator.id}, 'active', ${spec.startsAt}, ${spec.endsAt}, ${hp}, ${hp})
     returning *`;
   const quest = mapQuest(row);
   for (const m of members) {
@@ -394,7 +382,7 @@ async function completeQuest(quest: QuestRow, members: QuestMember[]) {
   const days = Math.max(1, Math.ceil((Date.now() - new Date(quest.startsAt).getTime()) / 86_400_000));
   const {text} = await recapText({title: quest.title, bossName, finishers: finishers.map(f => f.name), moves: moves.length, days});
   const author = quest.createdBy ?? finisherIds[0];
-  if (author) await sql`insert into posts (author_id, content, image_url, audience) values (${author}, ${`Muse Game Master · ${text}`}, ${quest.bossImageUrl && !quest.bossImageUrl.startsWith('data:') ? quest.bossImageUrl : null}, 'friends')`;
+  if (author) await sql`insert into posts (author_id, content, audience) values (${author}, ${`Muse Game Master · ${text}`}, 'friends')`;
 }
 
 // ---- State for the dashboard (§17.2) ----------------------------------------------

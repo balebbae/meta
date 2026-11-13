@@ -37,7 +37,7 @@ export default function QuestCard({message, conversation}: CardProps) {
   return (
     <div className={s.questCard} role="group" aria-label={`Quest: ${p.title}`}>
       <div className={s.questHero}>
-        <BossArt kind={state?.quest.bossKind ?? 'goblin'} imageUrl={state?.quest.bossImageUrl} name={p.bossName ?? p.title} size={84} down={hpMax > 0 && hpLeft <= 0} />
+        <BossArt kind={state?.quest.bossKind ?? 'goblin'} name={p.bossName ?? p.title} size={84} down={hpMax > 0 && hpLeft <= 0} />
         <div style={{minWidth: 0}}>
           <div className={s.questTitle}>{p.title}</div>
           <p className={s.questStory}>{state?.quest.spec.story ?? (p.bossName ? `${p.bossName} has ${p.bossHp} HP. Every move counts.` : 'A new Rally quest for this chat.')}</p>

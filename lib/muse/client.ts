@@ -28,12 +28,15 @@ export async function museJson<T>(opts: {
   schemaName: string;
   schema: JsonSchema;
   effort?: 'minimal' | 'low' | 'medium' | 'high';
+  /** Built-in tools Muse may use before answering, e.g. [{type: 'web_search'}]. */
+  tools?: OpenAI.Responses.Tool[];
 }): Promise<T> {
   const c = getMuseClient();
   const response = await c.responses.create({
     model: opts.model,
     input: opts.input,
     reasoning: {effort: opts.effort ?? 'low'},
+    tools: opts.tools,
     text: {
       format: {
         type: 'json_schema',
@@ -43,7 +46,9 @@ export async function museJson<T>(opts: {
       },
     },
   });
-  const text = response.output_text;
+  // With tools Muse narrates between calls ("I'll look that up…"); the JSON is the last message.
+  const last = opts.tools ? response.output.filter(o => o.type === 'message').at(-1) : undefined;
+  const text = last ? last.content.map(c => (c.type === 'output_text' ? c.text : '')).join('') : response.output_text;
   if (!text) throw new Error('empty Muse response');
   return JSON.parse(text) as T;
 }

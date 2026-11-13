@@ -1,6 +1,6 @@
 /** Which of the viewer's groups fit an activity, so "Post to groups" can preselect them. Pure: no DB, no Muse. */
 const FAMILIES: RegExp[] = [
-  /\b(run\w*|jog\w*|5k|10k|marathon\w*|trail\w*|track)\b/,
+  /\b(run\w*|jog\w*|\d+ ?km?|marathon\w*|trail\w*|track)\b/,
   /\b(walk\w*|hik\w*|steps?)\b/,
   /\b(bik\w*|cycl\w*|rid(e|es|ing)|spin)\b/,
   /\bswim\w*\b/,

@@ -165,6 +165,13 @@ img {
   background: var(--fb-blue-hover);
 }
 
+.fb-btn-primary:disabled,
+.fb-btn-secondary:disabled {
+  background: var(--fb-disabled-bg);
+  color: var(--fb-text-disabled);
+  cursor: not-allowed;
+}
+
 .fb-btn-secondary {
   background: var(--fb-icon-bg);
   color: var(--fb-text);

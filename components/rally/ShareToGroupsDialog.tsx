@@ -5,7 +5,7 @@ import {Avatar} from '@/components/ui/Avatar';
 import {Dialog} from '@/components/ui/Dialog';
 import s from './dashboard.module.css';
 
-type Target = {id: number; name: string; iconUrl: string; privacy: 'public' | 'private'; memberCount: number; posted: boolean; score: number};
+type Target = {id: number; name: string; iconUrl: string; privacy: 'public' | 'private'; memberCount: number; posted: boolean; member: boolean; score: number};
 
 /** Post a quest into the viewer's groups as a sign-up post with a spot limit. Relevant groups come preselected. */
 export function ShareToGroupsDialog({questId, open, onClose}: {questId: number; open: boolean; onClose: () => void}) {
@@ -58,7 +58,7 @@ export function ShareToGroupsDialog({questId, open, onClose}: {questId: number; 
       <Avatar src={g.iconUrl} alt="" size={36} />
       <span className={s.shareName}>
         <strong>{g.name}</strong>
-        <span className={s.muted}>{g.posted ? 'Already posted' : `${g.privacy === 'private' ? 'Private' : 'Public'} · ${g.memberCount} members`}</span>
+        <span className={s.muted}>{g.posted ? 'Already posted' : `${g.privacy === 'private' ? 'Private' : 'Public'} · ${g.memberCount} members${g.member ? '' : ' · posting joins you'}`}</span>
       </span>
     </label>
   );
@@ -83,7 +83,11 @@ export function ShareToGroupsDialog({questId, open, onClose}: {questId: number; 
         <div className={s.shareBody}>
           <p className={s.muted}>Group members can sign up until the spots run out. Joining adds them to this quest and its chat.</p>
           {!groups && !error && <p className={s.muted}>Loading your groups…</p>}
-          {groups?.length === 0 && <p className={s.muted}>You are not in any groups yet.</p>}
+          {groups?.length === 0 && (
+            <p className={s.muted}>
+              No groups to post to yet. <Link href="/groups">Find or create a group</Link>.
+            </p>
+          )}
           {suggested.length > 0 && <div className={s.shareHead}>Suggested for this activity</div>}
           {suggested.map(row)}
           {others.length > 0 && <div className={s.shareHead}>{suggested.length ? 'Your other groups' : 'Your groups'}</div>}
@@ -102,6 +106,7 @@ export function ShareToGroupsDialog({questId, open, onClose}: {questId: number; 
             </p>
           )}
           <div className={s.shareActions}>
+            {groups && groups.length > 0 && picked.size === 0 && <span className={s.muted}>Tick a group to post.</span>}
             <button type="button" className="fb-btn-primary" disabled={busy || picked.size === 0 || spots < Math.max(2, going) || spots > 100} onClick={submit}>
               {busy ? 'Posting…' : picked.size > 1 ? `Post to ${picked.size} groups` : 'Post'}
             </button>

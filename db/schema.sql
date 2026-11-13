@@ -480,6 +480,16 @@ create table if not exists reels (
   created_at timestamptz not null default now()
 );
 
+create table if not exists reel_comments (
+  id serial primary key,
+  reel_id integer not null,
+  reel_kind text not null check (reel_kind in ('fitness', 'feed')),
+  author_id integer not null references users(id) on delete cascade,
+  content text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists reel_comments_reel_idx on reel_comments (reel_kind, reel_id, created_at);
+
 -- Rally quests reuse the Closeness quests table (§19.1). template null = legacy closeness quest.
 alter table quests add column if not exists template text check (template in ('boss', 'relay', 'streak'));
 alter table quests add column if not exists spec jsonb;

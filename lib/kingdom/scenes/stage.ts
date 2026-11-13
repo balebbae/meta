@@ -10,6 +10,7 @@ import {animate, cloneRig, setState} from '../rig';
 import {blockGeometry, box, cube, mesh, softMaterial, type MatKind} from '../factories/soft';
 import type {BuildOptions, HeroPreset, Rig} from '../types';
 import type {Input, Phase} from '../games/common';
+import {dress} from './costumes';
 import {WORLDS, tint, type World, type WorldId} from './worlds';
 
 export type Hud = {phase: Phase; score: number; message: string; left: string; right: string};
@@ -102,6 +103,7 @@ export class Stage {
   make(id: string, options: BuildOptions = {}): Rig { const def = assetById(id); if (!def) throw new Error(`Unknown asset ${id}`); const r = def.build(options); this.made.push(r); return r; }
   /** Put a rig on the stage: it is drawn and animated from now on. */
   place(r: Rig, x: number, y: number, z: number, ry = 0, parent: Object3D = this.group): Rig {
+    if (!r.group.userData.dressed) { r.group.userData.dressed = true; dress(r, this.world.id); } // before the first placement, while the rig still stands at the origin
     if (r.species === 'hero' || r.species === 'avatar' || r.species === 'pony') r.group.userData.noTone = true; else this.tone(r.group);
     r.group.position.set(x, y, z); r.group.rotation.y = ry; parent.add(r.group); if (!this.rigs.includes(r)) this.rigs.push(r); return r; }
   /** A placed copy of a rig built with make(): shares geometry, animates on its own. */

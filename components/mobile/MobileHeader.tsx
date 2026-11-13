@@ -1,8 +1,9 @@
 'use client';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {useState} from 'react';
-import {MessengerIcon, SearchIcon} from '@/components/icons';
+import {useEffect, useState} from 'react';
+import {ArrowLeftIcon, MessengerIcon, SearchIcon} from '@/components/icons';
+import {Avatar} from '@/components/ui/Avatar';
 import {COMPOSE_EVENT} from '@/components/layout/ComposeFab';
 import {useVisiblePolling} from '@/components/messages/hooks';
 import {FacebookWordmark} from './Wordmark';
@@ -38,6 +39,79 @@ export function useChatUnread(intervalMs = 15000) {
   return n;
 }
 
+type Hit = {id: number; name: string; avatarUrl: string};
+
+/** People search used by the mobile header, menu, and friends title. Desktop keeps Header's search box. */
+export function PeopleSearchButton({className, iconSize = 22}: {className: string; iconSize?: number}) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const [users, setUsers] = useState<Hit[]>([]);
+  const [settled, setSettled] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const term = q.trim();
+    if (!term) {
+      setUsers([]);
+      setSettled(false);
+      return;
+    }
+    setSettled(false);
+    const ctrl = new AbortController();
+    const t = setTimeout(() => {
+      fetch(`/api/users/search?q=${encodeURIComponent(term)}`, {signal: ctrl.signal})
+        .then(r => (r.ok ? r.json() : {users: []}))
+        .then((d: {users?: Hit[]}) => {
+          setUsers(d.users ?? []);
+          setSettled(true);
+        })
+        .catch(() => {
+          if (ctrl.signal.aborted) return;
+          setSettled(true);
+        });
+    }, 150);
+    return () => {
+      clearTimeout(t);
+      ctrl.abort();
+    };
+  }, [open, q]);
+
+  const close = () => {
+    setOpen(false);
+    setQ('');
+  };
+
+  return (
+    <>
+      <button type="button" className={className} aria-label="Search" onClick={() => setOpen(true)}>
+        <SearchIcon size={iconSize} />
+      </button>
+      {open && (
+        <div className={styles.searchSheet} role="dialog" aria-label="Search Facebook">
+          <div className={styles.searchSheetTop}>
+            <button type="button" className={styles.titleBtn} aria-label="Close search" onClick={close}>
+              <ArrowLeftIcon size={20} />
+            </button>
+            <label className={styles.searchBox} style={{flex: 1, margin: 0}}>
+              <SearchIcon size={18} />
+              <input autoFocus aria-label="Search Facebook" placeholder="Search Facebook" value={q} onChange={e => setQ(e.target.value)} />
+            </label>
+          </div>
+          <div className={styles.searchSheetList}>
+            {users.map(u => (
+              <Link key={u.id} href={`/profile/${u.id}`} className={styles.searchHit} onClick={close}>
+                <Avatar src={u.avatarUrl} alt="" size={40} />
+                {u.name}
+              </Link>
+            ))}
+            {settled && users.length === 0 && <p className={styles.empty}>No people found.</p>}
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 /** Pages that draw their own large title instead of the wordmark header (like the iOS app). */
 const SELF_TITLED = ['/menu', '/friends', '/messages'];
 
@@ -57,9 +131,7 @@ export function MobileHeader() {
         <button className={styles.headerBtn} aria-label="Create" onClick={() => window.dispatchEvent(new Event(COMPOSE_EVENT))}>
           <CreatePlusIcon size={28} />
         </button>
-        <Link href="/friends?view=suggestions" className={styles.headerBtn} aria-label="Search">
-          <SearchIcon size={27} />
-        </Link>
+        <PeopleSearchButton className={styles.headerBtn} iconSize={27} />
         <Link href="/messages" className={styles.headerBtn} aria-label="Messenger">
           <MessengerIcon size={28} />
           {unread > 0 && <span className={styles.badge}>{unread > 9 ? '9+' : unread}</span>}

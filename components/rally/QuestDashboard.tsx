@@ -30,6 +30,7 @@ import s from './dashboard.module.css';
 
 // One live WebGL scene for the fight; every other character on the page is a cached sprite.
 const Arena = dynamic(() => import('@/components/kingdom/Arena'), {ssr: false});
+type ArenaStrike = import('@/components/kingdom/Arena').ArenaStrike;
 
 const POLL_MS = 3000;
 const exerciseLine = (e: {name: string; reps?: number | null; seconds?: number | null}) => `${e.name}${e.reps ? ` ×${e.reps}` : ''}${e.seconds ? ` ${e.seconds}s` : ''}`;
@@ -50,14 +51,22 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
   useEffect(() => setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches), []);
   const bossCast = useMemo(() => castBoss(state.quest.bossKind), [state.quest.bossKind]);
   const heroKey = state.members.map(m => `${m.id}:${m.name}:${m.gear.length}`).join('|');
-  const arenaHeroes = useMemo(() => state.members.map(m => ({id: m.id, cast: castHero(m.name, m.gear)})), [heroKey]); // eslint-disable-line react-hooks/exhaustive-deps -- state is replaced on every poll
+  const arenaHeroes = useMemo(() => state.members.map(m => ({id: m.id, name: m.name, cast: castHero(m.name, m.gear)})), [heroKey]); // eslint-disable-line react-hooks/exhaustive-deps -- state is replaced on every poll
   const lastMoveId = useRef(initial.moves[initial.moves.length - 1]?.id ?? 0);
+  // Moves logged since this page opened, for the arena to play. My own carry the reps I typed; a teammate's set is shown at their personal target.
+  const [strikes, setStrikes] = useState<ArenaStrike[]>([]);
+  const mine = useRef(new Map<number, {reps: number | null; critical: boolean}>());
 
   const refresh = useCallback(async () => {
     try {
       const next = await rallyApi.state(initial.quest.id);
       const newest = next.moves[next.moves.length - 1];
       if (newest && newest.id > lastMoveId.current) {
+        const fresh = next.moves.filter(m => m.id > lastMoveId.current && m.damage > 0).map(m => {
+          const own = mine.current.get(m.id);
+          return {id: m.id, userId: m.userId, damage: m.damage, reps: own?.reps ?? next.members.find(x => x.id === m.userId)?.target ?? 6, critical: own?.critical ?? false};
+        });
+        if (fresh.length) setStrikes(prev => [...prev.slice(-20), ...fresh]);
         lastMoveId.current = newest.id;
         setAnim({userId: newest.userId, state: next.quest.status === 'completed' ? 'celebrate' : 'attack', hurt: true});
         setTimeout(() => setAnim(null), 1800);
@@ -73,7 +82,8 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
     return () => clearInterval(t);
   }, [refresh]);
 
-  const onMove = (res: OkMove) => {
+  const onMove = (res: OkMove, reps: number | null) => {
+    mine.current.set(res.move.id, {reps, critical: res.critical});
     showToast({body: `Game Master: ${res.narration}`, autoHideDuration: 5000});
     void refresh();
   };
@@ -137,7 +147,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
                   <BossArt kind={q.bossKind} name={spec.boss.name} size={150} hurt={Boolean(anim?.hurt)} down={done} />
                 ) : (
                   <div className={s.arenaCanvas} role="img" aria-label={`${spec.boss.name}${done ? ', defeated,' : ''} facing the squad: ${state.members.map(m => m.name.split(' ')[0]).join(', ')}`}>
-                    <Arena boss={bossCast} heroes={arenaHeroes} attackerId={anim?.userId ?? null} hurt={Boolean(anim?.hurt)} down={done} reducedMotion={reducedMotion} onError={() => setArenaFailed(true)} />
+                    <Arena boss={bossCast} bossName={spec.boss.name} hp={q.bossHp} hpLeft={done ? 0 : q.bossHpLeft} heroes={arenaHeroes} strikes={strikes} reducedMotion={reducedMotion} onError={() => setArenaFailed(true)} />
                   </div>
                 )}
                 <Heading level={3}>{spec.boss.name}</Heading>

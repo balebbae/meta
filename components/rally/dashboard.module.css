@@ -5,7 +5,9 @@
 }
 .arenaCanvas {
   width: 100%;
-  height: clamp(200px, 34vw, 300px);
+  height: clamp(240px, 44vw, 400px);
+  border-radius: var(--radius-container);
+  overflow: hidden;
 }
 .arenaCanvas canvas {
   display: block;

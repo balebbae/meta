@@ -3,7 +3,7 @@
  * same scenes. A Stage owns the group, the lights, sky dressing, the rigs it animates, pixel-cube particles, scale pulses,
  * death pops and a camera with shake. Scenes set `eye` and `look`; `update(dt)` does the rest.
  */
-import {DirectionalLight, Group, HemisphereLight, Mesh, MeshBasicMaterial, Object3D, type PerspectiveCamera, Vector3} from 'three';
+import {CanvasTexture, DirectionalLight, Group, HemisphereLight, Mesh, MeshBasicMaterial, Object3D, type PerspectiveCamera, SRGBColorSpace, Sprite, SpriteMaterial, Vector3} from 'three';
 import {assetById} from '../catalog';
 import {C} from '../palette';
 import {animate, cloneRig, setState} from '../rig';
@@ -38,6 +38,7 @@ export class Stage {
   private readonly pulses = new Map<Object3D, {base: number; extra: number}>();
   private readonly dying: {rig: Rig; t: number; base: number}[] = [];
   private readonly clouds: Object3D[] = [];
+  private readonly floats: {sprite: Sprite; life: number; max: number}[] = [];
   private readonly made: {dispose: () => void}[] = [];
   private trauma = 0;
   private clock = 0;
@@ -85,6 +86,18 @@ export class Stage {
       if (++n >= count) break;
     }
   }
+  /** A text sprite: name tags, damage numbers. With `life` (seconds) it floats up and fades out. */
+  text(str: string, x: number, y: number, z: number, o: {color?: string; size?: number; life?: number; parent?: Object3D} = {}): Sprite | null {
+    if (typeof document === 'undefined') return null;
+    const c = document.createElement('canvas'), g = c.getContext('2d')!, font = '800 56px ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+    g.font = font; c.width = Math.ceil(g.measureText(str).width) + 28; c.height = 80;
+    g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round'; g.lineWidth = 12; g.strokeStyle = '#1b1518'; g.strokeText(str, c.width / 2, 42); g.fillStyle = o.color ?? '#ffffff'; g.fillText(str, c.width / 2, 42);
+    const map = new CanvasTexture(c); map.colorSpace = SRGBColorSpace;
+    const sprite = new Sprite(new SpriteMaterial({map, transparent: true, depthTest: false})), size = o.size ?? 0.5;
+    sprite.scale.set((c.width / c.height) * size, size, 1); sprite.position.set(x, y, z); sprite.renderOrder = 10; (o.parent ?? this.group).add(sprite);
+    if (o.life) this.floats.push({sprite, life: o.life, max: o.life}); else this.made.push({dispose: () => { map.dispose(); sprite.material.dispose(); }});
+    return sprite;
+  }
   shake(amount: number): void { this.trauma = Math.min(1, this.trauma + amount); }
   /** A quick scale pop that eases back: hit feedback that leaves the object's own scale alone. */
   pulse(o: Object3D, extra = 0.12): void { const p = this.pulses.get(o); if (p) p.extra = extra; else this.pulses.set(o, {base: o.scale.x, extra}); }
@@ -104,6 +117,7 @@ export class Stage {
     }
     for (const [o, p] of this.pulses) { p.extra *= Math.exp(-dt * 14); o.scale.setScalar(p.base * (1 + p.extra)); if (p.extra < 0.004) { o.scale.setScalar(p.base); this.pulses.delete(o); } }
     for (let i = this.dying.length - 1; i >= 0; i--) { const d = this.dying[i]; d.t += dt; const k = Math.max(0, 1 - d.t / 0.55); d.rig.group.scale.setScalar(d.base * k); d.rig.group.rotation.y += dt * 9; if (k <= 0) { this.drop(d.rig); this.dying.splice(i, 1); } }
+    for (let i = this.floats.length - 1; i >= 0; i--) { const f = this.floats[i]; f.life -= dt; f.sprite.position.y += dt * 1.3; f.sprite.material.opacity = Math.min(1, (f.life / f.max) * 2.2); if (f.life <= 0) { f.sprite.removeFromParent(); f.sprite.material.map?.dispose(); f.sprite.material.dispose(); this.floats.splice(i, 1); } }
     for (const c of this.clouds) { c.position.x += dt * 0.35; if (c.position.x > 38) c.position.x = -38; }
     this.trauma = Math.max(0, this.trauma - dt * 1.6);
     const cam = this.host.camera, s = this.trauma * this.trauma * 0.45, t = this.clock * 37;
@@ -112,5 +126,6 @@ export class Stage {
   dispose(): void {
     this.group.removeFromParent(); for (const r of this.rigs) r.group.removeFromParent(); this.rigs.length = 0;
     for (const m of this.made) m.dispose(); for (const m of this.mats.values()) m.dispose(); this.dying.length = 0; this.pulses.clear();
+    for (const f of this.floats) { f.sprite.material.map?.dispose(); f.sprite.material.dispose(); } this.floats.length = 0;
   }
 }

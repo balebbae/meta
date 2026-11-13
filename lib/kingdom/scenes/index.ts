@@ -7,4 +7,5 @@ import {createQuestScene} from './quest';
 import type {GameScene, Host} from './stage';
 
 export type {GameScene, Host, Hud} from './stage';
+export {createBossFight, type BossFight, type BossFightOpts, type Fighter} from './bossfight';
 export const createGameScene = (game: GameId, host: Host): GameScene => ({dash: createDashScene, defense: createDefenseScene, joust: createJoustScene, quest: createQuestScene})[game](host);

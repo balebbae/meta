@@ -1,6 +1,6 @@
 import {NextResponse, type NextRequest} from 'next/server';
 import {badRequest, forbidden, notFound, readJson, withUser} from '@/lib/api';
-import {getConversation, updateConversation} from '@/lib/messaging-queries';
+import {addSystemMessage, getConversation, updateConversation} from '@/lib/messaging-queries';
 
 type Ctx = {params: Promise<{id: string}>};
 
@@ -21,10 +21,10 @@ export async function PATCH(req: NextRequest, {params}: Ctx) {
     if (!existing.isGroup) return forbidden();
     const body = await readJson<{name?: string | null; imageUrl?: string | null}>(req);
     if (!body || (body.name === undefined && body.imageUrl === undefined)) return badRequest('name or imageUrl is required');
-    await updateConversation(id, {
-      name: body.name === undefined ? undefined : body.name?.trim() || null,
-      imageUrl: body.imageUrl === undefined ? undefined : body.imageUrl?.trim() || null,
-    });
+    const name = body.name === undefined ? undefined : body.name?.trim() || null;
+    await updateConversation(id, {name, imageUrl: body.imageUrl === undefined ? undefined : body.imageUrl?.trim() || null});
+    if (name !== undefined) await addSystemMessage(id, user, name ? `${user.name} named the group ${name}.` : `${user.name} removed the group name.`);
+    if (body.imageUrl !== undefined) await addSystemMessage(id, user, `${user.name} changed the group photo.`);
     return NextResponse.json({conversation: await getConversation(id, user.id)});
   });
 }

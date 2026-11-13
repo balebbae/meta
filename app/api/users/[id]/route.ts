@@ -1,6 +1,6 @@
 import {NextResponse} from 'next/server';
 import {getSessionUser} from '@/lib/auth';
-import {getProfile, updateProfile} from '@/lib/profile-queries';
+import {getProfile, updateProfile, type Profile} from '@/lib/profile-queries';
 import {MAX_DATA_URL_LENGTH, isImageDataUrl} from '@/lib/image-upload';
 
 type Ctx = {params: Promise<{id: string}>};
@@ -13,7 +13,19 @@ export async function GET(_req: Request, {params}: Ctx) {
   if (!Number.isInteger(userId)) return NextResponse.json({error: 'bad id'}, {status: 400});
   const profile = await getProfile(userId, viewer.id);
   if (!profile) return NextResponse.json({error: 'not found'}, {status: 404});
-  return NextResponse.json(profile);
+  return NextResponse.json(redactProfile(profile, viewer.id));
+}
+
+/** Only the owner sees their login identity and contact fields; friends see the birthday, everyone else only the public card. */
+function redactProfile(profile: Profile, viewerId: number): Profile {
+  if (profile.user.id === viewerId) return profile;
+  const {email: _email, supertokensId: _st, ...user} = profile.user;
+  const friends = profile.friendship === 'friends';
+  return {
+    ...profile,
+    user: {...user, email: '', supertokensId: null},
+    details: {...profile.details, phone: null, birthday: friends ? profile.details.birthday : null},
+  };
 }
 
 const isUrl = (v: unknown) => typeof v === 'string' && /^https?:\/\/\S+$/i.test(v) && v.length <= 2000;

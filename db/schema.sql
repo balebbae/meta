@@ -605,3 +605,77 @@ create table if not exists feed_reels (
   plays integer not null default 0,
   created_at timestamptz not null default now()
 );
+
+-- Group activities: a Rally quest posted into groups as a sign-up post; capacity caps quest_progress rows
+alter table quests add column if not exists capacity integer check (capacity between 2 and 100);
+alter table group_posts add column if not exists quest_id integer references quests(id) on delete cascade;
+create index if not exists group_posts_quest_idx on group_posts (quest_id) where quest_id is not null;
+
+-- Muse action items: things the owner's Muse suggests doing next (register for an event, buy gear).
+-- Private to the owner. Register/Buy are simulated in-app (demo): no organizer or store is contacted.
+create table if not exists muse_actions (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  kind text not null check (kind in ('event', 'buy')),
+  title text not null,
+  detail text not null default '',
+  why text not null default '',
+  price text,
+  url text,
+  image_url text,
+  starts_at timestamptz,
+  event_id integer references events(id) on delete cascade,
+  listing_id integer references marketplace_listings(id) on delete cascade,
+  dedupe_key text not null,
+  status text not null default 'suggested' check (status in ('suggested', 'done', 'dismissed')),
+  confirmation text,
+  created_at timestamptz not null default now(),
+  acted_at timestamptz,
+  unique (user_id, dedupe_key)
+);
+create index if not exists muse_actions_user_idx on muse_actions (user_id, status);
+alter table activity_profiles add column if not exists muse_actions_at timestamptz;
+
+-- "A few months ahead": advice runs instantly; connecting opens a Muse-relayed thread; names hidden until both reveal
+alter table mentor_requests add column if not exists connect_status text not null default 'none' check (connect_status in ('none', 'requested', 'connected', 'declined'));
+alter table mentor_requests add column if not exists reveal jsonb not null default '{}'::jsonb;
+create table if not exists muse_relay_messages (
+  id bigserial primary key,
+  request_id integer not null references mentor_requests(id) on delete cascade,
+  sender_id integer references users(id) on delete cascade,
+  from_role text not null check (from_role in ('seeker', 'mentor')),
+  kind text not null check (kind in ('relay', 'data_answer')),
+  raw_text text,
+  relayed_text text not null,
+  muse_used boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists muse_relay_messages_request_idx on muse_relay_messages (request_id, id);
+
+-- Wearables: Whoop OAuth + phone health sync (Apple Health / Health Connect)
+create table if not exists whoop_accounts (
+  user_id integer primary key references users(id) on delete cascade,
+  whoop_user_id text,
+  access_token text not null,
+  refresh_token text,
+  expires_at timestamptz,
+  connected_at timestamptz not null default now()
+);
+
+create table if not exists health_samples (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  source text not null check (source in ('whoop', 'apple_health', 'health_connect')),
+  metric text not null,
+  value double precision not null,
+  unit text not null,
+  recorded_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists health_samples_user_idx on health_samples (user_id, recorded_at desc);
+
+create table if not exists health_sync_tokens (
+  token text primary key,
+  user_id integer not null references users(id) on delete cascade,
+  expires_at timestamptz not null
+);

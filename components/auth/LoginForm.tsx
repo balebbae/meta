@@ -49,7 +49,9 @@ export function LoginForm() {
           else setPasswordError(f.error);
         }
       } else if (res.status === 'WRONG_CREDENTIALS_ERROR') {
-        setPasswordError('The password you\u2019ve entered is incorrect.');
+        const exists = await EmailPassword.doesEmailExist({email: email.trim()}).then(r => r.doesExist).catch(() => true);
+        if (exists) setPasswordError('The password you\u2019ve entered is incorrect.');
+        else setEmailError('The email address you entered isn\u2019t connected to an account.');
       } else {
         setFormError('Something went wrong. Please try again.');
       }

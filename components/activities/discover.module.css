@@ -5,6 +5,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  flex-wrap: wrap;
   margin: 0 0 10px;
 }
 .sectionTitle {
@@ -279,6 +280,7 @@
   font-weight: 400;
 }
 .introBody {
+  padding: 16px;
   font-size: 15px;
   line-height: 1.4;
   color: var(--fb-text);
@@ -301,6 +303,61 @@
   font: inherit;
   background: var(--fb-input-bg);
   color: var(--fb-text);
+}
+.imgIcon {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--fb-text-secondary);
+}
+.confirmed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 12px;
+  text-align: center;
+  color: var(--fb-text-secondary);
+}
+.confirmed strong {
+  font-size: 20px;
+  color: var(--fb-text);
+}
+.confirmedIcon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--fb-green);
+  color: #fff;
+}
+.receipt {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--fb-radius);
+  background: var(--fb-input-bg);
+  font-size: 14px;
+}
+.receipt dt {
+  color: var(--fb-text-secondary);
+}
+.receipt dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.demoNote {
+  margin: 10px 0 4px;
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+}
+.demoNote a {
+  color: var(--fb-blue);
 }
 @media (max-width: 699px) {
   .hero {

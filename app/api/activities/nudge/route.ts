@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
       ? (await sql`select id, title, boss_hp_left from quests where id = ${body.questId}`.catch(() => []))[0]
       : (await sql`select id, title, boss_hp_left from quests where status = 'active' and template is not null and (created_by = ${user.id} or exists (select 1 from quest_moves qm where qm.quest_id = quests.id and qm.user_id = ${user.id})) order by id desc limit 1`.catch(() => []))[0];
     const title = (quest?.title as string | undefined) ?? 'your weekly quest';
-    const context = kind === 'boss_low' ? `The boss in "${title}" is almost down; one more move finishes it.` : kind === 'mentor' ? 'A mentor accepted your request; your Muses are talking.' : `Your Rally quest "${title}" drops today. First move counts double if it happens before 6pm.`;
-    const fallback = kind === 'boss_low' ? `Boss almost down in ${title} — one more move finishes it.` : kind === 'mentor' ? 'Your mentor said yes. Your Muses are talking now.' : `Your quest drops today: ${title}. Make the first move before 6pm for double.`;
+    const context = kind === 'boss_low' ? `The boss in "${title}" is almost down; one more move finishes it.` : kind === 'mentor' ? 'Someone a few months ahead of you connected; your Muses are talking.' : `Your Rally quest "${title}" drops today. First move counts double if it happens before 6pm.`;
+    const fallback = kind === 'boss_low' ? `Boss almost down in ${title} — one more move finishes it.` : kind === 'mentor' ? 'They said yes. Your Muses are talking now.' : `Your quest drops today: ${title}. Make the first move before 6pm for double.`;
     let message = fallback;
     let museOffline = true;
     if (museConfigured()) {
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         message = fallback;
       }
     }
-    const url = quest?.id ? `/activities/quests/${quest.id}` : '/activities';
+    const url = quest?.id ? `/activities/games/${quest.id}` : '/activities';
     const [row] = await sql`insert into notifications (user_id, actor_id, type, message) values (${user.id}, null, ${`activities_${kind}`}, ${message}) returning id`;
     await sendPushToUser(user.id, {title: 'Activities', body: message, url, tag: `activities-${kind}`}).catch(() => {});
     return NextResponse.json({id: row.id, message, museOffline, url}, {status: 201});

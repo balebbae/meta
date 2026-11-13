@@ -25,7 +25,7 @@ export default async function GroupPage({params, searchParams}: {params: Promise
   const group = await getGroup(user?.id ?? 0, Number(id));
   if (!group) notFound();
   const tab: GroupTab = rawTab === 'about' || rawTab === 'members' || rawTab === 'events' ? rawTab : 'discussion';
-  const [posts, members] = await Promise.all([listGroupPosts(group.id), listGroupMembers(group.id, tab === 'members' ? 100 : 10)]);
+  const [posts, members] = await Promise.all([listGroupPosts(group.id, user?.id ?? 0), listGroupMembers(group.id, tab === 'members' ? 100 : 10)]);
   const canSee = group.privacy === 'public' || group.isMember;
 
   const about = (

@@ -14,6 +14,7 @@ import {
   LockIcon,
   MoonIcon,
   RailAdsIcon,
+  RailClimateIcon,
   RailEventsIcon,
   RailFeedsIcon,
   RailFriendsIcon,
@@ -35,6 +36,7 @@ import styles from './mobile.module.css';
 const SHORTCUTS = [
   {label: 'Friends', Icon: RailFriendsIcon, href: '/friends'},
   {label: 'Activities', Icon: RailGamingIcon, href: '/activities'},
+  {label: 'Health', Icon: RailClimateIcon, href: '/health'},
   {label: 'Log a workout', Icon: RailGamingIcon, href: '/activities/log'},
   {label: 'Memories', Icon: RailMemoriesIcon, href: '/memories'},
   {label: 'Groups', Icon: RailGroupsIcon, href: '/groups'},

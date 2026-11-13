@@ -511,3 +511,77 @@
     position: static;
   }
 }
+
+/* Group activity sign-up card (GroupActivityCard) */
+.activity {
+  margin: 0 16px 12px;
+  padding: 12px;
+  border: 1px solid var(--fb-divider-soft);
+  border-radius: var(--fb-radius);
+  background: var(--fb-bubble);
+}
+.activityKicker {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fb-blue);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.activityTitle {
+  margin-top: 2px;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 22px;
+}
+.activityStory {
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 19px;
+  color: var(--fb-text-secondary);
+}
+.activityMeter {
+  height: 6px;
+  margin-top: 10px;
+  border-radius: var(--fb-radius-pill);
+  background: var(--fb-hover-strong);
+  overflow: hidden;
+}
+.activityMeter > div {
+  height: 100%;
+  background: var(--fb-blue);
+}
+.activityFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+.activityGoing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+}
+.activityFaces {
+  display: inline-flex;
+}
+.activityFaces > span + span {
+  margin-left: -6px;
+}
+.activityFaces > span {
+  border: 2px solid var(--fb-bubble);
+  border-radius: 50%;
+}
+.activityError {
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--fb-red);
+}
+.btnPrimary:disabled {
+  background: var(--fb-disabled-bg);
+  color: var(--fb-text-disabled);
+  cursor: default;
+}

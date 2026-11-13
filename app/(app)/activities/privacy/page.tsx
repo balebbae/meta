@@ -21,7 +21,7 @@ const QUESTION_LABEL: Record<string, string> = {
 function askerLabel(a: string): string {
   if (a.startsWith('preview')) return 'You (preview)';
   const [kind, id] = a.split(':');
-  const names: Record<string, string> = {turf: 'Turf game', quest: 'Rally game', rally: 'Rally game', mentor: 'Mentor match', discover: 'Discover', game: 'Game'};
+  const names: Record<string, string> = {turf: 'Turf game', quest: 'Rally game', rally: 'Rally game', mentor: 'A few months ahead', ahead: 'A few months ahead', discover: 'Discover', game: 'Game'};
   return `${names[kind] ?? kind}${id ? ` #${id}` : ''}`;
 }
 
@@ -43,7 +43,7 @@ export default async function PrivacyPage({searchParams}: {searchParams: Promise
       <div className={styles.card} id="audit">
         <h2 className={styles.h2}>Who asked my Muse what, and what it said</h2>
         {audit.length === 0 ? (
-          <p className={styles.sub}>Nothing yet. As soon as a game, Discover or a mentor match asks, it shows up here.</p>
+          <p className={styles.sub}>Nothing yet. As soon as a game, Discover or someone's Muse asks, it shows up here.</p>
         ) : (
           <ul className={styles.list}>
             {audit.map(r => (

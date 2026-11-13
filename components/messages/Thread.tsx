@@ -9,6 +9,7 @@ import {Composer} from './Composer';
 import {RallySheet} from '@/components/rally/RallySheet';
 import {ConversationAvatar} from './ConversationRow';
 import {InfoCircleIcon, PhoneIcon, VideoCallIcon} from './icons';
+import {Skeleton} from '@/components/ui/Skeleton';
 import styles from './messages.module.css';
 import {MessageCard} from '@/components/messages/cards';
 
@@ -126,8 +127,21 @@ export function Thread({
             </div>
           </div>
         )}
-        {loading && <div className={styles.empty}>Loading…</div>}
+        {loading && (
+          <div className={styles.skeletonBubbles} role="status" aria-label="Loading messages">
+            {[200, 120, 260, 90, 180].map((w, i) => (
+              <Skeleton key={i} w={w} h={36} r={18} style={{alignSelf: i % 2 ? 'flex-end' : 'flex-start'}} />
+            ))}
+          </div>
+        )}
         {messages.map((m, i) => {
+          if (m.kind === 'system') {
+            return (
+              <div key={m.id} className={styles.divider} title={formatFullDate(m.createdAt)}>
+                {(m.payload?.text as string | undefined) ?? m.body}
+              </div>
+            );
+          }
           const prev = messages[i - 1];
           const next = messages[i + 1];
           const mine = m.sender?.id === viewerId;

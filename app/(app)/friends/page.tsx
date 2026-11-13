@@ -20,11 +20,14 @@ export default async function FriendsPage({searchParams}: {searchParams: Promise
   const {view: rawView} = await searchParams;
   const view: View = VIEWS.includes(rawView as View) ? (rawView as View) : 'home';
 
-  const [requests, suggestions, friends] = await Promise.all([
+  const [requests, allSuggestions, friends] = await Promise.all([
     listFriendRequests(viewer.id),
     view === 'home' || view === 'suggestions' ? listSuggestions(viewer.id, 200) : Promise.resolve([]),
     view === 'all' || view === 'home' ? listUserFriends(viewer.id, viewer.id) : Promise.resolve([]),
   ]);
+  // People who already sent a request live in Friend Requests; don't show them a second time under People You May Know.
+  const requestIds = new Set(requests.map(r => r.id));
+  const suggestions = allSuggestions.filter(s => !requestIds.has(s.id));
 
   return (
     <>

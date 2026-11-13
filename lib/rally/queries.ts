@@ -95,6 +95,12 @@ export async function getQuest(id: number): Promise<QuestRow | null> {
   return row ? mapQuest(row) : null;
 }
 
+/** A quest for this reel in this chat that was created in the last few minutes (the Muse design call is slow; see /api/games/from-reel). */
+export async function findRecentQuestForReel(reelId: number, conversationId: number): Promise<QuestRow | null> {
+  const [row] = await sql`select * from quests where reel_id = ${reelId} and conversation_id = ${conversationId} and template is not null and created_at > now() - interval '3 minutes' order by created_at desc limit 1`;
+  return row ? mapQuest(row) : null;
+}
+
 export async function listQuestsForConversation(conversationId: number): Promise<QuestRow[]> {
   const rows = await sql`select * from quests where conversation_id = ${conversationId} and template is not null order by created_at desc limit 20`;
   return rows.map(mapQuest);

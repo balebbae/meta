@@ -5,6 +5,7 @@ import {useState} from 'react';
 import type {GroupPost} from '@/lib/secondary-queries';
 import {formatCount, timeAgo} from '@/lib/secondary-data';
 import {CommentIcon, GlobeIcon, LikeIcon, LikeOutlineIcon, LockIcon, MoreIcon, ShareIcon} from './icons';
+import {GroupActivityCard} from './GroupActivityCard';
 import styles from './groups.module.css';
 
 export function GroupPostCard({post, showGroup = true}: {post: GroupPost; showGroup?: boolean}) {
@@ -55,6 +56,7 @@ export function GroupPostCard({post, showGroup = true}: {post: GroupPost; showGr
         </button>
       </header>
       <div className={styles.postBody}>{post.content}</div>
+      {post.activity && <GroupActivityCard groupId={post.group.id} postId={post.id} activity={post.activity} />}
       {post.imageUrl && (
         <div className={styles.postImage}>
           <Image src={post.imageUrl} alt="" fill sizes="680px" />

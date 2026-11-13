@@ -28,13 +28,18 @@ test('whoop readings keep recovery, sleep stages, and the workout name', () => {
   const samples = whoopReadings({
     recovery: {records: [{created_at: '2026-11-12T08:00:00Z', score: {recovery_score: 67, resting_heart_rate: 48, hrv_rmssd_milli: 72}}]},
     sleep: {records: [{end: '2026-11-12T08:00:00Z', score: {stage_summary: {total_light_sleep_time_milli: 3_600_000, total_rem_sleep_time_milli: 3_600_000}, sleep_performance_percentage: 90}}]},
-    workouts: {records: [{sport_name: 'running', start: '2026-11-12T15:00:00Z', end: '2026-11-12T15:42:00Z', score: {strain: 8.2, average_heart_rate: 140, max_heart_rate: 168}}]},
+    workouts: {records: [{sport_name: 'running', start: '2026-11-12T15:00:00Z', end: '2026-11-12T15:42:00Z', score: {strain: 8.2, average_heart_rate: 140, max_heart_rate: 168, percent_recorded: 100, zone_durations: {zone_one_milli: 600000}}}]},
+    body: {height_meter: 1.8, weight_kilogram: 70, max_heart_rate: 190},
   });
   assert.equal(samples.find(sample => sample.metric === 'recovery_score')?.value, 67);
   assert.equal(samples.find(sample => sample.metric === 'sleep_hours')?.value, 2);
   assert.equal(samples.find(sample => sample.metric === 'sleep_performance_pct')?.value, 90);
   assert.equal(samples.find(sample => sample.metric === 'workout_1')?.value, 42);
   assert.match(samples.find(sample => sample.metric === 'workout_1')?.unit ?? '', /^Running/);
+  assert.match(samples.find(sample => sample.metric === 'workout_1')?.unit ?? '', /z 0\/10/);
+  assert.equal(samples.find(sample => sample.metric === 'zone_1_min')?.value, 10);
+  assert.equal(samples.find(sample => sample.metric === 'height_cm')?.value, 180);
+  assert.equal(samples.find(sample => sample.metric === 'max_hr')?.value, 190);
 });
 
 test('sync only stores plain metric names', () => {

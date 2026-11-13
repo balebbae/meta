@@ -416,6 +416,9 @@
 .heroWrap {
   min-width: 0;
 }
+.goalWrap {
+  min-width: 0;
+}
 @media (hover: none) {
   .arrow {
     display: none;
@@ -456,6 +459,14 @@
   }
   .heroWrap {
     padding: 0 16px;
+  }
+  .goalWrap {
+    padding: 12px 16px 0;
+    border-bottom: 1px solid var(--fb-divider);
+  }
+  .goalWrap > section {
+    box-shadow: none;
+    border: 1px solid var(--fb-divider);
   }
   .hero {
     flex-direction: column;

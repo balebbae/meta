@@ -9,17 +9,19 @@ import {ChevronLeftIcon, ChevronRightIcon} from '@/components/icons';
 import {Leaderboard} from '@/components/closeness/Leaderboard';
 import {ListingCard} from '@/components/pages/ListingCard';
 import type {DiscoverCard, DiscoverPayload, DiscoverSection} from '@/lib/activities/discover';
+import type {Goal} from '@/lib/activities/goals';
+import {GoalSpotlight} from '@/components/activities/goals/GoalSpotlight';
 import type {MuseActionsPayload} from '@/lib/activities/actions';
 import type {ListingBrief} from '@/lib/rally/queries';
 import {MuseActions} from './MuseActions';
 import styles from './discover.module.css';
 
 type Viewer = {id: number; name: string; avatarUrl: string};
-type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; listings: ListingBrief[]; showIntro: boolean; start: string | null; eventId: number | null};
+type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; listings: ListingBrief[]; showIntro: boolean; start: string | null; eventId: number | null; goal?: Goal | null};
 
 const json = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
 
-export function DiscoverPage({viewer, data, museActions, listings, showIntro, start, eventId}: Props) {
+export function DiscoverPage({viewer, data, museActions, listings, showIntro, start, eventId, goal = null}: Props) {
   const router = useRouter();
   const [sections, setSections] = useState<DiscoverSection[]>(data.sections);
   const rail = useRef<HTMLDivElement>(null);
@@ -91,7 +93,7 @@ export function DiscoverPage({viewer, data, museActions, listings, showIntro, st
     setBusy(template);
     try {
       if (template === 'reel') {
-        router.push('/reels');
+        router.push('/reels?tab=fitness');
         return;
       }
       if (chatId == null) {
@@ -140,19 +142,22 @@ export function DiscoverPage({viewer, data, museActions, listings, showIntro, st
   return (
     <div className={styles.page}>
       <h1 className={styles.pageTitle}>Activities</h1>
+      <div className={styles.goalWrap}>
+        <GoalSpotlight goal={goal} />
+      </div>
       <MuseActions initial={museActions} viewerName={viewer.name} say={say} />
       {firstMove && renderSection(firstMove)}
       {reels && (
         <section className={styles.section} aria-label="Suggested reels">
           <div className={styles.sectionHead}>
             <h2 className={styles.sectionTitle}>Suggested reels</h2>
-            <Link href="/reels#activities" className={styles.seeAll}>
+            <Link href="/reels?tab=fitness#activities" className={styles.seeAll}>
               See all
             </Link>
           </div>
           <div className={styles.bento}>
             {reels.cards.map(c => (
-              <Link key={c.id} href={c.href ?? '/reels#activities'} className={styles.reelTile}>
+              <Link key={c.id} href={c.href ?? '/reels?tab=fitness#activities'} className={styles.reelTile}>
                 {c.imageUrl && <img src={c.imageUrl} alt="" loading="lazy" />}
                 <span className={styles.reelTag}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>

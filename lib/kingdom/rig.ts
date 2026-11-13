@@ -20,6 +20,16 @@ export function makeRig(group: Group, species: Species, pivots: Record<string, O
   return rig;
 }
 export function setState(rig: Rig, state: AnimState): void { if (rig.state !== state) { rig.state = state; rig.stateTime = 0; } }
+/** A second instance of a rig that shares its geometry. Pivots are re-found by name so it animates independently. */
+export function cloneRig(src: Rig): Rig {
+  const group = src.group.clone(true) as Group, pivots: Record<string, Object3D> = {};
+  group.traverse((o) => { if (o.name && o !== group && !(o as Mesh).isMesh) pivots[o.name] = o; });
+  const rig = makeRig(group, src.species, pivots, src.height, [...src.states], src.rest);
+  rig.scratch = {...src.scratch}; rig.dispose = () => { group.removeFromParent(); };
+  return rig;
+}
+/** Set a continuous state without interrupting a one-shot that is still playing. */
+export function setContinuous(rig: Rig, state: AnimState): void { if (ONE_SHOT[rig.state] && rig.stateTime < (ONE_SHOT[rig.state] ?? 0)) return; if (rig.states.includes(state)) setState(rig, state); }
 
 /** Critically damped-ish approach used by every animator; k is the per-second stiffness. */
 function ease(rig: Rig, key: string, target: number, dt: number, k = 14): number {

@@ -1,4 +1,5 @@
 'use client';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {AlertDialog} from '@astryxdesign/core/AlertDialog';
 import {useEffect, useMemo, useRef, useState} from 'react';
@@ -11,6 +12,8 @@ import {PrivacyZones} from './PrivacyZones';
 import {endsLabel, timeLeft, turfApi, useTurfState, type PointsResult} from './api';
 import styles from './turf.module.css';
 import {useTracker} from './useTracker';
+
+const KingdomView = dynamic(() => import('./KingdomView'), {ssr: false});
 
 const STATUS: Record<string, string> = {pending: 'Not started', live: 'Live', ended: 'Ended', cancelled: 'Cancelled'};
 const INVITE: Record<string, string> = {invited: 'Invited', declined: 'Passed', left: 'Left', expired: 'Expired'};
@@ -34,6 +37,10 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
   const [note, setNote] = useState<string | null>(null);
   const [myOuting, setMyOuting] = useState(state.me.outing);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Kingdom is the game board; Map is the same cells on real streets, which is what you want while you run.
+  const [view, setView] = useState<'kingdom' | 'map'>('kingdom');
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches), []);
 
   useEffect(() => setMyOuting(state.me.outing), [state.me.outing]);
 
@@ -89,9 +96,23 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
             {live ? timeLeft(state.endsAt, now) : STATUS[state.status]}
           </span>
         </div>
-        <div className={styles.mapWrap}>
-          <HexMap arena={state.arena} cells={state.cells} colors={colors} trail={trail} trailColor={colors[me.id]} me={tracker.position} label={`Turf map of ${state.title}`} />
+        <div className={styles.viewTabs} role="group" aria-label="How to show the arena">
+          <button type="button" className={view === 'kingdom' ? styles.btnPrimary : styles.btn} aria-pressed={view === 'kingdom'} onClick={() => setView('kingdom')}>
+            Kingdom
+          </button>
+          <button type="button" className={view === 'map' ? styles.btnPrimary : styles.btn} aria-pressed={view === 'map'} onClick={() => setView('map')}>
+            Map
+          </button>
         </div>
+        {view === 'kingdom' ? (
+          <div className={styles.kingdomWrap} role="img" aria-label={`Kingdom board of ${state.title}: ${players.map(p => `${p.name.split(' ')[0]} ${cellsOf[p.id]?.cells ?? 0} cells`).join(', ')}`}>
+            <KingdomView arena={state.arena} players={state.players} cells={state.cells} trail={trail} viewerId={me.id} reducedMotion={reducedMotion} onError={() => setView('map')} />
+          </div>
+        ) : (
+          <div className={styles.mapWrap}>
+            <HexMap arena={state.arena} cells={state.cells} colors={colors} trail={trail} trailColor={colors[me.id]} me={tracker.position} label={`Turf map of ${state.title}`} />
+          </div>
+        )}
         <p className={styles.muted} style={{padding: '8px 4px 0'}}>
           {accepted ? 'Everyone in this game sees cells and who owns them. Routes and live positions are never shown; the dashed cells are your own open trail and only you can see them.' : 'Cells appear here once you join. Players only ever see cells, never routes.'}
         </p>

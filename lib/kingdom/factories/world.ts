@@ -22,7 +22,7 @@ const flagOn = (parent: Object3D, x: number, y: number, z: number, color: number
 const crenels = (parent: Object3D, m: Material, x0: number, x1: number, y: number, z: number): void => { for (let x = x0; x <= x1; x += 4) box(parent, m, 2, 2, 2, x, y + 1, z); };
 const windowOn = (parent: Object3D, x: number, y: number, z: number): void => { decal(parent, M('flat', C.blueDark), 2, 3, x, y, z); };
 /** A square tower: shaft, lip, eight merlons and a stepped roof. Returns the roof's top y. */
-function tower(parent: Object3D, x: number, z: number, h: number, side: number, stone: Material, roof: Material, knob: Material, flag?: number): number {
+export function tower(parent: Object3D, x: number, z: number, h: number, side: number, stone: Material, roof: Material, knob: Material, flag?: number): number {
   const e = side / 2; box(parent, stone, side, h, side, x, h / 2, z); box(parent, stone, side + 2, 2, side + 2, x, h + 1, z);
   for (const [dx, dz] of [[-e, -e], [0, -e], [e, -e], [-e, 0], [e, 0], [-e, e], [0, e], [e, e]]) box(parent, stone, 2, 2, 2, x + dx, h + 3, z + dz);
   const top = steps(parent, roof, side - 2, 3, x, h + 2, z); box(parent, knob, 2, 2, 2, x, top + 1, z);

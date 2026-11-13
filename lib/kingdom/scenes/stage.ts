@@ -47,7 +47,7 @@ export class Stage {
     host.camera.fov = o.fov; host.camera.updateProjectionMatrix();
     this.group.add(new HemisphereLight(0xe8f4ff, 0xa7b59c, 0.95)); // a pale bounce: a saturated green one tints every stone underside
     const sun = new DirectionalLight(0xfff6e2, 2.5); sun.position.set(...o.sun); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0006; sun.shadow.normalBias = 0.02;
-    Object.assign(sun.shadow.camera, {left: -o.radius, right: o.radius, top: o.radius, bottom: -o.radius, near: 1, far: 60}); sun.shadow.camera.updateProjectionMatrix();
+    Object.assign(sun.shadow.camera, {left: -o.radius, right: o.radius, top: o.radius, bottom: -o.radius, near: 1, far: Math.max(60, o.radius * 5)}); sun.shadow.camera.updateProjectionMatrix();
     sun.target.position.set(0, 0, o.far !== undefined ? Math.sign(o.far) * o.radius * 0.4 : 0); this.group.add(sun, sun.target);
     const pool = new Group(); this.group.add(pool);
     for (let i = 0; i < 140; i++) { const m = new Mesh(cube(2, 2, 2), this.mat(0xffffff)); m.visible = false; pool.add(m); this.parts.push({mesh: m, vel: new Vector3(), life: 0, max: 1, size: 1}); }

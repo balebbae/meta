@@ -170,6 +170,67 @@ def test_proof_augmentations_deterministic_per_seed():
     assert fx1 == fx2 and img1.tobytes() == img2.tobytes()
 
 
+def _seeds_for(cat, n, seed=0):
+    rng = random.Random(seed)
+    out = []
+    while len(out) < n:
+        s = rng.getrandbits(48)
+        if proof.category(s) == cat:
+            out.append(s)
+    return out
+
+
+def test_proof_category_shares():
+    cats = Counter(proof.category(s) for s in random.Random(1).sample(range(10**9), 4000))
+    hard = sum(cats[c] for c in ("idle_screen", "decimal", "pace")) / 4000
+    assert 0.12 <= hard <= 0.18 and 0.05 < cats["idle_screen"] / 4000 < 0.09
+    assert set(cats) == {c for c, _, _ in proof.CATEGORIES}
+    assert "lifetime or odometer total screens are not workout screens" in proof.PROMPT
+
+
+def test_proof_idle_screens_render_and_label():
+    kinds = Counter()
+    for seed in _seeds_for("idle_screen", 40):
+        a, target, meta = proof.make_example(seed)
+        b, target2, meta2 = proof.make_example(seed)
+        assert a.tobytes() == b.tobytes() and target == target2 and meta == meta2  # deterministic per seed
+        assert target == {"kind": "other", "distanceKm": None, "durationMin": None, "steps": None, "confidence": 0.0,
+                          "verdict": "not_a_workout"}  # fmt: skip
+        assert proof.grade(target, target)["all"] == 1.0 and proof.grade(target, target)["confidence"] == 1.0
+        assert meta["scene"] == "idle_screen" and meta["device"] in proof.SCREENS and meta["rows"]
+        kinds[meta["idle"]] += 1
+        values = [v for _, v, _ in meta["rows"]] + ([meta["hero"][0]] if meta.get("hero") else [])
+        if meta["idle"] == "zeros":  # nothing but zeros / dashes on screen
+            assert all(set(v) <= set("0.:-") for v in values), values
+        if meta["idle"] == "totals":  # no session clock
+            assert not any(":" in v for v in values), values
+    assert set(kinds) == {"zeros", "menu", "totals"}
+    # the frames are the same devices as the workout screens
+    a = proof.make_example(_seeds_for("idle_screen", 1, seed=9)[0])[0]
+    assert a.mode == "RGB" and max(a.size) in (640, 768, 896)
+
+
+def test_proof_hard_decimal_and_pace_screens():
+    for seed in _seeds_for("decimal", 25):
+        target, meta = proof.make_example(seed)[1:]
+        assert target["verdict"] == "workout_screen" and meta["hard"] == "decimal"
+        assert target["distanceKm"] >= 8 and target["confidence"] >= proof.APP_ACCEPT
+        if target["kind"] in ("run", "walk"):
+            pr = meta["printed"]
+            assert target["distanceKm"] == round(float(pr["distance"]) * (proof.MI_TO_KM if pr["units"] == "mi" else 1), 2)
+    seen = Counter()
+    for seed in _seeds_for("pace", 40):
+        target, meta = proof.make_example(seed)[1:]
+        pr = meta["printed"]
+        assert meta["hard"] == "pace" and (pr["pace"] or pr["speed"])  # pace or speed always printed
+        assert not {"run", "walk"} & set(meta["title"].lower().split())  # title never gives it away
+        to_mph = 1 if pr["units"] == "mi" else 1 / proof.MI_TO_KM  # printed per-unit speed -> mph
+        mph = (float(pr["speed"]) if pr["speed"] else 3600 / proof.parse_duration(pr["pace"])) * to_mph
+        assert proof.label_for_speed(mph) == target["kind"]
+        seen[target["kind"]] += 1
+    assert set(seen) == {"run", "walk"}
+
+
 def test_seven_segment_draws_digits():
     img = Image.new("L", (200, 60), 0)
     w = imaging.draw_seg7(ImageDraw.Draw(img), (5, 5), "8:88", 50, 255, skew=0)

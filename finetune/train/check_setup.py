@@ -17,7 +17,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sft import INSTRUCTION_PART, RESPONSE_PART, VISION_TASKS, with_reasoning  # noqa: E402
+from sft import INSTRUCTION_PART, RESPONSE_PART, VISION_TASKS, use_meta_chat_template, with_reasoning  # noqa: E402
 
 TASKS = ["mapper", "private_muse", "proof", "exercise_check"]
 
@@ -57,6 +57,7 @@ def main() -> None:
     from transformers import AutoTokenizer
 
     tok = AutoTokenizer.from_pretrained(a.model)
+    use_meta_chat_template(tok)  # same template sft.py trains with
     for task in TASKS:
         path = a.data / task / "train.jsonl"
         if not path.exists():

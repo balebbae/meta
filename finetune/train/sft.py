@@ -39,6 +39,23 @@ def with_reasoning(messages: list[dict], strength: str) -> list[dict]:
     return out
 
 
+META_BASE = "meta-models/Muse-Glimmer-30B"
+
+
+def use_meta_chat_template(processor) -> None:
+    """Train with Meta's chat template, the one vLLM serves with.
+
+    The unsloth 4-bit repo ships an older template that always appends "Reasoning strength: high" to a system
+    message, so with_reasoning()'s "low" line would render next to a contradictory "high" one.
+    """
+    from huggingface_hub import hf_hub_download
+
+    template = Path(hf_hub_download(META_BASE, "chat_template.jinja")).read_text()
+    for obj in (processor, getattr(processor, "tokenizer", None)):
+        if obj is not None and hasattr(obj, "chat_template"):
+            obj.chat_template = template
+
+
 def load_rows(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.open()]
 
@@ -63,9 +80,10 @@ def main() -> None:
     from unsloth import FastModel  # noqa: I001 - unsloth must be imported before transformers/trl
     from trl import SFTConfig, SFTTrainer
 
-    base = "unsloth/Muse-Glimmer-30B-unsloth-bnb-4bit" if a.qlora else "meta-models/Muse-Glimmer-30B"
+    base = "unsloth/Muse-Glimmer-30B-unsloth-bnb-4bit" if a.qlora else META_BASE
     vision = a.task in VISION_TASKS
     model, processor = FastModel.from_pretrained(model_name=base, max_seq_length=a.max_seq, load_in_4bit=a.qlora)
+    use_meta_chat_template(processor)
     model = FastModel.get_peft_model(
         model,
         finetune_vision_layers=vision,

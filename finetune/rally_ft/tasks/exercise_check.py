@@ -17,7 +17,8 @@ Data (see generate()):
     groups per exercise (by hash), so no clip or group is in two splits.
   - workout screens rendered by `proof.make_example`, with a task that the screen meets, falls short of, or is
     for a different activity.
-  - negatives: non-exercise clips (exercise "none"), proof's not_a_workout scenes, race bibs, illegible screens.
+  - negatives: non-exercise clips (exercise "none"), proof's not_a_workout scenes, idle device screens (ready,
+    menu, all zeros/dashes, odometer or lifetime totals: case `idle_screen`), race bibs, illegible screens.
 
 LICENCE: UCF101 / HMDB51 frames are for non-commercial research only. Data built from them must not ship in the
 product or be redistributed; `write_license_note()` drops a note into the generated data dir. No WHOOP data.
@@ -63,6 +64,7 @@ shows: exercise_frames (a person doing an exercise), workout_screen (treadmill, 
 ex: the exercise or activity seen: push_up, squat, lunge, jumping_jack, sit_up, run, walk, ride, other, or none. For a screen use the activity it reports (a steps count is walk; swim, row, elliptical, strength and yoga are other). none if no workout is shown.
 match: true only if the shown activity is the task's activity and, for a screen, its numbers reach the task's distance, time or steps. Do not count reps or judge form.
 km, min, steps: distance, duration and step count printed on a workout screen (convert miles to km x1.609, mm:ss to decimal minutes), else null.
+An idle, menu, all-zero/dash or lifetime/odometer total screen is not_a_workout.
 ok: true only if shows is exercise_frames or workout_screen and match is true.
 why: at most 15 words about what is visible. Never comment on a person's body, looks, age or health.
 Return only JSON with keys shows, ex, match, km, min, steps, ok, why."""  # noqa: E501
@@ -197,7 +199,8 @@ def load_index(frames_dir: str | Path) -> list[dict]:
         )
     rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
     for r in rows:
-        if r["exercise"] not in [*BODY_EXERCISES, "none"] or r["split"] not in ("train", "test") or len(r["frames"]) != 3:
+        bad_frames = len(r["frames"]) not in (1, 3)  # 3 clip stills, or 1 hand-checked photo
+        if r["exercise"] not in [*BODY_EXERCISES, "none"] or r["split"] not in ("train", "test") or bad_frames:
             raise ValueError(f"{path}: bad row {r.get('clip_id')!r}")
     return rows
 
@@ -247,13 +250,12 @@ def _row(ex_id: str, images: list[str], task: str, target: dict, **extra) -> dic
             "images": images, "task_text": task, **extra}  # fmt: skip
 
 
-def _proof_seed(rng: random.Random, verdict: str) -> int:
-    """A seed whose proof.make_example has `verdict`. Mirrors make_example's first draw (checked in tests)."""
+def _proof_seed(rng: random.Random, verdict: str, categories: tuple[str, ...] | None = None) -> int:
+    """A seed whose proof.make_example has `verdict` (and, if given, one of proof's `categories`)."""
     while True:
         seed = rng.getrandbits(48)
-        u = random.Random(seed).random()
-        v = "not_a_workout" if u < 0.10 else "race_bib" if u < 0.18 else "unclear" if u < 0.22 else "workout_screen"
-        if v == verdict:
+        cat = proof.category(seed)
+        if proof.VERDICT_OF[cat] == verdict and (categories is None or cat in categories):
             return seed
 
 
@@ -280,17 +282,20 @@ def _screen_row(rng: random.Random, target: dict, meta: dict, want: str) -> tupl
     return None
 
 
-CASES = [  # (case, weight): ~40% exercise frames, ~30% screens, ~30% negatives
+CASES = [  # (case, weight): ~38% exercise frames, ~29% screens, ~33% negatives
     ("ex_match", 0.20),
-    ("ex_wrong_task", 0.20),
-    ("screen_match", 0.18),
+    ("ex_wrong_task", 0.18),
+    ("screen_match", 0.17),
     ("screen_short", 0.06),
     ("screen_wrong_activity", 0.06),
-    ("junk_frames", 0.12),
-    ("junk_photo", 0.09),
-    ("race_bib", 0.06),
+    ("junk_frames", 0.11),
+    ("junk_photo", 0.08),
+    ("idle_screen", 0.06),  # device on but no workout: ready/menu/zeros/odometer (proof's idle_screen)
+    ("race_bib", 0.05),
     ("unclear", 0.03),
 ]
+# case -> proof categories it draws from (proof.CATEGORIES); screen cases take any workout_screen category.
+PROOF_CATS = {"junk_photo": ("scene",), "idle_screen": ("idle_screen",)}
 
 
 def _pick_case(rng: random.Random) -> str:
@@ -339,8 +344,10 @@ def generate(
         case = _pick_case(rng)
         if case in ("ex_match", "ex_wrong_task", "junk_frames"):
             clip = (junk if case == "junk_frames" else exercise).next()
-            k = rng.choice([1, 3])
-            frames = [clip["frames"][1]] if k == 1 else clip["frames"]
+            # all stills of a clip: one still from a video often lands between reps (person standing) and makes the
+            # label unlearnable. Single-photo items (checked mid-exercise by hand) carry one frame.
+            frames = clip["frames"]
+            k = len(frames)
             images = [str(frames_dir / f) for f in frames]
             where = "the photo" if k == 1 else "the clip"
             exn = clip["exercise"]
@@ -362,9 +369,10 @@ def generate(
                     "source_class": clip["source_class"], "n_images": k, "task_spec": spec}  # fmt: skip
             rows.append(_row(ex_id, images, task, label, case=case, meta=meta))
             continue
-        verdict = {"junk_photo": "not_a_workout", "race_bib": "race_bib", "unclear": "unclear"}.get(case, "workout_screen")
+        verdict = {"junk_photo": "not_a_workout", "idle_screen": "not_a_workout", "race_bib": "race_bib",
+                   "unclear": "unclear"}.get(case, "workout_screen")  # fmt: skip
         while True:
-            pseed = _proof_seed(rng, verdict)
+            pseed = _proof_seed(rng, verdict, PROOF_CATS.get(case))
             img, ptarget, pmeta = proof.make_example(pseed)
             if verdict == "workout_screen":
                 want = {"screen_match": "match", "screen_short": "short", "screen_wrong_activity": "wrong_activity"}[case]
@@ -376,9 +384,10 @@ def generate(
                 task, spec = _random_task(rng, exclude=set())
                 why = {
                     "not_a_workout": "No workout shown; the photo is not a workout screen.",
+                    "idle_screen": "Device screen is idle, a menu or totals; no workout shown.",
                     "race_bib": "Only a race bib; no workout is shown.",
                     "unclear": "Screen too blurry to read.",
-                }[verdict]
+                }["idle_screen" if case == "idle_screen" else verdict]
                 label = gold(verdict, "none", False, why=why)
             break
         path = image_dir / f"{split}-{i}.jpg"

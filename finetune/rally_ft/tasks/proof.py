@@ -9,6 +9,11 @@ and any title that names the activity agrees with it. Hard negatives: `not_a_wor
 appliance clocks, receipts; confidence 0) and `race_bib` (bib number, no workout numbers). A few screens are
 photographed so badly that nothing is legible (`unclear`).
 
+App-policy hard cases (see CATEGORIES, ~15% of rows): `idle_screen` (the same consoles/watches/apps showing a ready
+or menu screen, only zeros/dashes, or odometer/lifetime totals -> not_a_workout, confidence 0, no numbers),
+`decimal` (two/three-digit distances on LCD digits, so 21.24 is never read as 212.4) and `pace` (run vs walk
+decided only by the printed pace/speed near the boundary, neutral titles).
+
 Real photos: `load_jsonl()` reads {image, kind, distanceKm, durationMin, steps, verdict} rows for eval only.
 """
 
@@ -46,7 +51,7 @@ SCHEMA = {
 }
 # Identical to PROMPT in lib/activities/proof.ts (keep in sync).
 PROMPT = """You read a photo of a fitness device or screen (treadmill, watch, bike computer, phone app, race bib) and extract the workout it shows.
-Rules: only report numbers that are visibly printed. Convert miles to km (x1.609). Convert mm:ss to minutes as a decimal. If the image is not a workout screen, set verdict to not_a_workout and confidence 0.
+Rules: only report numbers that are visibly printed. Convert miles to km (x1.609). Convert mm:ss to minutes as a decimal. If the image is not a workout screen, set verdict to not_a_workout and confidence 0. Idle, menu, all-zero/dash and lifetime or odometer total screens are not workout screens.
 Never describe or comment on any person, body, weight or health condition in the image; only the device readout.
 Return JSON matching the schema. confidence is 0..1."""  # noqa: E501 - verbatim copy of the app prompt
 MI_TO_KM = 1.609  # the factor the prompt tells the model to use
@@ -107,11 +112,15 @@ def _dist(rng: random.Random, lo_km: float, hi_km: float, units: str) -> tuple[s
 # ---------------------------------------------------------------- workout screen specs
 
 
-def _spec_run_walk(rng: random.Random, device: str) -> dict:
+def _spec_run_walk(
+    rng: random.Random, device: str, km_range: tuple | None = None, mph_range: tuple | None = None, neutral: bool = False
+) -> dict:
+    """A run or walk screen. Overrides for the hard cases: `km_range` (same for both labels), `mph_range`
+    ((walk lo, hi), (run lo, hi)), and `neutral` (pace or speed always shown, title never names the activity)."""
     label = rng.choice(["run", "walk"])
     units = rng.choice(["km", "mi"])
-    mph = rng.uniform(*(RUN_MPH if label == "run" else WALK_MPH))
-    dist_s, km = _dist(rng, *((1.5, 21) if label == "run" else (0.8, 8)), units)
+    mph = rng.uniform(*(mph_range or (WALK_MPH, RUN_MPH))[label == "run"])
+    dist_s, km = _dist(rng, *(km_range or ((1.5, 21) if label == "run" else (0.8, 8))), units)
     miles = float(dist_s) * (1 if units == "mi" else 1 / MI_TO_KM)
     sec = max(60, round(miles / mph * 3600))
     shown_mph = miles / (sec / 3600)
@@ -122,7 +131,7 @@ def _spec_run_walk(rng: random.Random, device: str) -> dict:
     speed_s = f"{float(dist_s) / (sec / 3600):.1f}"
     per = "/km" if units == "km" else "/mi"
     rows = [("TIME", dur_s, ""), ("DISTANCE", dist_s, units)]
-    show = rng.choice(["pace", "speed", "both", "none"])
+    show = rng.choice(["pace", "speed", "both"] if neutral else ["pace", "speed", "both", "none"])
     if show in ("pace", "both"):
         rows.append(("AVG PACE", pace_s, per))
     if show in ("speed", "both"):
@@ -130,8 +139,12 @@ def _spec_run_walk(rng: random.Random, device: str) -> dict:
     rows.append(("CALORIES", str(rng.randint(40, 1100)), "kcal"))
     word = label.capitalize()
     if device == "treadmill":
-        title = rng.choice(["WORKOUT SUMMARY", "WORKOUT COMPLETE", "", f"{word.upper()} COMPLETE", f"{word.upper()} SUMMARY"])
+        titles = ["WORKOUT SUMMARY", "WORKOUT COMPLETE", "", f"{word.upper()} COMPLETE", f"{word.upper()} SUMMARY"]
+        title = rng.choice(titles[:3] if neutral else titles)
         rows.append(("INCLINE", f"{rng.choice([0, 0.5, 1, 1.5, 2, 3, 4.5])}", "%"))
+    elif neutral:
+        title = rng.choice(["Workout", "Outdoor Activity", "Treadmill", "Morning Workout", "Activity"])
+        rows.append(("AVG HR", str(rng.randint(85, 175)), "bpm"))
     else:
         title = f"{rng.choice(['Outdoor', 'Indoor', 'Morning', 'Evening'])} {word}"
         rows.append(("AVG HR", str(rng.randint(85, 175)), "bpm"))
@@ -150,10 +163,10 @@ def _spec_run_walk(rng: random.Random, device: str) -> dict:
     }
 
 
-def _spec_ride(rng):
+def _spec_ride(rng, km_range: tuple = (5, 90)):
     units = rng.choice(["km", "mi"])
     kmh = rng.uniform(12, 34)
-    dist_s, km = _dist(rng, 5, 90, units)
+    dist_s, km = _dist(rng, *km_range, units)
     sec = max(300, round(km / kmh * 3600))
     spd = f"{float(dist_s) / (sec / 3600):.1f}"
     rows = [("DIST", dist_s, units), ("RIDE TIME", fmt_duration(sec), ""), ("AVG SPD", spd, "km/h" if units == "km" else "mph")]
@@ -299,10 +312,129 @@ def _render_spec(rng: random.Random, spec: dict) -> tuple[Image.Image, str, list
     pad = 0.07
     if device == "watch" and rng.random() < 0.5:
         device, pad = "watch_round", 0.17
-    img = im.render_screen(
-        rng, rng.choice(sizes), rng.choice(styles), spec["title"], rows, spec.get("hero"), seg7=rng.random() < p7, pad_frac=pad
-    )
+    size, style, seg7 = rng.choice(sizes), rng.choice(styles), rng.random() < p7
+    seg7 = spec.get("seg7", seg7) and p7 > 0  # hard decimal cases force LCD digits on consoles
+    img = im.render_screen(rng, size, style, spec["title"], rows, spec.get("hero"), seg7=seg7, pad_frac=pad)
     return img, device, rows
+
+
+def _photograph_device(rng: random.Random, np_rng: np.random.Generator, spec: dict) -> tuple[Image.Image, list]:
+    """Render a spec's screen, add screen moire and the device bezel (before the camera)."""
+    screen, device_kind, shown = _render_spec(rng, spec)
+    if rng.random() < 0.3:
+        screen = im.moire(np_rng, screen, amp=rng.uniform(0.05, 0.18))
+    return im.add_bezel(rng, screen, device_kind), shown
+
+
+# ---------------------------------------------------------------- hard positives (read decimals, run vs walk)
+
+
+def _spec_decimal(rng):
+    """Two- and three-digit distances on LCD digits (21.24 km, never 212.4): the decimal point is the only cue."""
+    if rng.random() < 0.7:
+        km_range = rng.choice([(10, 21.1), (21.1, 42.2)]) if rng.random() < 0.6 else (8, 15)
+        spec = _spec_run_walk(rng, rng.choice(["treadmill", "watch"]), km_range=km_range)
+        if spec["target"]["kind"] == "walk" and spec["target"]["distanceKm"] > 16:  # keep walks plausible
+            spec = _spec_run_walk(rng, "treadmill", km_range=(8, 16))
+    else:
+        spec = _spec_ride(rng, km_range=(40, 180))
+    return {**spec, "seg7": True, "meta": {**spec.get("meta", {}), "hard": "decimal"}}
+
+
+def _spec_pace(rng):
+    """Run vs walk decided only by the printed pace or speed: same distances, neutral titles, speeds near the
+    walk/run boundary (walk 5.8-7.1 km/h, run 8.0-9.7 km/h)."""
+    spec = _spec_run_walk(
+        rng, rng.choice(["treadmill", "watch"]), km_range=(2, 10), mph_range=((3.6, 4.4), (5.0, 6.0)), neutral=True
+    )
+    return {**spec, "meta": {**spec["meta"], "hard": "pace"}}
+
+
+# ---------------------------------------------------------------- idle / menu / lifetime-total screens (not proof)
+# Same devices, bezels and camera as the workout screens; only the content differs. All are not_a_workout.
+
+IDLE_TITLES = ["READY", "PRESS START", "QUICK START", "", "WELCOME"]
+NO_DATA_LABELS = ("PACE", "HR", "SPD", "SPEED", "/500M", "CADENCE", "WATTS")
+
+
+def _zero(rng: random.Random, label: str, value: str) -> str:
+    """What the field shows before a session starts: 0.00, 00:00 / 0:00, 0, or dashes."""
+    if any(k in label.upper() for k in NO_DATA_LABELS) and rng.random() < 0.6:
+        return "--:--" if ":" in value else "--"
+    if ":" in value:
+        parts = value.split(":")
+        return ":".join(["0" * rng.choice([1, 2])] + ["00"] * (len(parts) - 1))
+    if "." in value:
+        return "0." + "0" * len(value.split(".")[1])
+    return "0"
+
+
+def _idle_zeros(rng):
+    """A workout layout before START: every number zero or dashes."""
+    _, fn = rng.choice(WORKOUT_SPECS)
+    spec = fn(rng)
+    rows = [(lab, _zero(rng, lab, val), unit) for lab, val, unit in spec["rows"]]
+    title = spec["title"]
+    if any(w in title.upper() for w in ("COMPLETE", "SUMMARY")) or rng.random() < 0.4:
+        title = rng.choice(IDLE_TITLES)
+    hero = ("0", spec["hero"][1]) if spec.get("hero") else None
+    return {"screen": spec["screen"], "title": title, "rows": rows, "hero": hero}
+
+
+def _idle_menu(rng):
+    """A program / workout picker or a 'press start' prompt."""
+    screen = rng.choice(["treadmill", "treadmill", "elliptical", "rower", "bike", "watch", "phone"])
+    units = rng.choice(["km", "mi"])
+    if screen in ("treadmill", "elliptical"):
+        if rng.random() < 0.5:
+            progs = ["MANUAL", "HILL", "INTERVALS", "FAT BURN", "CARDIO", "CUSTOM", "5K", "HEART RATE"]
+            rows = [(f"P{i + 1}", p, "") for i, p in enumerate(rng.sample(progs, rng.randint(2, 4)))]
+            title = rng.choice(["SELECT PROGRAM", "PROGRAMS", "CHOOSE WORKOUT"])
+        else:
+            title = rng.choice(["WELCOME", "QUICK START", ""])
+            rows = [("", rng.choice([t for t in ["PRESS START", "QUICK START", "PRESS START TO BEGIN"] if t != title]), "")]
+            rows += rng.sample([("TIME", "00:00", ""), ("DISTANCE", "0.00", units), ("SPEED", "0.0", "")], rng.randint(0, 2))
+    elif screen == "rower":
+        title = rng.choice(["MAIN MENU", "SELECT WORKOUT", ""])
+        rows = [("", t, "") for t in rng.sample(["Just Row", "Select Workout", "Workout Library", "More Options"], 3)]
+    elif screen == "bike":
+        title = rng.choice(["", "READY", "PRESS START"])
+        rows = [("", rng.choice(["PRESS START", "START RIDE?", "READY"]), ""), ("SPD", "0.0", "km/h" if units == "km" else "mph")]
+    else:
+        title = rng.choice(["Workouts", "Start Workout", "Choose Activity"])
+        acts = ["Outdoor Run", "Outdoor Walk", "Indoor Run", "Pool Swim", "Outdoor Cycle", "Strength", "Yoga"]
+        rows = [("", a, "") for a in rng.sample(acts, 3)]
+        if rng.random() < 0.5:
+            rows.append(("", rng.choice(["Tap to start", "Quick Start", "Press START"]), ""))
+    return {"screen": screen, "title": title, "rows": rows}
+
+
+def _idle_totals(rng):
+    """Odometer / lifetime totals: big cumulative numbers, no session time."""
+    screen = rng.choice(["treadmill", "elliptical", "bike", "bike", "rower", "watch", "phone"])
+    units = rng.choice(["km", "mi"])
+    big = rng.uniform(250, 40000)
+    dist = f"{big:,.1f}" if rng.random() < 0.5 else f"{big:.1f}"
+    if screen in ("treadmill", "elliptical"):
+        title = rng.choice(["ODOMETER", "MAINTENANCE", "TOTALS", ""])
+        rows = [(rng.choice(["ODO", "TOTAL DIST", "ODOMETER"]), dist, units), ("TOTAL HRS", str(rng.randint(40, 4000)), "")]
+    elif screen == "bike":
+        title = rng.choice(["", "TOTAL", "ODO"])
+        rows = [("ODO", f"{big:.0f}" if rng.random() < 0.5 else f"{big:.1f}", units)]
+        trip = ("TRIP TOTAL", f"{rng.uniform(0.3, 0.9) * big:.1f}", units)  # resettable trip, still cumulative
+        rows.append(rng.choice([("TOTAL", str(rng.randint(40, 2500)), "h"), trip]))
+    elif screen == "rower":
+        title = rng.choice(["LIFETIME", "TOTALS", ""])
+        rows = [("LIFETIME METERS", f"{rng.randint(50_000, 9_000_000):,}", "m")]
+    else:
+        title = rng.choice(["Lifetime", "All Time", "Totals"])
+        rows = [("All-time Distance", dist, units), ("Lifetime Workouts", str(rng.randint(20, 1500)), "")]
+        if rng.random() < 0.5:
+            rows.append(("Lifetime Hours", str(rng.randint(15, 2500)), "h"))
+    return {"screen": screen, "title": title, "rows": rows}
+
+
+IDLE_SCREENS = [("zeros", _idle_zeros), ("menu", _idle_menu), ("totals", _idle_totals)]
 
 
 # ---------------------------------------------------------------- hard negatives
@@ -422,32 +554,65 @@ def _row(ex_id: str, image: str, target: dict, **extra) -> dict:
     return {"id": ex_id, "task": TASK, "messages": [{"role": "user", "content": user}], "target": target, "image": image, **extra}
 
 
+# First draw of make_example -> category (cumulative upper bounds). ~15% of rows are the app-policy hard cases
+# (idle/menu/lifetime screens, decimal-heavy distances, run vs walk by pace).
+CATEGORIES = [
+    ("scene", 0.09, "not_a_workout"),  # landscapes, text screens, appliances, receipts
+    ("idle_screen", 0.16, "not_a_workout"),  # device ready / menu / zeros / odometer totals
+    ("race_bib", 0.23, "race_bib"),
+    ("unclear", 0.27, "unclear"),
+    ("decimal", 0.31, "workout_screen"),
+    ("pace", 0.35, "workout_screen"),
+    ("workout", 1.0, "workout_screen"),
+]
+VERDICT_OF = {c: v for c, _, v in CATEGORIES}
+
+
+def category(seed: int) -> str:
+    """The category make_example(seed) renders (from its first draw)."""
+    u = random.Random(seed).random()
+    return next(c for c, hi, _ in CATEGORIES if u < hi)
+
+
 def make_example(seed: int) -> tuple[Image.Image, dict, dict]:
     """Render one example from its own seed: (image, target, meta). Deterministic per seed."""
     rng = random.Random(seed)
     np_rng = np.random.default_rng(seed)
     u = rng.random()
-    if u < 0.10:
+    cat = next(c for c, hi, _ in CATEGORIES if u < hi)
+    if cat == "scene":
         device, scene = rng.choice(NEGATIVES)(rng, np_rng)
         img, fx, _ = im.camera(rng, np_rng, device)
         return img, _empty("other", "not_a_workout", 0.0), {"scene": scene, "effects": fx}
-    if u < 0.18:
+    if cat == "idle_screen":
+        idle, fn = rng.choice(IDLE_SCREENS)
+        spec = fn(rng)
+        device, shown = _photograph_device(rng, np_rng, spec)
+        img, fx, _ = im.camera(rng, np_rng, device)
+        meta = {"scene": "idle_screen", "idle": idle, "device": spec["screen"], "title": spec["title"]}
+        meta["rows"] = [list(r) for r in shown]
+        if spec.get("hero"):
+            meta["hero"] = list(spec["hero"])
+        return img, _empty("other", "not_a_workout", 0.0), {**meta, "effects": fx}
+    if cat == "race_bib":
         device, num = _race_bib(rng, np_rng)
         img, fx, _ = im.camera(rng, np_rng, device)
         return img, _empty("run", "race_bib", 0.5), {"scene": "race_bib", "bib": num, "effects": fx}
-    r, spec = rng.random(), None
-    for w, fn in WORKOUT_SPECS:
-        r -= w
-        if r <= 0:
-            spec = fn(rng)
-            break
-    spec = spec or WORKOUT_SPECS[-1][1](rng)
-    screen, device_kind, shown = _render_spec(rng, spec)
-    if rng.random() < 0.3:
-        screen = im.moire(np_rng, screen, amp=rng.uniform(0.05, 0.18))
-    device = im.add_bezel(rng, screen, device_kind)
+    if cat == "decimal":
+        spec = _spec_decimal(rng)
+    elif cat == "pace":
+        spec = _spec_pace(rng)
+    else:
+        r, spec = rng.random(), None
+        for w, fn in WORKOUT_SPECS:
+            r -= w
+            if r <= 0:
+                spec = fn(rng)
+                break
+        spec = spec or WORKOUT_SPECS[-1][1](rng)
+    device, shown = _photograph_device(rng, np_rng, spec)
     meta = {"scene": spec["screen"], "title": spec["title"], "rows": [list(r) for r in shown], **spec.get("meta", {})}
-    if u < 0.22:
+    if cat == "unclear":
         img, fx, _ = im.camera(rng, np_rng, device, heavy=True)
         return img, _empty("other", "unclear", 0.2), {**meta, "effects": fx, "illegible": True}
     img, fx, pen = im.camera(rng, np_rng, device)

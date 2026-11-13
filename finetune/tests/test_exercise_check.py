@@ -50,6 +50,7 @@ def test_schema_and_prompt():
     for k in xc.FIELDS:
         assert k in p
     assert "count reps" in p and "form" in p  # rep counting / form stay in code
+    assert "lifetime/odometer total screen is not_a_workout" in p
 
 
 def test_gold_approval_rule():
@@ -69,6 +70,7 @@ def test_proof_seed_predicts_verdict():
     rng = random.Random(0)
     for v in ("workout_screen", "not_a_workout", "race_bib", "unclear"):
         assert proof.make_example(xc._proof_seed(rng, v))[1]["verdict"] == v
+    assert proof.make_example(xc._proof_seed(rng, "not_a_workout", ("idle_screen",)))[2]["scene"] == "idle_screen"
 
 
 def test_generate_rows_consistent(frames_dir, tmp_path):
@@ -90,8 +92,13 @@ def test_generate_rows_consistent(frames_dir, tmp_path):
             assert t["match"] == (spec["act"] == t["ex"])
         if t["shows"] == "workout_screen":
             assert len(r["images"]) == 1 and (t["km"] is not None or t["min"] is not None or t["steps"] is not None)
+        if r["case"] == "idle_screen":
+            assert r["meta"]["scene"] == "idle_screen" and t["shows"] == "not_a_workout" and t["ok"] is False
+            assert t["ex"] == "none" and t["km"] is t["min"] is t["steps"] is None
+        if r["case"] == "junk_photo":
+            assert r["meta"]["scene"] != "idle_screen"
     assert set(cases) == {c for c, _ in xc.CASES}
-    assert set(n_images) == {1, 3}
+    assert set(n_images) == {3}  # fixture clips are videos: their rows always carry all 3 stills
     frac = lambda names: sum(cases[c] for c in names) / len(rows)  # noqa: E731
     assert 0.28 < frac(["ex_match", "ex_wrong_task"]) < 0.52
     assert 0.18 < frac(["screen_match", "screen_short", "screen_wrong_activity"]) < 0.42

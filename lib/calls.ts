@@ -1,3 +1,6 @@
+/** Closeness points for a call that actually connects. Fixed so a demo still scores if Muse is down. */
+export const CALL_XP = 15;
+
 export type CallMode = 'voice' | 'video';
 export type CallState = {
   id: string;
@@ -21,6 +24,11 @@ export function isCallState(value: unknown): value is CallState {
   return typeof row.id === 'string' && typeof row.from === 'number' && (row.mode === 'voice' || row.mode === 'video')
     && (row.phase === 'ringing' || row.phase === 'active') && typeof row.offer === 'string'
     && (row.answer === null || typeof row.answer === 'string') && Array.isArray(row.ice);
+}
+
+/** True only on the ring → connected transition, so one call awards XP once. */
+export function callConnected(before: CallState | null, after: CallState | null | 'busy' | 'gone') {
+  return !!before && before.phase === 'ringing' && !!after && typeof after !== 'string' && after.phase === 'active';
 }
 
 /** The ringing call the viewer should answer. */

@@ -5,6 +5,30 @@
   flex-direction: column;
   gap: 16px;
 }
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow: auto;
+}
+.tab,
+.tabOn {
+  flex: none;
+  padding: 8px 12px;
+  border-radius: var(--fb-radius-pill);
+  background: var(--fb-hover);
+  color: var(--fb-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.tabOn {
+  background: var(--fb-blue);
+  color: var(--fb-on-media);
+}
+.empty {
+  padding: 48px;
+  text-align: center;
+  color: var(--fb-text-secondary);
+}
 
 .card {
   background: var(--fb-card);

@@ -119,7 +119,7 @@ export function PeopleSearchButton({className, iconSize = 22}: {className: strin
             ))}
             {hits.posts.length > 0 && <div className={styles.searchSection}>Posts</div>}
             {hits.posts.map(p => (
-              <Link key={`p${p.id}`} href={`/profile/${p.authorId}`} className={styles.searchHit} onClick={close}>
+              <Link key={`p${p.id}`} href={`/posts/${p.id}`} className={styles.searchHit} onClick={close}>
                 <span>{p.snippet}<span className={styles.profileSub}> {p.authorName}</span></span>
               </Link>
             ))}

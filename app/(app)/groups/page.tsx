@@ -3,7 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {getSessionUser} from '@/lib/auth';
 import {listGroupFeed, listGroups} from '@/lib/secondary-queries';
-import {formatCount} from '@/lib/secondary-data';
+import {formatCount, matchesQuery} from '@/lib/secondary-data';
 import {SecondaryLayout} from '@/components/pages/SecondaryLayout';
 import {GroupsPanel} from '@/components/pages/GroupsPanel';
 import {GroupPostCard} from '@/components/pages/GroupPostCard';
@@ -14,15 +14,15 @@ import mk from '@/components/pages/marketplace.module.css';
 export const metadata: Metadata = {title: 'Groups | Facebook'};
 export const dynamic = 'force-dynamic';
 
-export default async function GroupsPage({searchParams}: {searchParams: Promise<{tab?: string}>}) {
-  const {tab} = await searchParams;
+export default async function GroupsPage({searchParams}: {searchParams: Promise<{tab?: string; q?: string}>}) {
+  const {tab, q} = await searchParams;
   const user = await getSessionUser();
   const viewerId = user?.id ?? 0;
   const groups = await listGroups(viewerId);
   const active = tab === 'discover' ? 'discover' : tab === 'yours' ? 'yours' : 'feed';
 
   if (active !== 'feed') {
-    const shown = active === 'yours' ? groups.filter(g => g.isMember) : groups.filter(g => !g.isMember);
+    const shown = (active === 'yours' ? groups.filter(g => g.isMember) : groups.filter(g => !g.isMember)).filter(group => matchesQuery(q, group.name, group.description));
     return (
       <SecondaryLayout panel={<GroupsPanel groups={groups} active={active} />}>
         <div className={mk.head}>
@@ -55,7 +55,7 @@ export default async function GroupsPage({searchParams}: {searchParams: Promise<
     );
   }
 
-  const posts = await listGroupFeed(viewerId);
+  const posts = (await listGroupFeed(viewerId)).filter(post => matchesQuery(q, post.content, post.group.name, post.author.name));
   return (
     <SecondaryLayout center panel={<GroupsPanel groups={groups} active="feed" />}>
       <div className={styles.feed}>

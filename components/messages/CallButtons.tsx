@@ -1,13 +1,18 @@
 'use client';
 
 import {useEffect, useRef, useState} from 'react';
-import type {CallState} from '@/lib/calls';
+import {CALL_XP, type CallState} from '@/lib/calls';
 import {useVisiblePolling} from './hooks';
 import {PhoneIcon, VideoCallIcon} from './icons';
 import styles from './messages.module.css';
 
-const ICE: RTCConfiguration = {iceServers: [{urls: 'stun:stun.l.google.com:19302'}]};
-// shortcut: the other person only sees the ring while this chat is open, upgrade when calls have their own screen.
+function iceConfig(): RTCConfiguration {
+  const servers: RTCIceServer[] = [{urls: 'stun:stun.l.google.com:19302'}];
+  const urls = process.env.NEXT_PUBLIC_TURN_URL;
+  if (urls) servers.push({urls, username: process.env.NEXT_PUBLIC_TURN_USERNAME, credential: process.env.NEXT_PUBLIC_TURN_CREDENTIAL});
+  return {iceServers: servers};
+}
+// shortcut: no relay until NEXT_PUBLIC_TURN_URL is set, so calls fail across strict networks.
 
 export function CallButtons({conversationId, viewerId}: {conversationId: number; viewerId: number}) {
   const [call, setCall] = useState<CallState | null>(null);
@@ -114,7 +119,7 @@ export function CallButtons({conversationId, viewerId}: {conversationId: number;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({audio: true, video: mode === 'video'});
       localRef.current = stream;
-      const pc = new RTCPeerConnection(ICE);
+      const pc = new RTCPeerConnection(iceConfig());
       pcRef.current = pc;
       attach(pc, stream);
       const offer = await pc.createOffer();
@@ -144,7 +149,7 @@ export function CallButtons({conversationId, viewerId}: {conversationId: number;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({audio: true, video: call.mode === 'video'});
       localRef.current = stream;
-      const pc = new RTCPeerConnection(ICE);
+      const pc = new RTCPeerConnection(iceConfig());
       pcRef.current = pc;
       attach(pc, stream);
       await pc.setRemoteDescription({type: 'offer', sdp: call.offer});
@@ -176,7 +181,7 @@ export function CallButtons({conversationId, viewerId}: {conversationId: number;
   };
 
   const incoming = Boolean(call && call.from !== viewerId && call.phase === 'ringing' && !pcRef.current);
-  const status = note ?? (incoming ? 'Incoming call' : call && !call.answer ? 'Calling…' : call ? 'Connected' : '');
+  const status = note ?? (incoming ? 'Incoming call' : call && !call.answer ? 'Calling…' : call ? `Connected · +${CALL_XP} XP` : '');
 
   return (
     <>

@@ -21,8 +21,8 @@ const subscribe = (onChange: () => void) => {
 };
 
 /** Mirrors <html data-theme> (set by the inline head script and the theme toggle) into Astryx's Theme.
- *  The server snapshot is the fb.theme cookie; when it disagrees with the DOM (first visit of a
- *  system-dark user) React re-renders after hydration with the client snapshot, so the Astryx wrapper's
+ *  The server snapshot is the fb.theme cookie; when it disagrees with the saved client preference,
+ *  React re-renders after hydration with the client snapshot, so the Astryx wrapper's
  *  own data-theme gets patched instead of staying stuck on the server value. */
 function useDocumentTheme(initialMode: Mode): Mode {
   return useSyncExternalStore(subscribe, readMode, () => initialMode);

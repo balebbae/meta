@@ -26,11 +26,11 @@ import {
   RailReelsIcon,
   RailSavedIcon,
   RailVideoIcon,
-  SearchIcon,
   SettingsIcon,
   WarningIcon,
 } from '@/components/icons';
 import type {User} from '@/lib/types';
+import {PeopleSearchButton} from './MobileHeader';
 import styles from './mobile.module.css';
 
 const SHORTCUTS = [
@@ -52,7 +52,9 @@ const SHORTCUTS = [
 ];
 
 function Accordion({title, Icon, rows}: {title: string; Icon: React.ComponentType<{size?: number}>; rows: {label: string; Icon: React.ComponentType<{size?: number}>; href?: string}[]}) {
+  const linked = rows.filter(row => row.href);
   const [open, setOpen] = useState(false);
+  if (linked.length === 0) return null;
   return (
     <div className={styles.accordion}>
       <button className={styles.accordionHead} onClick={() => setOpen(o => !o)} aria-expanded={open}>
@@ -63,7 +65,7 @@ function Accordion({title, Icon, rows}: {title: string; Icon: React.ComponentTyp
         {open ? <ChevronUpIcon size={20} /> : <ChevronDownIcon size={20} />}
       </button>
       {open &&
-        rows.map(({label, Icon: RowIcon, href}) =>
+        linked.map(({label, Icon: RowIcon, href}) =>
           href ? (
             <Link key={label} href={href} className={styles.accordionRow}>
               <RowIcon size={20} />
@@ -127,12 +129,10 @@ export function MobileMenu({user}: {user: User}) {
       <header className={`${styles.titleBar} ${styles.mobileOnly}`} style={{margin: '0 -12px', padding: 'calc(env(safe-area-inset-top) + 10px) 12px 10px 16px'}}>
         <h1>Menu</h1>
         <div style={{display: 'flex', gap: 8}}>
-          <Link href="/menu" className={styles.titleBtn} aria-label="Settings">
+          <Link href={`/profile/${user.id}`} className={styles.titleBtn} aria-label="Settings">
             <SettingsIcon size={22} />
           </Link>
-          <Link href="/friends?view=suggestions" className={styles.titleBtn} aria-label="Search">
-            <SearchIcon size={22} />
-          </Link>
+          <PeopleSearchButton className={styles.titleBtn} />
         </div>
       </header>
       <Link href={`/profile/${user.id}`} className={styles.profileCard}>
@@ -153,7 +153,6 @@ export function MobileMenu({user}: {user: User}) {
           </Link>
         ))}
       </div>
-      <button className={styles.seeMoreBtn}>See more</button>
       <Accordion
         title="Help & support"
         Icon={HelpIcon}

@@ -38,7 +38,7 @@ export async function listActions(userId: number): Promise<MuseActionsPayload> {
 const usd = (cents: number) => (cents ? `$${(cents / 100).toFixed(cents % 100 ? 2 : 0)}` : 'Free');
 
 /** In-app things Muse may pick: upcoming events the user is not going to yet, and Marketplace gear. */
-async function localCandidates(userId: number, tags: string[]): Promise<Candidate[]> {
+export async function localCandidates(userId: number, tags: string[]): Promise<Candidate[]> {
   const [events, listings] = await Promise.all([
     sql`select e.id, e.title, e.location, e.cover_url, e.starts_at, e.settings from events e
         where e.starts_at > now() and e.starts_at < now() + interval '90 days'

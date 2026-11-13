@@ -680,3 +680,13 @@ create table if not exists health_sync_tokens (
   user_id integer not null references users(id) on delete cascade,
   expires_at timestamptz not null
 );
+
+-- Coach mode (docs/scheduler-coach.md §2): opt-in, one stored report per user per day
+alter table activity_profiles add column if not exists coach_mode boolean not null default false;
+create table if not exists coach_reports (
+  user_id integer not null references users(id) on delete cascade,
+  day date not null,
+  report jsonb not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, day)
+);

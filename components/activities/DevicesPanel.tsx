@@ -1,15 +1,7 @@
 'use client';
 import {useEffect, useState} from 'react';
-import {Banner} from '@astryxdesign/core/Banner';
-import {Button} from '@astryxdesign/core/Button';
-import {Card} from '@astryxdesign/core/Card';
-import {Collapsible} from '@astryxdesign/core/Collapsible';
-import {Heading} from '@astryxdesign/core/Heading';
-import {HStack} from '@astryxdesign/core/HStack';
-import {List, ListItem} from '@astryxdesign/core/List';
-import {SegmentedControl, SegmentedControlItem} from '@astryxdesign/core/SegmentedControl';
-import {Text} from '@astryxdesign/core/Text';
-import {VStack} from '@astryxdesign/core/VStack';
+import h from './home/home.module.css';
+import p from './panels/panels.module.css';
 import {layoutHealth, type HealthReading} from '@/lib/health-format';
 
 type Sample = HealthReading & {source: string};
@@ -37,6 +29,7 @@ export function DevicesPanel() {
   const [note, setNote] = useState<{ok: boolean; text: string} | null>(null);
   const [busy, setBusy] = useState<'whoop' | 'phone' | null>(null);
   const [source, setSource] = useState('whoop');
+  const [showAll, setShowAll] = useState(false);
 
   const load = () =>
     fetch('/api/health/summary')
@@ -92,47 +85,62 @@ export function DevicesPanel() {
   const linked = Boolean(summary?.whoop);
   const layout = layoutHealth(samples.filter(x => x.source === source));
   const count = (id: string) => samples.filter(x => x.source === id).length;
+  const pill = `${h.pill} ${h.pillSm}`;
   return (
-    <Card id="devices">
-      <VStack gap={3}>
-        <VStack gap={1}>
-          <Heading level={2}>Devices</Heading>
-          <Text type="supporting" color="secondary">
-            {linked ? 'Whoop is linked. ' : ''}Apple Health and Google Health sync from the phone app. Every sync goes into your vault, which is what your level and Coach mode use.
-          </Text>
-        </VStack>
-        {note && <Banner status={note.ok ? 'success' : 'error'} title={note.text} />}
-        <HStack gap={2} wrap="wrap">
-          <Button label={linked ? 'Reconnect Whoop' : 'Connect Whoop'} variant={linked ? 'secondary' : 'primary'} href="/api/whoop/connect" />
-          {linked && <Button label="Sync Whoop" isLoading={busy === 'whoop'} isDisabled={busy === 'phone'} onClick={() => void syncWhoop()} />}
-          <Button label="Sync phone" isLoading={busy === 'phone'} isDisabled={busy === 'whoop'} onClick={() => void syncPhone()} />
-        </HStack>
-        {samples.length > 0 && (
-          <Collapsible trigger={`All synced readings (${samples.length})`}>
-            <VStack gap={3}>
-              <SegmentedControl label="Source" value={source} onChange={setSource}>
+    <div id="devices" className={p.stack}>
+      <p className={p.label}>Devices {linked && <span className={`${p.badge} ${p.green}`}>Whoop linked</span>}</p>
+      {note && <p className={note.ok ? p.note : p.error} role="status">{note.text}</p>}
+      <div className={p.actions}>
+        <button type="button" className={`${pill} ${h.pillBlue}`} disabled={busy != null} onClick={() => void syncPhone()}>
+          {busy === 'phone' ? '…' : 'Sync phone'}
+        </button>
+        {linked && (
+          <button type="button" className={`${pill} ${h.pillOutline}`} disabled={busy != null} onClick={() => void syncWhoop()}>
+            {busy === 'whoop' ? '…' : 'Sync Whoop'}
+          </button>
+        )}
+        <a className={`${pill} ${h.pillOutline}`} href="/api/whoop/connect">
+          {linked ? 'Reconnect Whoop' : 'Connect Whoop'}
+        </a>
+      </div>
+      {samples.length > 0 && (
+        <>
+          <button type="button" className={p.textBtn} aria-expanded={showAll} onClick={() => setShowAll(v => !v)}>
+            {showAll ? 'Hide readings' : `${samples.length} readings`}
+          </button>
+          {showAll && (
+            <>
+              <div className={p.pills} role="group" aria-label="Source">
                 {SOURCES.map(x => (
-                  <SegmentedControlItem key={x.id} value={x.id} label={`${x.label}${count(x.id) ? ` ${count(x.id)}` : ''}`} />
+                  <button key={x.id} type="button" aria-pressed={source === x.id} className={`${pill} ${source === x.id ? h.pillBlue : h.pillOutline}`} onClick={() => setSource(x.id)}>
+                    {x.label} {count(x.id) || ''}
+                  </button>
                 ))}
-              </SegmentedControl>
+              </div>
               {layout.sections.length === 0 ? (
-                <Text color="secondary">Nothing synced from this source yet.</Text>
+                <p className={p.note}>Nothing synced yet.</p>
               ) : (
                 layout.sections.map(section => (
-                  <VStack key={section.title} gap={1}>
-                    <Heading level={3}>{section.title}</Heading>
-                    <List hasDividers density="compact">
+                  <div key={section.title} className={p.stack}>
+                    <p className={p.label}>{section.title}</p>
+                    <ul className={p.list}>
                       {section.rows.map(row => (
-                        <ListItem key={row.key} label={row.label} description={row.when || undefined} endContent={<Text weight="bold">{row.value}</Text>} />
+                        <li key={row.key} className={p.row}>
+                          <span className={p.rowText}>
+                            <strong>{row.label}</strong>
+                            {row.when && <small>{row.when}</small>}
+                          </span>
+                          <b className={p.metric}>{row.value}</b>
+                        </li>
                       ))}
-                    </List>
-                  </VStack>
+                    </ul>
+                  </div>
                 ))
               )}
-            </VStack>
-          </Collapsible>
-        )}
-      </VStack>
-    </Card>
+            </>
+          )}
+        </>
+      )}
+    </div>
   );
 }

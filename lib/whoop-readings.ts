@@ -40,8 +40,7 @@ export function whoopReadings(input: {recovery?: Rec | null; sleep?: Rec | null;
   const needed = obj(sleepScore?.sleep_needed);
   const sleepAt = sleep ? when(sleep, now) : now;
   const asleep = [stages?.total_light_sleep_time_milli, stages?.total_slow_wave_sleep_time_milli, stages?.total_rem_sleep_time_milli]
-    .map(num)
-    .reduce((sum, value) => sum + (value ?? 0), 0);
+    .reduce((sum: number, value) => sum + (num(value) ?? 0), 0);
   push(out, 'sleep_hours', hours(asleep), 'hours', sleepAt);
   push(out, 'sleep_light_hours', hours(stages?.total_light_sleep_time_milli), 'hours', sleepAt);
   push(out, 'sleep_sws_hours', hours(stages?.total_slow_wave_sleep_time_milli), 'hours', sleepAt);

@@ -30,6 +30,17 @@ export default async function MusePage({searchParams}: {searchParams: Promise<Re
       <OnboardingGate userId={user.id} searchParams={sp} />
       <h1 className={styles.h1}>Your Muse</h1>
       <p className={styles.sub}>Only you can see this page. It is the whole of what your Muse knows about how you move.</p>
+      <div className={styles.card}>
+        <div className={styles.between}>
+          <div>
+            <h2 className={styles.h2}>Coach mode</h2>
+            <div className={styles.small}>This week vs last week: what improved, the gaps, and a plan to bridge them.</div>
+          </div>
+          <Link href="/activities/coach" className={styles.btnPrimary}>
+            Open Coach
+          </Link>
+        </div>
+      </div>
       <div className={styles.card} style={{borderTop: '4px solid var(--fb-blue)'}}>
         <h2 className={styles.h2}>What it shares</h2>
         <div className={styles.small} style={{marginBottom: 8}}>

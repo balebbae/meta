@@ -37,6 +37,7 @@ const SHORTCUTS = [
   {label: 'Friends', Icon: RailFriendsIcon, href: '/friends'},
   {label: 'Activities', Icon: RailGamingIcon, href: '/activities'},
   {label: 'Health', Icon: RailClimateIcon, href: '/health'},
+  {label: 'Coach', Icon: RailGamingIcon, href: '/activities/coach'},
   {label: 'Log a workout', Icon: RailGamingIcon, href: '/activities/log'},
   {label: 'Memories', Icon: RailMemoriesIcon, href: '/memories'},
   {label: 'Groups', Icon: RailGroupsIcon, href: '/groups'},

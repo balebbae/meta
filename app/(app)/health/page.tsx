@@ -32,7 +32,8 @@ function LevelCard({level}: {level: FitnessLevel}) {
     <section className={styles.card}>
       <h2 className={styles.heading}>Your level</h2>
       <p className={styles.sub}>
-        Worked out from your last {level.weeks === 1 ? 'week' : `${level.weeks} weeks`} of workouts. Your Muse uses it for goal plans, suggestions and fair Rally games. It gets this rounded, never your Whoop numbers.
+        Worked out from your last {level.weeks === 1 ? 'week' : `${level.weeks} weeks`} of workouts. Your Muse uses it for goal plans, suggestions, Coach and fair Rally games. It gets this rounded, never your Whoop numbers.{' '}
+        <a href="/activities/coach" style={{color: 'var(--fb-blue)'}}>Open Coach</a>
       </p>
       {level.easyWeek && <div className={styles.note}>Your Muse is keeping this week easy because {EASY_WHY[level.easyWeek]}.</div>}
       <div className={styles.grid}>

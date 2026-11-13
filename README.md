@@ -1,5 +1,7 @@
 # meta
 
+> **Team (5):** Veer Shah, Caleb Bae, Sunay Shehaan, Sahas Sharma, Jagadeep Kalluri. See [TEAM.md](TEAM.md) for why a borrowed DGX Spark's git identity (`mstxus-dgx`) and AI assistants appear in the commit history.
+
 Facebook clone: Next.js 16 App Router, React 19, TypeScript, Neon Postgres, SuperTokens auth, Meta Muse (Model API) for closeness XP / quests / nudges, Expo Go WebView wrapper. Deployed on Vercel.
 
 ```sh

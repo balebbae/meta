@@ -136,7 +136,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
                   <BossArt kind={q.bossKind} name={spec.boss.name} size={150} hurt={Boolean(anim?.hurt)} down={done} />
                 ) : (
                   <div className={s.arenaCanvas} role="img" aria-label={`${spec.boss.name}${done ? ', defeated,' : ''} facing the squad: ${state.members.map(m => m.name.split(' ')[0]).join(', ')}`}>
-                    <Arena boss={bossCast} heroes={arenaHeroes} attackerId={anim?.userId ?? null} hurt={Boolean(anim?.hurt)} down={done} reducedMotion={reducedMotion} onError={() => setArenaFailed(true)} />
+                    <Arena boss={bossCast} heroes={arenaHeroes} attackerId={anim?.userId ?? null} hp={hpPct / 100} hurt={Boolean(anim?.hurt)} down={done} reducedMotion={reducedMotion} onError={() => setArenaFailed(true)} />
                   </div>
                 )}
                 <Heading level={3}>{spec.boss.name}</Heading>
@@ -144,7 +144,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
                   label={done ? 'Defeated' : `Boss HP · ${Math.round(hpPct)}%`}
                   value={q.bossHpLeft}
                   max={q.bossHp || 1}
-                  variant={hpPct < 10 && !done ? 'error' : 'warning'}
+                  variant="error"
                   hasValueLabel
                   formatValueLabel={(v, m) => `${v} / ${m} HP`}
                 />

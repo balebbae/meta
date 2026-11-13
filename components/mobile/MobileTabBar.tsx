@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useEffect, useState, type CSSProperties} from 'react';
-import {ActivitiesIcon, HomeIcon, VideoIcon, MarketplaceIcon, MobileBellIcon} from '@/components/icons';
+import {MobileNavIcon} from '@/components/icons';
 import {Avatar} from '@/components/ui/Avatar';
 import type {User} from '@/lib/types';
 import styles from './mobile.module.css';
@@ -24,11 +24,11 @@ export function MobileTabBar({user}: {user?: Pick<User, 'id' | 'avatarUrl' | 'na
   const isActive = (href: string) => (pending ? pending === href : matches(href));
   const profileHref = user ? `/profile/${user.id}` : '/profile';
   const tabs = [
-    {href: '/', label: 'Home', icon: (a: boolean) => <HomeIcon size={24} active={a} />},
-    {href: '/reels', label: 'Reels', icon: (a: boolean) => <VideoIcon size={24} active={a} />},
-    {href: '/activities', label: 'Activities', icon: (a: boolean) => <ActivitiesIcon size={23} active={a} />},
-    {href: '/marketplace', label: 'Marketplace', icon: (a: boolean) => <MarketplaceIcon size={24} active={a} />},
-    {href: '/notifications', label: 'Notifications', icon: (a: boolean) => <MobileBellIcon size={24} active={a} />, dot: notif > 0},
+    {href: '/', label: 'Home', icon: (a: boolean) => <MobileNavIcon name="home" size={24} active={a} />},
+    {href: '/reels', label: 'Reels', icon: (a: boolean) => <MobileNavIcon name="reels" size={24} active={a} />},
+    {href: '/activities', label: 'Activities', icon: (a: boolean) => <MobileNavIcon name="activities" size={23} active={a} />},
+    {href: '/marketplace', label: 'Marketplace', icon: (a: boolean) => <MobileNavIcon name="marketplace" size={24} active={a} />},
+    {href: '/notifications', label: 'Notifications', icon: (a: boolean) => <MobileNavIcon name="notifications" size={24} active={a} />, dot: notif > 0},
     {
       href: profileHref,
       label: 'Profile',

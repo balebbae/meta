@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useEffect, useState} from 'react';
-import {ArrowLeftIcon, ChevronLeftIcon, MessengerIcon, MoreCircleIcon, SearchIcon} from '@/components/icons';
+import {ArrowLeftIcon, ChevronLeftIcon, MessengerIcon, MoreCircleIcon, SearchIcon, MobileSearchIcon, HamburgerIcon, CreatePlusIcon} from '@/components/icons';
 import {Popover} from '@/components/ui/Popover';
 import {CreateGroupDialog} from '@/components/pages/CreateGroupDialog';
 import {Avatar} from '@/components/ui/Avatar';
@@ -12,21 +12,7 @@ import type {AppSearch} from '@/lib/search';
 import {FacebookWordmark} from './Wordmark';
 import styles from './mobile.module.css';
 
-function HamburgerIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-      <path d="M3 6h18M3 12h18M3 18h18" />
-    </svg>
-  );
-}
-export function CreatePlusIcon({size = 28}: {size?: number}) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <rect x="3" y="3" width="18" height="18" rx="5" />
-      <path d="M12 8v8M8 12h8" />
-    </svg>
-  );
-}
+export const MOBILE_MENU_EVENT = 'fb.mobile-menu';
 
 /** Polls the Messenger unread count while the tab is visible; 0 when the messaging API is unavailable. */
 export function useChatUnread(intervalMs = 15000) {
@@ -49,7 +35,7 @@ function money(cents: number) {
 }
 
 /** Search used by the mobile header, menu, and friends title. */
-export function PeopleSearchButton({className, iconSize = 22}: {className: string; iconSize?: number}) {
+export function PeopleSearchButton({className, iconSize = 22, thin = false}: {className: string; iconSize?: number; thin?: boolean}) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
   const [hits, setHits] = useState<AppSearch>(blankSearch);
@@ -98,7 +84,7 @@ export function PeopleSearchButton({className, iconSize = 22}: {className: strin
   return (
     <>
       <button type="button" className={className} aria-label="Search" onClick={() => setOpen(true)}>
-        <SearchIcon size={iconSize} />
+        {thin ? <MobileSearchIcon size={iconSize} /> : <SearchIcon size={iconSize} />}
       </button>
       {open && (
         <div className={styles.searchSheet} role="dialog" aria-label="Search Facebook">
@@ -171,7 +157,7 @@ export function MobileHeader() {
   const groups = pathname === '/groups';
   if (title) return (
     <header className={`${styles.mobileOnly} ${styles.header} ${styles.pageHeader} ${groups ? styles.groupsHeader : ''}`} data-mobile-title={title} aria-label={title}>
-      <Link href="/menu" className={styles.hamburger} aria-label={groups ? 'Back to menu' : 'Menu'}>
+      <Link href="/menu" className={styles.hamburger} aria-label={groups ? 'Back to menu' : 'Menu'} onClick={e => { e.preventDefault(); window.dispatchEvent(new Event(MOBILE_MENU_EVENT)); }}>
         {groups ? <ChevronLeftIcon size={24} /> : <HamburgerIcon />}
       </Link>
       <h1 className={styles.pageTitle}>{title}</h1>
@@ -181,7 +167,7 @@ export function MobileHeader() {
           <MessengerIcon size={24} />
           {unread > 0 && <span className={styles.badge}>{unread > 9 ? '9+' : unread}</span>}
         </Link>}
-        <PeopleSearchButton className={styles.headerBtn} iconSize={25} />
+        <PeopleSearchButton className={styles.headerBtn} iconSize={25} thin />
         {pathname !== '/friends' && <div className={styles.moreWrap}>
           <button className={styles.headerBtn} aria-label="More options" aria-expanded={more} onClick={() => setMore(v => !v)}><MoreCircleIcon size={24} /></button>
           <Popover open={more} onClose={() => setMore(false)} width={220}>
@@ -197,7 +183,7 @@ export function MobileHeader() {
   );
   return (
     <header className={`${styles.mobileOnly} ${styles.header} ${pathname === '/' ? styles.homeHeader : ''}`} aria-label="Facebook">
-      <Link href="/menu" className={styles.hamburger} aria-label="Menu">
+      <Link href="/menu" className={styles.hamburger} aria-label="Menu" onClick={e => { e.preventDefault(); window.dispatchEvent(new Event(MOBILE_MENU_EVENT)); }}>
         <HamburgerIcon />
       </Link>
       <Link href="/" className={styles.wordmark} aria-label="Home">
@@ -207,7 +193,7 @@ export function MobileHeader() {
         <button className={styles.headerBtn} aria-label="Create" onClick={() => window.dispatchEvent(new Event(COMPOSE_EVENT))}>
           <CreatePlusIcon size={28} />
         </button>
-        <PeopleSearchButton className={styles.headerBtn} iconSize={27} />
+        <PeopleSearchButton className={styles.headerBtn} iconSize={27} thin />
         <Link href="/messages" className={styles.headerBtn} aria-label="Messenger">
           <MessengerIcon size={28} />
           {unread > 0 && <span className={styles.badge}>{unread > 9 ? '9+' : unread}</span>}

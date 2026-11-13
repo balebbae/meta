@@ -20,7 +20,7 @@ export function MobileTabBar({user}: {user?: Pick<User, 'id' | 'avatarUrl' | 'na
 
   const tabs = [
     {href: '/', label: 'Home', Icon: HomeIcon, badge: 0},
-    {href: '/video', label: 'Video', Icon: VideoIcon, badge: 1},
+    {href: '/reels', label: 'Reels', Icon: VideoIcon, badge: 1},
     {href: '/friends', label: 'Friends', Icon: FriendsIcon, badge: 0},
     {href: '/marketplace', label: 'Marketplace', Icon: MarketplaceIcon, badge: 1},
     {href: '/notifications', label: 'Notifications', Icon: (p: {size?: number; active?: boolean}) => <BellIcon size={p.size} />, badge: notif},

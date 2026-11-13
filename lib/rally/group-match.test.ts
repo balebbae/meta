@@ -14,6 +14,10 @@ test('a 5K run ranks the run club first, climbing next (fitness), CS not suggest
   assert.equal(ranked[2].score, 0);
 });
 
+test('any distance counts as running: "3K Pals Road Rampage" suggests a run club', () => {
+  assert.equal(rankGroups('3K Pals Road Rampage', [groups[0], {id: 43, name: 'Meta Run Club', description: null}])[0].id, 43);
+});
+
 test('non-fitness text still marks fitness groups, never unrelated ones', () => {
   assert.equal(groupScore('Plank Goblin Week', groups[0]), 0);
   assert.ok(groupScore('Bouldering night', groups[1]) > groupScore('Bouldering night', groups[2]));

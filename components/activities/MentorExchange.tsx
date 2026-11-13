@@ -1,16 +1,30 @@
 'use client';
 
-import Link from 'next/link';
-import {useRouter} from 'next/navigation';
-import {useEffect, useRef, useState} from 'react';
-import {Avatar} from '@/components/ui/Avatar';
-import type {ExchangeEvent, MentorConsent, MentorRequestView, Plan, Turn} from '@/lib/activities/mentor';
-import styles from './mentor.module.css';
+import {useCallback, useEffect, useState} from 'react';
+import type {ConnectAction, ExchangeEvent, MentorRequestView, Plan, RelayMessage, Turn} from '@/lib/activities/mentor';
+import {UserRound} from 'lucide-react';
+import {Avatar} from '@astryxdesign/core/Avatar';
+import {Button} from '@astryxdesign/core/Button';
+import {Card} from '@astryxdesign/core/Card';
+import {ChatComposer, ChatMessage, ChatMessageBubble, ChatMessageList} from '@astryxdesign/core/Chat';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Icon} from '@astryxdesign/core/Icon';
+import {Link} from '@astryxdesign/core/Link';
+import {List, ListItem} from '@astryxdesign/core/List';
+import {Spinner} from '@astryxdesign/core/Spinner';
+import {Text} from '@astryxdesign/core/Text';
+import {useToast} from '@astryxdesign/core/Toast';
+import {Token} from '@astryxdesign/core/Token';
+import {VStack} from '@astryxdesign/core/VStack';
+
+const museAvatar = (mine: boolean) => <Avatar name={mine ? 'Your Muse' : 'Their Muse'} size="sm" />;
 
 const json = (method: string, body?: unknown) => ({method, headers: {'content-type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
+const POLL_MS = 4000;
 
+/** /activities/ahead/[id]: the advice exchange (streams once), then connect → a thread relayed by both Muses. */
 export function MentorExchange({initial}: {initial: MentorRequestView}) {
-  const router = useRouter();
   const [req, setReq] = useState(initial);
   const [turns, setTurns] = useState<Turn[]>(initial.transcript);
   const [plan, setPlan] = useState<Plan | null>(initial.plan);
@@ -18,14 +32,16 @@ export function MentorExchange({initial}: {initial: MentorRequestView}) {
   const [typing, setTyping] = useState<'seeker' | 'mentor' | null>(null);
   const [streaming, setStreaming] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [consent, setConsent] = useState<MentorConsent>({workouts: true, steps: false, heart: false, sleep: false, ...initial.consent});
-  const [anonymous, setAnonymous] = useState(initial.offer.anonymous);
-  const [toast, setToast] = useState<string | null>(null);
-  const endRef = useRef<HTMLDivElement>(null);
+  const showToast = useToast();
+  const [thread, setThread] = useState<RelayMessage[]>([]);
+  const [draft, setDraft] = useState('');
+  const [sendError, setSendError] = useState<string | null>(null);
 
-  useEffect(() => {
-    endRef.current?.scrollIntoView({behavior: 'smooth', block: 'nearest'});
-  }, [turns, typing, plan]);
+  const isSeeker = req.role === 'seeker';
+  const them = isSeeker ? req.mentor : req.seeker;
+  const themLabel = them?.name ?? (isSeeker ? 'Someone a few months ahead' : 'Someone a few months behind you');
+  const theirMuse = them ? `${them.name.split(' ')[0]}’s Muse` : 'Their Muse';
+  const connected = req.connect === 'connected' && req.status !== 'revoked';
 
   useEffect(() => {
     if (req.status !== 'accepted' || plan) return;
@@ -56,12 +72,46 @@ export function MentorExchange({initial}: {initial: MentorRequestView}) {
     return () => es.close();
   }, [req.id, req.status, plan]);
 
-  const decide = async (accept: boolean) => {
-    setBusy(accept ? 'accept' : 'decline');
-    const res = await fetch(`/api/mentor/requests/${req.id}/consent`, json('POST', {accept, consent, anonymous}));
+  // Thread + connect state poll (the other side may accept, reveal or reply at any time)
+  const lastId = thread[thread.length - 1]?.id ?? 0;
+  const poll = useCallback(async () => {
+    try {
+      const [t, r] = await Promise.all([
+        connected ? fetch(`/api/mentor/requests/${req.id}/relay?after=${lastId}`, {cache: 'no-store'}).then(x => (x.ok ? x.json() : {messages: []})) : Promise.resolve({messages: []}),
+        fetch(`/api/mentor/requests/${req.id}`, {cache: 'no-store'}).then(x => (x.ok ? x.json() : null)),
+      ]);
+      const fresh = (t as {messages: RelayMessage[]}).messages;
+      if (fresh.length) setThread(prev => [...prev, ...fresh.filter(m => !prev.some(p => p.id === m.id))]);
+      const next = (r as {request?: MentorRequestView} | null)?.request;
+      if (next) setReq(prev => ({...prev, connect: next.connect, reveal: next.reveal, seeker: next.seeker, mentor: next.mentor, status: prev.status === 'completed' && next.status === 'accepted' ? prev.status : next.status}));
+    } catch {
+      /* keep last good state */
+    }
+  }, [connected, lastId, req.id]);
+
+  useEffect(() => {
+    void poll();
+    const t = setInterval(() => void poll(), POLL_MS);
+    return () => clearInterval(t);
+  }, [poll]);
+
+  const act = async (action: ConnectAction) => {
+    setBusy(action);
+    const res = await fetch(`/api/mentor/requests/${req.id}/connect`, json('POST', {action}));
     const d = (await res.json().catch(() => ({}))) as {request?: MentorRequestView};
     setBusy(null);
-    if (res.ok && d.request) setReq(d.request);
+    if (res.ok && d.request) setReq(r => ({...r, ...d.request!, transcript: r.transcript, plan: r.plan ?? d.request!.plan}));
+  };
+  const send = async (text = draft) => {
+    if (!text.trim()) return;
+    setBusy('send');
+    setSendError(null);
+    const res = await fetch(`/api/mentor/requests/${req.id}/relay`, json('POST', {text}));
+    const d = (await res.json().catch(() => ({}))) as {messages?: RelayMessage[]; error?: string};
+    setBusy(null);
+    if (!res.ok) return setSendError(d.error ?? 'Your Muse could not pass that on.');
+    setDraft('');
+    setThread(prev => [...prev, ...(d.messages ?? []).filter(m => !prev.some(p => p.id === m.id))]);
   };
   const revoke = async () => {
     setBusy('revoke');
@@ -69,173 +119,154 @@ export function MentorExchange({initial}: {initial: MentorRequestView}) {
     setBusy(null);
     if (res.ok) setReq(r => ({...r, status: 'revoked'}));
   };
-  const startTurf = async () => {
-    setBusy('turf');
-    const res = await fetch('/api/games', json('POST', {gameType: 'turf', title: 'Mentor Turf', inviteUserIds: [req.role === 'seeker' ? req.mentor?.id : req.seeker.id].filter(Boolean)}));
-    setBusy(null);
-    if (res.status === 404 || res.status === 501) return router.push('/activities?start=turf');
-    const d = (await res.json().catch(() => ({}))) as {id?: number; game?: {id?: number}; gameId?: number; url?: string};
-    if (!res.ok) return router.push('/activities?start=turf');
-    router.push(d.url ?? `/activities/turf/${d.game?.id ?? d.gameId ?? d.id ?? ''}`);
-  };
-
-  const other = req.role === 'seeker' ? (req.mentor ? req.mentor.name : 'Anonymous mentor') : req.seeker.name;
-  const pending = req.status === 'pending';
 
   return (
-    <div className={styles.page}>
-      <div>
-        <Link href="/activities/mentor" className={styles.sub}>
-          ← Mentors
-        </Link>
-        <h1 className={styles.h1}>
-          {req.offer.metric}: {req.offer.fromValue} → {req.offer.toValue}
-        </h1>
-        <div className={styles.sub}>
-          in {req.offer.weeks} weeks · {req.role === 'seeker' ? 'you asked' : `${req.seeker.name} asked`} · <span className={req.status === 'pending' ? styles.badgeAmber : styles.badgeBlue}>{req.status}</span>
-          {offline === true && <span className={styles.offline}> · Muse offline: scripted exchange</span>}
-        </div>
-      </div>
+    <VStack gap={4} paddingBlock={4}>
+      <VStack gap={1} hAlign="start">
+        <Button label="A few months ahead" variant="ghost" size="sm" icon={<Icon icon="chevronLeft" />} href="/activities/ahead" />
+        <Heading level={1}>{req.offer.metric ? `${req.offer.metric}: ${req.offer.fromValue} → ${req.offer.toValue}` : isSeeker ? 'Where you want to be in 3 months' : 'Someone a few months behind you'}</Heading>
+        <HStack gap={2} vAlign="center" wrap="wrap">
+          <Text color="secondary">Everything here goes through your Muses. Neither of you sees the other&apos;s raw data or words.</Text>
+          {offline === true && <Token label="Muse offline: scripted answers" size="sm" color="gray" />}
+        </HStack>
+      </VStack>
 
-      <section className={styles.card}>
-        <div className={styles.identity}>
-          {req.role === 'seeker' ? (
-            req.mentor ? (
-              <>
-                <Avatar src={req.mentor.avatarUrl} alt="" size={40} />
-                <div>
-                  <div className={styles.matchTitle}>{req.mentor.name}</div>
-                  <div className={styles.matchSub}>Revealed after accepting</div>
-                </div>
-              </>
-            ) : (
-              <>
-                <span className={styles.matchIcon} aria-hidden>
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z"/></svg>
-                </span>
-                <div>
-                  <div className={styles.matchTitle}>Anonymous mentor</div>
-                  <div className={styles.matchSub}>{pending ? 'Nothing is shared until they accept.' : 'They chose to stay anonymous.'}</div>
-                </div>
-              </>
-            )
-          ) : (
-            <>
-              <Avatar src={req.seeker.avatarUrl} alt="" size={40} />
-              <div>
-                <div className={styles.matchTitle}>{req.seeker.name}</div>
-                <div className={styles.matchSub}>wants to know how you did it</div>
-              </div>
-            </>
+      <Card>
+        <VStack gap={3}>
+          <HStack gap={3} vAlign="center">
+            {them ? <Avatar src={them.avatarUrl} name={them.name} size="lg" /> : <Icon icon={UserRound} size="lg" color="secondary" />}
+            <VStack gap={0.5}>
+              <Text weight="bold">{them ? <Link href={`/profile/${them.id}`}>{them.name}</Link> : themLabel}</Text>
+              <Text type="supporting" color="secondary">
+                {them ? 'You both chose to share your names.' : connected ? (req.reveal.them ? 'They shared their name. Share yours to see who they are.' : 'Names stay hidden unless you both share.') : 'Name hidden.'}
+              </Text>
+            </VStack>
+          </HStack>
+          {req.status !== 'revoked' && (
+            <VStack gap={2}>
+              {isSeeker && req.connect === 'requested' && <Text color="secondary">Connect request sent. You&apos;ll get a notification when they answer.</Text>}
+              {req.connect === 'declined' && <Text color="secondary">{isSeeker ? 'They chose not to connect. The advice below is still yours.' : 'You chose not to connect.'}</Text>}
+              {!isSeeker && req.connect === 'requested' && <Text color="secondary">They&apos;d like to keep talking. Messages go through your Muses both ways, and your name stays hidden unless you share it.</Text>}
+              <HStack gap={2} wrap="wrap">
+                {isSeeker && req.connect === 'none' && <Button label="Connect: keep talking through your Muses" variant="primary" isLoading={busy === 'request'} isDisabled={!!busy && busy !== 'request'} onClick={() => void act('request')} />}
+                {!isSeeker && req.connect === 'requested' && (
+                  <>
+                    <Button label="Accept" variant="primary" isLoading={busy === 'accept'} isDisabled={!!busy && busy !== 'accept'} onClick={() => void act('accept')} />
+                    <Button label="Decline" isDisabled={!!busy} onClick={() => void act('decline')} />
+                  </>
+                )}
+                {connected && <Button label={req.reveal.me ? 'Hide my name' : 'Share my name'} isDisabled={!!busy} onClick={() => void act(req.reveal.me ? 'hide' : 'reveal')} />}
+              </HStack>
+            </VStack>
           )}
-        </div>
-
-        {pending && req.role === 'mentor' && (
-          <>
-            <div className={styles.sub} style={{marginTop: 12, fontWeight: 600}}>
-              Your Muse may use (rounded, never exact):
-            </div>
-            <div className={styles.toggles}>
-              {(['workouts', 'steps', 'heart', 'sleep'] as const).map(k => (
-                <label key={k} className={styles.check}>
-                  <input type="checkbox" checked={!!consent[k]} onChange={e => setConsent(c => ({...c, [k]: e.target.checked}))} />
-                  {k === 'workouts' ? 'Workouts & distance' : k === 'steps' ? 'Steps' : k === 'heart' ? 'Heart rate (Muse only)' : 'Sleep (Muse only)'}
-                </label>
-              ))}
-              <label className={styles.check}>
-                <input type="checkbox" checked={anonymous} onChange={e => setAnonymous(e.target.checked)} />
-                Stay anonymous
-              </label>
-              <label className={styles.check}>
-                <input type="checkbox" checked={!!consent.reviewBeforeSend} onChange={e => setConsent(c => ({...c, reviewBeforeSend: e.target.checked}))} />
-                Review before my Muse sends
-              </label>
-            </div>
-            <div className={styles.actions}>
-              <button type="button" className={styles.primary} disabled={busy === 'accept'} onClick={() => decide(true)}>
-                {busy === 'accept' ? 'Accepting…' : 'Accept — let our Muses talk'}
-              </button>
-              <button type="button" className={styles.secondary} disabled={busy === 'decline'} onClick={() => decide(false)}>
-                Decline
-              </button>
-            </div>
-          </>
-        )}
-        {pending && req.role === 'seeker' && <div className={styles.sub} style={{marginTop: 12}}>Waiting for the mentor to accept. You&apos;ll get a notification; the exchange starts here automatically.</div>}
-        {req.status === 'declined' && <div className={styles.sub} style={{marginTop: 12}}>This request was declined. Nothing was shared.</div>}
-        {req.status === 'revoked' && <div className={styles.sub} style={{marginTop: 12}}>Revoked. Both of you keep the transcript below; no new answers will be generated.</div>}
-      </section>
+          {req.status === 'revoked' && <Text color="secondary">Stopped. You both keep what&apos;s below; no new messages can be sent.</Text>}
+        </VStack>
+      </Card>
 
       {(turns.length > 0 || typing || streaming) && (
-        <section className={styles.card} aria-label="Muse exchange" aria-live="polite">
-          <h2 className={styles.h2}>Muse ↔ Muse</h2>
-          <div className={styles.sub}>
-            {req.role === 'seeker' ? 'Your' : `${req.seeker.name.split(' ')[0]}’s`} Muse asks three questions; {req.role === 'mentor' ? 'your' : `the mentor’s`} Muse answers from consented, rounded facts and the offer note only.
-          </div>
-          <div className={styles.chat}>
-            {turns.map((t, i) => (
-              <div key={i}>
-                <div className={styles.who} style={t.role === 'mentor' ? {textAlign: 'right'} : undefined}>
-                  {t.role === 'seeker' ? `${req.seeker.name.split(' ')[0]}’s Muse` : `${other.split(' ')[0]}’s Muse`}
-                </div>
-                <div className={t.role === 'mentor' ? styles.turnMentor : styles.turn}>
-                  <span className={t.role === 'mentor' ? styles.museMentor : styles.muse}>M</span>
-                  <span className={t.role === 'mentor' ? styles.bubbleMentor : styles.bubble}>{t.text}</span>
-                </div>
-              </div>
-            ))}
-            {typing && (
-              <div className={typing === 'mentor' ? styles.turnMentor : styles.turn}>
-                <span className={typing === 'mentor' ? styles.museMentor : styles.muse}>M</span>
-                <span className={typing === 'mentor' ? styles.bubbleMentor : styles.bubble}>
-                  <span className={styles.typing} aria-label="typing">
-                    <i />
-                    <i />
-                    <i />
-                  </span>
-                </span>
-              </div>
-            )}
-            <div ref={endRef} />
-          </div>
-        </section>
+        <Card aria-label="Advice from their Muse">
+          <VStack gap={3}>
+            <VStack gap={1}>
+              <Heading level={2}>{isSeeker ? 'Your Muse asked theirs' : 'Their Muse asked yours'}</Heading>
+              <Text type="supporting" color="secondary">
+                {isSeeker ? 'Your' : 'Their'} Muse asks three questions; {isSeeker ? 'theirs' : 'yours'} answers from consented, rounded activity and {isSeeker ? 'their' : 'your'} note only.
+              </Text>
+            </VStack>
+            <ChatMessageList align="top" isStreaming={streaming}>
+              {turns.map((t, i) => {
+                const mine = (t.role === 'seeker') === isSeeker;
+                return (
+                  <ChatMessage key={i} sender={mine ? 'user' : 'assistant'} name={mine ? 'Your Muse' : theirMuse} avatar={museAvatar(mine)}>
+                    <ChatMessageBubble>{t.text}</ChatMessageBubble>
+                  </ChatMessage>
+                );
+              })}
+              {typing && (
+                <ChatMessage sender={(typing === 'seeker') === isSeeker ? 'user' : 'assistant'} avatar={museAvatar((typing === 'seeker') === isSeeker)}>
+                  <ChatMessageBubble>
+                    <Spinner size="sm" label="typing" />
+                  </ChatMessageBubble>
+                </ChatMessage>
+              )}
+            </ChatMessageList>
+          </VStack>
+        </Card>
       )}
 
       {plan && (
-        <section className={styles.card} aria-label="Plan">
-          <div className={styles.plan}>
-            <h2 className={styles.h2}>{plan.title}</h2>
-            <div className={styles.sub}>{plan.weeks} weeks · written by {offline ? 'a template (Muse offline)' : 'Muse Spark'} from the exchange above</div>
-            <ol>
-              {plan.steps.map((s, i) => (
-                <li key={i}>{s}</li>
+        <Card variant="blue" aria-label="Plan">
+          <VStack gap={3}>
+            <VStack gap={1}>
+              <Heading level={2}>{plan.title}</Heading>
+              <Text type="supporting" color="secondary">
+                {plan.weeks} weeks · written by {offline ? 'a template (Muse offline)' : 'Muse Spark'} from the answers above
+              </Text>
+            </VStack>
+            <List listStyle="decimal" density="compact">
+              {plan.steps.map((st, i) => (
+                <ListItem key={i} label={st} />
               ))}
-            </ol>
-            <div className={styles.note}>{plan.note}</div>
-          </div>
-          <div className={styles.actions}>
-            <button type="button" className={styles.primary} disabled={busy === 'turf'} onClick={startTurf}>
-              {busy === 'turf' ? 'Starting…' : 'Start a Turf game together'}
-            </button>
-            <button type="button" className={styles.secondary} onClick={() => {
-              void navigator.clipboard?.writeText(`${plan.title}\n${plan.steps.join('\n')}`);
-              setToast('Plan copied');
-              window.setTimeout(() => setToast(null), 2000);
-            }}>
-              Copy plan
-            </button>
-          </div>
-        </section>
+            </List>
+            <Text type="supporting" color="secondary">
+              {plan.note}
+            </Text>
+            <HStack>
+              <Button
+                label="Copy plan"
+                onClick={() => {
+                  void navigator.clipboard?.writeText(`${plan.title}\n${plan.steps.join('\n')}`);
+                  showToast({body: 'Plan copied', autoHideDuration: 2000});
+                }}
+              />
+            </HStack>
+          </VStack>
+        </Card>
       )}
 
-      {req.status !== 'revoked' && req.status !== 'declined' && (
-        <div className={styles.actions}>
-          <button type="button" className={styles.danger} disabled={busy === 'revoke'} onClick={revoke}>
-            Revoke — stop sharing (keeps the transcript)
-          </button>
-        </div>
+      {(connected || thread.length > 0) && (
+        <Card aria-label="Through your Muses">
+          <VStack gap={3}>
+            <VStack gap={1}>
+              <Heading level={2}>Through your Muses</Heading>
+              <Text type="supporting" color="secondary">
+                Write to your Muse. It removes names, contact details and health numbers, rewrites the message and passes it on. Only you see what you typed.
+              </Text>
+            </VStack>
+            <ChatMessageList align="top" emptyState={<Text color="secondary">{isSeeker ? 'Ask anything about how they got there.' : 'Nothing yet. You will get a notification when they write.'}</Text>}>
+              {thread.map(m => {
+                const mineSide = m.fromRole === req.role;
+                const label = m.kind === 'data_answer' ? (mineSide ? 'Your Muse, from your activity' : `${theirMuse}, from their activity`) : mineSide ? 'Your Muse passed on' : theirMuse;
+                return (
+                  <ChatMessage
+                    key={m.id}
+                    sender={mineSide ? 'user' : 'assistant'}
+                    name={`${label}${m.museUsed ? '' : ' (as written, Muse offline)'}`}
+                    avatar={museAvatar(mineSide)}
+                    metadata={m.rawText && m.rawText !== m.text ? `You wrote: ${m.rawText}` : undefined}>
+                    <ChatMessageBubble>{m.text}</ChatMessageBubble>
+                  </ChatMessage>
+                );
+              })}
+            </ChatMessageList>
+            {connected && (
+              <ChatComposer
+                value={draft}
+                onChange={v => setDraft(v.slice(0, 600))}
+                onSubmit={v => void send(v)}
+                placeholder={isSeeker ? 'Ask how they handled a bad week…' : 'Reply through your Muse…'}
+                isDisabled={busy === 'send'}
+                status={sendError ? {type: 'error', message: sendError} : undefined}
+              />
+            )}
+          </VStack>
+        </Card>
       )}
-      {toast && <div className={styles.sub}>{toast}</div>}
-    </div>
+
+      {req.status !== 'revoked' && (
+        <HStack>
+          <Button label="Stop: no more messages (keeps what's here)" variant="destructive" isLoading={busy === 'revoke'} onClick={() => void revoke()} />
+        </HStack>
+      )}
+    </VStack>
   );
 }

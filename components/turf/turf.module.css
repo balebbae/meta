@@ -1,66 +1,25 @@
 /* Hex map */
 .map {
+  position: relative;
   display: block;
   width: 100%;
-  height: auto;
   aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
   user-select: none;
 }
-.mapPick {
-  cursor: crosshair;
+.pin,
+.meMarker {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--fb-blue);
+  border: 2px solid var(--fb-card);
+  box-shadow: var(--fb-shadow-card);
 }
-.arena {
-  fill: var(--fb-input-bg);
-}
-.arenaRing {
-  fill: none;
-  stroke: var(--fb-text-secondary);
-  stroke-width: 2;
-  stroke-dasharray: 10 8;
-  vector-effect: non-scaling-stroke;
-  opacity: 0.6;
-}
-.grid {
-  fill: none;
-  stroke: var(--fb-divider);
-  stroke-width: 0.6;
-  vector-effect: non-scaling-stroke;
-}
-.gridCoarse {
-  fill: none;
-  stroke: var(--fb-divider);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-.owned {
-  fill-opacity: 0.78;
-  stroke: var(--fb-card);
-  stroke-width: 0.5;
-  vector-effect: non-scaling-stroke;
-}
-.trail {
-  fill-opacity: 0.28;
-  stroke-width: 2;
-  stroke-dasharray: 4 3;
-  vector-effect: non-scaling-stroke;
-  fill: var(--fb-blue);
-  stroke: var(--fb-blue);
-}
-.centerPin {
-  fill: var(--fb-blue);
-  stroke: var(--fb-card);
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
-}
-.meHalo {
-  fill: var(--fb-blue);
-  opacity: 0.2;
-}
-.meDot {
-  fill: var(--fb-blue);
-  stroke: var(--fb-card);
-  stroke-width: 2;
-  vector-effect: non-scaling-stroke;
+.meMarker {
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--fb-blue) 20%, transparent);
 }
 
 /* Page */

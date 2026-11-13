@@ -2,6 +2,7 @@ import {NextResponse} from 'next/server';
 import {sql} from '@/lib/db';
 import {badRequest, forbidden, notFound, readJson, withUser} from '@/lib/api';
 import {listGroupPosts} from '@/lib/secondary-queries';
+import {isAllowedImageUrl} from '@/lib/image-upload';
 
 type Ctx = {params: Promise<{id: string}>};
 
@@ -23,9 +24,12 @@ export async function POST(req: Request, {params}: Ctx) {
     const body = await readJson<{content?: string; imageUrl?: string | null}>(req);
     const content = body?.content?.trim();
     if (!content) return badRequest('content is required');
+    if (content.length > 10_000) return badRequest('post is too long');
+    const imageUrl = body?.imageUrl?.trim() || null;
+    if (imageUrl && !isAllowedImageUrl(imageUrl)) return badRequest('imageUrl must be an http(s) URL or an image under 1.5 MB');
     const [row] = await sql`
       insert into group_posts (group_id, author_id, content, image_url)
-      values (${groupId}, ${user.id}, ${content}, ${body?.imageUrl?.trim() || null})
+      values (${groupId}, ${user.id}, ${content}, ${imageUrl})
       returning id`;
     return NextResponse.json({id: row.id}, {status: 201});
   });

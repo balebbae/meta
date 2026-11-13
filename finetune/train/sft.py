@@ -2,6 +2,7 @@
 
     python train/sft.py --task mapper --data data --out outputs/mapper-lora
     python train/sft.py --task proof  --data data --out outputs/proof-lora   # vision
+    python train/sft.py --task exercise_check --data data --out outputs/exercise_check-lora   # vision, 1 or 3 images/row
 
 Follows Unsloth's Muse Glimmer notebooks (transformers==5.15.0). bf16 LoRA needs >40 GB, which the
 DGX Spark's 128 GB unified memory covers; pass --qlora to use the 4-bit checkpoint instead.
@@ -20,10 +21,16 @@ RESPONSE_PART = "<|start|>assistant to=user<|message|>"
 # reply-only (no reasoning), so train at a fixed low strength; serve with the same line or
 # chat_template_kwargs={"reasoning_strength": "low"} so prompts match.
 REASONING_LINE = "Reasoning strength: {}."
+# Rows whose user turn holds images (exercise_check: 1 photo or 3 clip stills, in order).
+VISION_TASKS = ("proof", "exercise_check")
 
 
 def with_reasoning(messages: list[dict], strength: str) -> list[dict]:
     line = REASONING_LINE.format(strength)
+    if not any(m["role"] == "system" for m in messages):
+        # proof / exercise_check rows mirror the app (one user turn, no system prompt); serving with
+        # chat_template_kwargs={"reasoning_strength": ...} renders the same system line.
+        return [{"role": "system", "content": line}, *messages]
     out = []
     for m in messages:
         if m["role"] == "system" and isinstance(m["content"], str) and "reasoning strength" not in m["content"].lower():
@@ -32,13 +39,30 @@ def with_reasoning(messages: list[dict], strength: str) -> list[dict]:
     return out
 
 
+META_BASE = "meta-models/Muse-Glimmer-30B"
+
+
+def use_meta_chat_template(processor) -> None:
+    """Train with Meta's chat template, the one vLLM serves with.
+
+    The unsloth 4-bit repo ships an older template that always appends "Reasoning strength: high" to a system
+    message, so with_reasoning()'s "low" line would render next to a contradictory "high" one.
+    """
+    from huggingface_hub import hf_hub_download
+
+    template = Path(hf_hub_download(META_BASE, "chat_template.jinja")).read_text()
+    for obj in (processor, getattr(processor, "tokenizer", None)):
+        if obj is not None and hasattr(obj, "chat_template"):
+            obj.chat_template = template
+
+
 def load_rows(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.open()]
 
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--task", required=True, choices=["mapper", "private_muse", "proof"])
+    p.add_argument("--task", required=True, choices=["mapper", "private_muse", "proof", "exercise_check"])
     p.add_argument("--data", type=Path, default=Path("data"))
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--qlora", action="store_true", help="4-bit base (unsloth bnb) instead of bf16")
@@ -56,9 +80,10 @@ def main() -> None:
     from unsloth import FastModel  # noqa: I001 - unsloth must be imported before transformers/trl
     from trl import SFTConfig, SFTTrainer
 
-    base = "unsloth/Muse-Glimmer-30B-unsloth-bnb-4bit" if a.qlora else "meta-models/Muse-Glimmer-30B"
-    vision = a.task == "proof"
+    base = "unsloth/Muse-Glimmer-30B-unsloth-bnb-4bit" if a.qlora else META_BASE
+    vision = a.task in VISION_TASKS
     model, processor = FastModel.from_pretrained(model_name=base, max_seq_length=a.max_seq, load_in_4bit=a.qlora)
+    use_meta_chat_template(processor)
     model = FastModel.get_peft_model(
         model,
         finetune_vision_layers=vision,

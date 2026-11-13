@@ -26,6 +26,16 @@ export function VideoIcon({active, size = 24, className, style}: IconProps & {ac
   return <FbSvg name={active ? 'reelsActive' : 'reels'} size={size} className={className} style={style} />;
 }
 
+/** Activities: a dumbbell in the same 2px rounded weight as the Facebook tab glyphs; solid when active. */
+export function ActivitiesIcon({active, size = 24, className, style}: IconProps & {active?: boolean}) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className={className} style={style} aria-hidden>
+      <rect x="4.5" y="3.5" width="4.5" height="17" rx="1.75" />
+      <rect x="15" y="3.5" width="4.5" height="17" rx="1.75" />
+      <path d="M4.5 8H3a1.5 1.5 0 0 0-1.5 1.5v5A1.5 1.5 0 0 0 3 16h1.5M19.5 8H21a1.5 1.5 0 0 1 1.5 1.5v5A1.5 1.5 0 0 1 21 16h-1.5M9 12h6" />
+    </svg>
+  );
+}
 export function MarketplaceIcon({active, size = 24, className, style}: IconProps & {active?: boolean}) {
   return <FbSvg name={active ? 'marketplaceActive' : 'marketplace'} size={size} className={className} style={style} />;
 }
@@ -350,6 +360,11 @@ export function RailPagesIcon() {
 
 export function RailGamingIcon() {
   return <FbSprite name="railGaming" />;
+}
+
+export function RailActivitiesIcon() {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/activities-icon.png" width={36} height={36} alt="" draggable={false} />;
 }
 
 export function RailMessengerIcon() {

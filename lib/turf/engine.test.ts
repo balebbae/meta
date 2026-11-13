@@ -2,11 +2,12 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {latLngToCell} from 'h3-js';
 import {
-  applyClaim, arenaCells, cellCenter, detectCut, detectLoop, fillLoop, haversineM, inArena, pointsToCells, releasePlayer, score,
-  TURF_RES, type Arena, type GpsPoint, type TrailCell, type TurfGame,
+  applyClaim, arenaCells, cellCenter, detectCut, detectLoop, fastPoints, fillLoop, haversineM, inArena, MAX_ACCEL_MS2, obfuscateZone, outingTrimM,
+  pointsToCells, releasePlayer, score, TRIM_M, TRIM_MAX_M, TRIM_MIN_M, TURF_RES, type LatLng, type Zone, type Arena, type GpsPoint, type TrailCell,
+  type TurfGame,
 } from './engine.ts';
 import {KATY_TRAIL, scriptGpx, scriptPoints} from './fixtures.ts';
-import {parseGpx} from './gpx.ts';
+import {parseGpx, parseGpxTrack, tooUntimed} from './gpx.ts';
 
 const arena: Arena = {center: KATY_TRAIL, radiusKm: 1.5};
 const M_LAT = 111_320;
@@ -202,4 +203,123 @@ test('stage demo: Priya closes a base, Sarah cuts her open trail and takes 14 ce
   assert.equal(claimS.taken[2], 14, `Sarah took ${claimS.taken[2]} of Priya's cells`);
   const s = score(claimS.game, [1, 2]);
   assert.equal(s[0].cells + s[1].cells, claimS.game.cells.size);
+});
+
+/** Seeded uniform [0, 1) so the attack simulation is reproducible. */
+function rng(seed: number) {
+  return () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 2 ** 32;
+  };
+}
+
+/** Attacker: least-squares (Kasa) circle through the first visible cell of every outing; returns the centre in local metres. */
+function fitCircle(pts: [number, number][]): [number, number] {
+  // solve [x y 1] . [a b c] = x^2 + y^2 via 3x3 normal equations; centre = (a/2, b/2)
+  const A = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
+  const v = [0, 0, 0];
+  for (const [x, y] of pts) {
+    const row = [x, y, 1];
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) A[i][j] += row[i] * row[j];
+      v[i] += row[i] * (x * x + y * y);
+    }
+  }
+  for (let i = 0; i < 3; i++) {
+    for (let k = i + 1; k < 3; k++) {
+      const f = A[k][i] / A[i][i];
+      for (let j = i; j < 3; j++) A[k][j] -= f * A[i][j];
+      v[k] -= f * v[i];
+    }
+  }
+  const s = [0, 0, 0];
+  for (let i = 2; i >= 0; i--) {
+    let acc = v[i];
+    for (let j = i + 1; j < 3; j++) acc -= A[i][j] * s[j];
+    s[i] = acc / A[i][i];
+  }
+  return [s[0] / 2, s[1] / 2];
+}
+
+const local = (p: LatLng): [number, number] => [(p.lng - KATY_TRAIL.lng) * M_LNG, (p.lat - KATY_TRAIL.lat) * M_LAT];
+
+/** N outings leave home in random directions; the attacker sees only the cells pointsToCells keeps. */
+function attack(zone: Zone, trimFor: (i: number) => number, rand: () => number, n = 40): [number, number] {
+  const firsts: [number, number][] = [];
+  for (let i = 0; i < n; i++) {
+    const a = 2 * Math.PI * rand();
+    const cells = pointsToCells(walk([0, 0], [1200 * Math.cos(a), 1200 * Math.sin(a)]), arena, {zones: [zone], trimM: trimFor(i)});
+    if (cells.length) firsts.push(local(cellCenter(cells[0].cell)));
+  }
+  return fitCircle(firsts);
+}
+
+test('zone-centre attack: exact zone + fixed trim leaks home, obfuscated zone + per-outing trim does not', () => {
+  const home: Zone = {...KATY_TRAIL, radiusM: 200};
+  const before: number[] = [];
+  const after: number[] = [];
+  const offsets: number[] = [];
+  for (let trial = 0; trial < 12; trial++) {
+    const rand = rng(1000 + trial);
+    before.push(Math.hypot(...attack(home, () => TRIM_M, rand)));
+    const z = obfuscateZone(home, rand(), rand());
+    const [cx, cy] = attack(z, i => outingTrimM(`${trial}:${i}`), rand);
+    offsets.push(haversineM(z, home));
+    after.push(Math.hypot(cx, cy));
+  }
+  const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  console.log(`zone attack: before mean ${mean(before).toFixed(1)} m (max ${Math.max(...before).toFixed(1)}), after mean ${mean(after).toFixed(1)} m vs mean offset ${mean(offsets).toFixed(1)} m`);
+  assert.ok(Math.max(...before) < 10, `before: ${before}`);
+  assert.ok(mean(after) >= 0.8 * mean(offsets) && mean(after) > 200 / 4, `after: ${after}`);
+});
+
+test('obfuscated zone still covers every point of the original circle', () => {
+  const rand = rng(7);
+  for (let i = 0; i < 200; i++) {
+    const z = {...KATY_TRAIL, radiusM: 50 + Math.round(rand() * 950)};
+    const o = obfuscateZone(z, rand(), rand());
+    assert.equal(o.radiusM, Math.round(z.radiusM * 1.5));
+    assert.ok(haversineM(o, z) <= z.radiusM / 2 + 0.5);
+    const a = 2 * Math.PI * rand();
+    const edge = {lat: z.lat + (z.radiusM * Math.sin(a)) / M_LAT, lng: z.lng + (z.radiusM * Math.cos(a)) / M_LNG};
+    assert.ok(haversineM(edge, o) <= o.radiusM, 'original edge point left uncovered');
+  }
+});
+
+test('outingTrimM is stable per outing and spans 150-400 m', () => {
+  const trims = Array.from({length: 500}, (_, i) => outingTrimM(i));
+  assert.equal(outingTrimM(42), outingTrimM(42));
+  assert.ok(trims.every(t => t >= TRIM_MIN_M && t < TRIM_MAX_M));
+  assert.ok(Math.min(...trims) < 170 && Math.max(...trims) > 380);
+});
+
+test('pointsToCells hides the trim distance after leaving a zone mid-outing', () => {
+  const zone = {...at(500, 0, 0), radiusM: 100};
+  const cells = pointsToCells(walk([0, 0], [1200, 0]), arena, {trimM: 150, zones: [zone]});
+  // visible: [150, 250) before the zone, and from 600 + 150 = 750 to 1200 - 150
+  assert.ok(cells.every(c => {
+    const x = local(cellCenter(c.cell))[0];
+    return (x > 120 && x < 280) || (x > 720 && x < 1080);
+  }), `${cells.map(c => local(cellCenter(c.cell))[0].toFixed(0))}`);
+});
+
+test('untimed GPX is refused for territory claims, timed GPX is accepted', () => {
+  const untimed = parseGpxTrack('<gpx><trk><trkseg><trkpt lat="32.81" lon="-96.79"/><trkpt lat="32.811" lon="-96.79"/><trkpt lat="32.812" lon="-96.79"/></trkseg></trk></gpx>', 1000);
+  assert.equal(untimed.untimed, 3);
+  assert.equal(tooUntimed(untimed), true);
+  const timed = parseGpxTrack(scriptGpx('priya_loop', KATY_TRAIL, Date.UTC(2026, 10, 12, 15)));
+  assert.equal(timed.untimed, 0);
+  assert.equal(tooUntimed(timed), false);
+});
+
+test('acceleration bound flags a speed jump that stays under 25 km/h', () => {
+  // 1 m/s, one point every second; then a single point 6.5 m ahead (6.5 m/s = 23 km/h), then 1 m/s again
+  const pts: GpsPoint[] = [at(0, 0, 0), at(1, 0, 1000), at(2, 0, 2000), at(8.5, 0, 3000), at(9.5, 0, 4000), at(10.5, 0, 5000)];
+  assert.deepEqual(fastPoints(pts), [false, false, false, true, true, false]);
+  // same top speed reached gradually (<= 2 m/s per second) is fine
+  const ramp: GpsPoint[] = [at(0, 0, 0), at(1, 0, 1000), at(3, 0, 2000), at(6.5, 0, 3000), at(13, 0, 4000), at(19.5, 0, 5000)];
+  assert.deepEqual(fastPoints(ramp), [false, false, false, false, false, false]);
+  assert.ok(MAX_ACCEL_MS2 < 5.5);
 });

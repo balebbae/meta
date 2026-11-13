@@ -288,48 +288,91 @@
 }
 
 /* ---- bottom tab bar ---- */
-.tabBar {
-  position: fixed;
-  left: 16px;
-  right: 16px;
-  bottom: calc(10px + env(safe-area-inset-bottom));
-  height: 64px;
-  border-radius: 40px;
-  background: var(--fb-card);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
-  z-index: 50;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 8px;
+/* Bottom tab bar: frosted liquid glass (liquid-glass-react) in Instagram's shape. The library positions the glass
+   itself (fixed, centered by translate) and gets its z-index from the style prop. The dock must NOT create a stacking
+   context (no position/z-index here): backdrop-filter can only see what is painted inside its nearest isolated layer,
+   so a fixed, z-indexed wrapper left the glass blurring nothing and its overLight blend showing as solid black. */
+.glassDock > span {
+  /* the library's two white gradient-border spans: no outline */
+  display: none;
 }
-.tab {
+.glassBar {
   position: relative;
-  width: 54px;
-  height: 48px;
+  display: flex;
+  align-items: center;
+  width: min(calc(100vw - 32px), 480px);
+  height: 58px;
+  padding: 5px;
+  border-radius: 33px;
+  /* the frost, blur and darkening come from liquid-glass-react; this only deepens it a little */
+  background: var(--fb-glass-tint);
+  color: var(--fb-on-media);
+}
+/* One pill that slides to the current tab (moves on tap, before the next page has loaded). */
+.glassIndicator {
+  position: absolute;
+  top: 5px;
+  bottom: 5px;
+  left: 5px;
+  width: calc((100% - 10px) / var(--tabs));
   border-radius: 24px;
+  background: var(--fb-glass-pill);
+  transform: translateX(calc(var(--i) * 100%));
+  transition:
+    transform 0.42s cubic-bezier(0.32, 1.25, 0.5, 1),
+    opacity 0.2s ease;
+  will-change: transform;
+  pointer-events: none;
+}
+.glassTab {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--fb-text);
+  color: var(--fb-on-media);
+  opacity: 0.82;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
-.tabActive {
-  color: var(--fb-blue);
-  background: #e7f3ff;
+.glassTab:active {
+  transform: scale(0.92);
 }
-.tabBadge {
+.glassTabOn {
+  opacity: 1;
+}
+.glassTab:focus-visible {
+  outline: 2px solid var(--fb-on-media);
+  outline-offset: -2px;
+  border-radius: 24px;
+}
+.glassDot {
   position: absolute;
-  top: 4px;
-  right: 6px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border-radius: 10px;
+  top: 27px;
+  left: calc(50% + 7px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   background: var(--fb-notif);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 20px;
-  text-align: center;
+}
+.glassAvatar {
+  display: flex;
+  border-radius: 50%;
+}
+.glassAvatarOn {
+  box-shadow: 0 0 0 2px var(--fb-on-media);
+}
+@media (prefers-reduced-motion: reduce) {
+  .glassTab,
+  .glassIndicator {
+    transition: none;
+  }
 }
 
 /* ---- Menu page ---- */
@@ -503,6 +546,40 @@
   border-radius: 20px;
   background: var(--fb-icon-bg);
   color: var(--fb-text-secondary);
+}
+.searchSheet {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--fb-card);
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 8px) 12px 12px;
+}
+.searchSheetTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.searchSheetList {
+  overflow: auto;
+  margin-top: 8px;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+}
+.searchSection {
+  padding: 12px 4px 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fb-text-secondary);
+}
+.searchHit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fb-text);
 }
 .searchBox input {
   flex: 1;

@@ -3,6 +3,7 @@
  * cells and owners. GPS points live in turf_outings.raw and are only ever read back for their owner's
  * own pipeline run; no query here returns them.
  */
+import {randomInt} from 'node:crypto';
 import {neon, type NeonQueryFunction} from '@neondatabase/serverless';
 import {sql} from '@/lib/db';
 import {getProfile, hasOnboarded} from '@/lib/activities/onboarding';
@@ -10,7 +11,7 @@ import type {RallyInvitePayload, SystemPayload, TurfRecapPayload} from '@/lib/ac
 import {isMember, sendMessage} from '@/lib/messaging-queries';
 import {sendPushToUser} from '@/lib/push';
 import {colorAt} from './colors';
-import {applyClaim, detectCut, detectLoop, fillLoop, pointsToCells, score, type Arena, type GpsPoint, type LatLng, type TrailCell, type TurfGame, type Zone} from './engine';
+import {applyClaim, detectCut, detectLoop, fillLoop, obfuscateZone, outingTrimM, pointsToCells, score, type Arena, type GpsPoint, type LatLng, type TrailCell, type TurfGame, type Zone} from './engine';
 import {scriptInfo, scriptPoints, type ReplayScript} from './fixtures';
 import {finalText, narrateRecap, type FinalStanding} from './recap';
 import {emptyResult, type GameStatus, type InviteStatus, type MyOuting, type OutingResult, type OutingStatus, type TurfPlayer, type TurfSettings, type TurfState} from './types';
@@ -250,8 +251,12 @@ export async function startGame(game: Game, user: Actor): Promise<Game> {
   if (!started.length) throw new TurfError('Turf needs at least 2 accepted players to start');
   const next = mapGame(started[0]);
   if (next.conversationId) {
-    const ends = next.endsAt ? new Date(next.endsAt).toLocaleString('en-US', {weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago'}) : '';
-    const text = `Turf: ${next.settings.arenaLabel} is live${ends ? `. Ends ${ends} CT` : ''}. Go claim some ground.`;
+    // relative, so it reads the same in every time zone (the card shows the absolute time in the viewer's zone)
+    const left = next.endsAt ? Math.max(0, new Date(next.endsAt).getTime() - Date.now()) : 0;
+    const days = Math.floor(left / DAY_MS);
+    const hours = Math.floor((left % DAY_MS) / 3_600_000);
+    const ends = left ? (days > 0 ? `${days}d ${hours}h` : `${Math.max(1, hours)}h`) : '';
+    const text = `Turf: ${next.settings.arenaLabel} is live${ends ? `. Ends in ${ends}` : ''}. Go claim some ground.`;
     await sendMessage(next.conversationId, user, text, null, {kind: 'system', payload: {text, gameId: next.id}});
   }
   return next;
@@ -271,6 +276,14 @@ export async function resendInvites(game: Game, user: Actor): Promise<number> {
 }
 
 /** Leaving turns your cells neutral and drops any open outing. */
+/** Turf games the user has accepted and not left, that haven't ended. */
+export async function listActiveGamesForUser(userId: number): Promise<{id: number; label: string; status: GameStatus}[]> {
+  const rows = await sql`
+    select g.id, g.status, g.settings->>'arenaLabel' as label from games g join game_invites i on i.game_id = g.id
+    where i.user_id = ${userId} and i.status = 'accepted' and g.status in ('pending', 'live') order by g.created_at desc limit 20`;
+  return rows.map(r => ({id: Number(r.id), label: String(r.label ?? 'Turf'), status: r.status as GameStatus}));
+}
+
 export async function leaveGame(game: Game, user: Actor): Promise<void> {
   const rows = await sql`update game_invites set status = 'left', responded_at = now() where game_id = ${game.id} and user_id = ${user.id} and status = 'accepted' returning user_id`;
   if (!rows.length) throw new TurfError('You are not in this game');
@@ -319,8 +332,7 @@ async function requirePlayer(game: Game, userId: number): Promise<void> {
 }
 
 async function privacyZones(userId: number): Promise<Zone[]> {
-  const rows = await sql`select lat, lng, radius_m from turf_privacy_zones where user_id = ${userId}`;
-  return rows.map(r => ({lat: Number(r.lat), lng: Number(r.lng), radiusM: Number(r.radius_m)}));
+  return (await listZones(userId)).map(({lat, lng, radiusM}) => ({lat, lng, radiusM}));
 }
 
 export async function startOuting(game: Game, user: Actor, source: 'live' | 'gpx' | 'replay' = 'live'): Promise<MyOuting> {
@@ -358,7 +370,7 @@ export async function addPoints(game: Game, user: Actor, outingId: number, point
     .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng) && Number.isFinite(p.t) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180);
   const raw = [...outing.raw, ...clean].sort((a, b) => a.t - b.t).slice(-MAX_POINTS);
   const arena = arenaOf(game);
-  const trail = pointsToCells(raw, arena, {zones: await privacyZones(user.id), keepHidden: true});
+  const trail = pointsToCells(raw, arena, {zones: await privacyZones(user.id), trimM: outingTrimM(outing.id), keepHidden: true});
 
   const [cellRows, otherRows, playerRows] = await Promise.all([
     sql`select cell, owner_id from turf_cells where game_id = ${game.id} and owner_id is not null`,
@@ -466,8 +478,34 @@ async function postRecap(game: Game, user: Actor, result: OutingResult, players:
 }
 
 /** GPX upload: a whole route through the same pipeline as live points. */
-export async function importRoute(game: Game, user: Actor, points: GpsPoint[], source: 'gpx' | 'replay', finish = true): Promise<PointsResult> {
+export async function importRoute(game: Game, user: Actor, points: GpsPoint[], source: 'gpx' | 'replay' | 'strava', finish = true, externalId?: string): Promise<PointsResult> {
   if (points.length < 2) throw new TurfError('No track points found in that file');
+  if (source === 'strava') {
+    if (!externalId) throw new TurfError('Missing Strava activity id');
+    if (game.status !== 'live') throw new TurfError('This game is not live', 409);
+    await requirePlayer(game, user.id);
+    const tx = db();
+    const [, rows] = await tx.transaction([
+      tx`select pg_advisory_xact_lock(${game.id}::int, ${user.id}::int)`,
+      tx`insert into turf_outings (game_id, user_id, source, result)
+        select ${game.id}, ${user.id}, 'strava', ${JSON.stringify({stravaActivityId: externalId})}::jsonb
+        where not exists (select 1 from turf_outings where game_id = ${game.id} and user_id = ${user.id}
+          and source = 'strava' and result->>'stravaActivityId' = ${externalId}) returning *`,
+    ]);
+    if (!rows.length) {
+      const [existing] = await sql`select * from turf_outings where game_id = ${game.id} and user_id = ${user.id}
+        and source = 'strava' and result->>'stravaActivityId' = ${externalId} order by id limit 1`;
+      return {outing: toMyOuting(mapOuting(existing)), gained: 0, cut: false, recap: null};
+    }
+    // shortcut: reserve before processing for at-most-once claims; failed imports need a board reset to retry.
+    const outingId = Number(rows[0].id);
+    try {
+      return await addPoints(game, user, outingId, points.slice(0, MAX_POINTS), true);
+    } catch (e) {
+      await sql`update turf_outings set status = 'discarded', ended_at = now() where id = ${outingId} and status = 'open'`;
+      throw e;
+    }
+  }
   const outing = await startOuting(game, user, source);
   return addPoints(game, user, outing.id, points.slice(0, MAX_POINTS), finish, {ongoingRecap: !finish});
 }
@@ -552,7 +590,15 @@ export async function buildState(game: Game, viewerId: number): Promise<TurfStat
 
 export type PrivacyZone = {id: number; label: string; lat: number; lng: number; radiusM: number};
 
+const unit = () => randomInt(2 ** 47) / 2 ** 47;
+
 export async function listZones(userId: number): Promise<PrivacyZone[]> {
+  // rows from before obfuscation: offset + enlarge them once, on first read (the guard stops a double offset)
+  const legacy = await sql`select id, lat, lng, radius_m from turf_privacy_zones where user_id = ${userId} and not obfuscated`;
+  for (const r of legacy) {
+    const z = obfuscateZone({lat: Number(r.lat), lng: Number(r.lng), radiusM: Number(r.radius_m)}, unit(), unit());
+    await sql`update turf_privacy_zones set lat = ${z.lat}, lng = ${z.lng}, radius_m = ${z.radiusM}, obfuscated = true where id = ${r.id} and not obfuscated`;
+  }
   const rows = await sql`select id, label, lat, lng, radius_m from turf_privacy_zones where user_id = ${userId} order by id`;
   return rows.map(r => ({id: Number(r.id), label: String(r.label), lat: Number(r.lat), lng: Number(r.lng), radiusM: Number(r.radius_m)}));
 }
@@ -564,7 +610,9 @@ export async function addZone(userId: number, z: {label?: string; lat: number; l
   const radius = Math.min(1000, Math.max(50, Math.round(Number(z.radiusM ?? 200)) || 200));
   const existing = await sql`select count(*)::int as n from turf_privacy_zones where user_id = ${userId}`;
   if (Number(existing[0].n) >= 10) throw new TurfError('You can have up to 10 privacy zones');
-  await sql`insert into turf_privacy_zones (user_id, label, lat, lng, radius_m) values (${userId}, ${String(z.label ?? 'Home').trim().slice(0, 30) || 'Home'}, ${lat}, ${lng}, ${radius})`;
+  // the true point is never stored: only the offset, enlarged circle that still covers it (see obfuscateZone)
+  const o = obfuscateZone({lat, lng, radiusM: radius}, unit(), unit());
+  await sql`insert into turf_privacy_zones (user_id, label, lat, lng, radius_m, obfuscated) values (${userId}, ${String(z.label ?? 'Home').trim().slice(0, 30) || 'Home'}, ${o.lat}, ${o.lng}, ${o.radiusM}, true)`;
   return listZones(userId);
 }
 

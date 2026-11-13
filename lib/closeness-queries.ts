@@ -1,4 +1,5 @@
 import {sql} from '@/lib/db';
+import {xpBlockReason} from '@/lib/xp-guard';
 
 export type LeaderboardRow = {
   userId: number;
@@ -27,6 +28,17 @@ export async function insertXpEvent(opts: {
     )`;
 }
 
+/** Anti-farming gate (lib/xp-guard.ts): call before scoring so a re-added reaction never earns XP twice. */
+export async function xpBlocked(opts: {userId: number; friendId?: number | null; sourceType: string; sourceId?: number | null}): Promise<string | null> {
+  const [row] = await sql`
+    select
+      exists(select 1 from xp_events where user_id = ${opts.userId} and friend_id is not distinct from ${opts.friendId ?? null}
+        and source_type = ${opts.sourceType} and source_id is not distinct from ${opts.sourceId ?? null}) as already,
+      (select count(*)::int from xp_events where user_id = ${opts.userId} and source_type = ${opts.sourceType}
+        and created_at >= date_trunc('day', now())) as today`;
+  return xpBlockReason({alreadyAwarded: Boolean(row?.already), todayCount: Number(row?.today ?? 0)}, opts.sourceType);
+}
+
 export async function weekLeaderboard(viewerId: number, limit = 10): Promise<LeaderboardRow[]> {
   const rows = await sql`
     with friends as (
@@ -42,7 +54,7 @@ export async function weekLeaderboard(viewerId: number, limit = 10): Promise<Lea
     select u.id as user_id, u.name, u.avatar_url, coalesce(sum(x.xp), 0)::int as xp
     from pool p
     join users u on u.id = p.id
-    left join xp_events x on x.user_id = u.id and x.created_at > now() - interval '7 days'
+    left join xp_events x on x.user_id = u.id and x.created_at > now() - interval '7 days' and x.source_type not like 'rally%'
     group by u.id, u.name, u.avatar_url
     order by xp desc, u.name asc
     limit ${limit}`;

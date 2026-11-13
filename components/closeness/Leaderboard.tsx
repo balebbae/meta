@@ -7,8 +7,8 @@ import styles from './closeness.module.css';
 
 type Row = {userId: number; name: string; avatarUrl: string; xp: number};
 
-export function Leaderboard({compact = false}: {compact?: boolean}) {
-  const [tab, setTab] = useState<'closeness' | 'fitness'>('closeness');
+export function Leaderboard({compact = false, defaultTab = 'closeness'}: {compact?: boolean; defaultTab?: 'closeness' | 'fitness'}) {
+  const [tab, setTab] = useState(defaultTab);
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +31,7 @@ export function Leaderboard({compact = false}: {compact?: boolean}) {
   }, [tab]);
 
   return (
-    <section className={styles.card} aria-label="Leaderboard">
+    <section className={styles.board} aria-label="Leaderboard">
       <div className={styles.heading}>
         <span>{tab === 'fitness' ? 'Fitness this week' : 'Closeness this week'}</span>
         {!compact && <Link href={tab === 'fitness' ? '/activities' : '/closeness'}>See all</Link>}

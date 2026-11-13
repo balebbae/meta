@@ -199,6 +199,7 @@ create table if not exists conversations (
   updated_at timestamptz not null default now()
 );
 create index if not exists conversations_updated_idx on conversations (updated_at desc);
+alter table conversations add column if not exists call_state jsonb;
 
 create table if not exists conversation_members (
   conversation_id integer not null references conversations(id) on delete cascade,

@@ -304,7 +304,10 @@
 }
 .tab {
   position: relative;
-  width: 54px;
+  /* tabs share the pill: up to 54px each, shrinking on narrow phones */
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 54px;
   height: 48px;
   border-radius: 24px;
   display: flex;
@@ -503,6 +506,40 @@
   border-radius: 20px;
   background: var(--fb-icon-bg);
   color: var(--fb-text-secondary);
+}
+.searchSheet {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--fb-card);
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 8px) 12px 12px;
+}
+.searchSheetTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.searchSheetList {
+  overflow: auto;
+  margin-top: 8px;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+}
+.searchSection {
+  padding: 12px 4px 2px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fb-text-secondary);
+}
+.searchHit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fb-text);
 }
 .searchBox input {
   flex: 1;

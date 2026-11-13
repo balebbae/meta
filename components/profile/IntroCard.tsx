@@ -3,7 +3,7 @@
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import type {Profile} from '@/lib/profile-queries';
-import {BriefcaseIcon, CakeIcon, GraduationIcon, HeartIcon, HomeIcon, PencilIcon, PinIcon, RssIcon, ClockIcon, UserIcon} from './icons';
+import {BriefcaseIcon, CakeIcon, GraduationIcon, HeartIcon, HomeIcon, PencilIcon, PinIcon, ClockIcon, UserIcon} from './icons';
 import {EditDialog} from './EditDialog';
 import {profileApi} from './api';
 import styles from './profile.module.css';
@@ -85,18 +85,7 @@ export function IntroCard({profile, isOwn}: {profile: Profile; isOwn: boolean}) 
           <ClockIcon size={20} />
           <span>Joined {joined.toLocaleDateString('en-US', {month: 'long', year: 'numeric'})}</span>
         </div>
-        <div className={styles.detail}>
-          <RssIcon size={20} />
-          <span>Followed by <b>{Math.max(profile.friendCount, 1) * 7 + 12}</b> people</span>
-        </div>
       </div>
-      {isOwn && (
-        <>
-          <button type="button" className={styles.fullBtn}>Edit details</button>
-          <div style={{height: 8}} />
-          <button type="button" className={styles.fullBtn}>Add highlights</button>
-        </>
-      )}
       {editing && (
         <EditDialog
           title="Edit bio"

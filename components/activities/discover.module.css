@@ -173,10 +173,6 @@
   gap: 8px;
   flex-wrap: wrap;
 }
-.offline {
-  color: #b35c00;
-  font-weight: 600;
-}
 .toast {
   position: fixed;
   left: 50%;
@@ -190,94 +186,6 @@
   z-index: 50;
   max-width: 90vw;
   box-shadow: var(--fb-shadow-popover);
-}
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: var(--fb-icon-bg);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--fb-text);
-}
-.chipBtn {
-  border: 0;
-  background: transparent;
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-  color: var(--fb-blue);
-  padding: 0 2px;
-}
-.chipBtn:hover {
-  text-decoration: underline;
-}
-.panelBox {
-  margin: 8px;
-  padding: 12px;
-  border-radius: var(--fb-radius);
-  background: var(--fb-bg);
-  font-size: 13px;
-  color: var(--fb-text-secondary);
-}
-.panelBox strong {
-  color: var(--fb-text);
-}
-.toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-weight: 600;
-  color: var(--fb-text);
-  margin-bottom: 8px;
-}
-.switch {
-  width: 40px;
-  height: 22px;
-  border-radius: 11px;
-  border: 0;
-  background: var(--fb-divider);
-  position: relative;
-  cursor: pointer;
-}
-.switchOn {
-  composes: switch;
-  background: var(--fb-blue);
-}
-.switch::after {
-  content: '';
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  transition: left 0.15s;
-}
-.switchOn::after {
-  left: 20px;
-}
-.suggestion {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 0;
-  border-top: 1px solid var(--fb-divider-soft);
-}
-.suggestion small {
-  display: block;
-  color: var(--fb-text-secondary);
-  font-weight: 400;
 }
 .introBody {
   padding: 16px;
@@ -359,7 +267,207 @@
 .demoNote a {
   color: var(--fb-blue);
 }
-@media (max-width: 699px) {
+
+/* ---- page ---- */
+.page {
+  min-width: 0;
+}
+.pageTitle {
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 28px;
+  margin: 0 0 16px;
+  color: var(--fb-text);
+}
+.seeAll {
+  color: var(--fb-blue);
+  font-size: 15px;
+  padding: 4px 8px;
+  margin-right: -8px;
+  border-radius: 6px;
+}
+.seeAll:hover {
+  background: var(--fb-hover);
+}
+
+/* ---- suggested reels bento: lead tile 2x2, five around it ---- */
+.bento {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-rows: 210px;
+  gap: 8px;
+}
+.reelTile {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--fb-radius);
+  background: var(--fb-icon-bg);
+  color: #fff;
+  isolation: isolate;
+}
+.reelTile:first-child {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+.reelTile img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+  transition: transform 0.25s ease;
+}
+.reelTile:hover img {
+  transform: scale(1.04);
+}
+.reelTile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent 28%, transparent 52%, rgba(0, 0, 0, 0.72));
+}
+.reelTag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  max-width: calc(100% - 16px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reelCaption {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.reelTile:first-child .reelCaption {
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  font-size: 18px;
+  -webkit-line-clamp: 3;
+}
+
+/* ---- Marketplace carousel ---- */
+.carouselWrap {
+  position: relative;
+}
+.carousel {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.carousel::-webkit-scrollbar {
+  display: none;
+}
+.slide {
+  flex: 0 0 calc((100% - 36px) / 4);
+  min-width: 0;
+  scroll-snap-align: start;
+}
+.arrow {
+  position: absolute;
+  /* centred on the square image, above the 64px price/title block */
+  top: calc((100% - 64px) / 2 - 24px);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--fb-card);
+  color: var(--fb-text);
+  box-shadow: var(--fb-shadow-popover);
+  z-index: 1;
+}
+.arrow:hover {
+  background: var(--fb-hover);
+}
+.arrowPrev {
+  left: -12px;
+}
+.arrowNext {
+  right: -12px;
+}
+.heroWrap {
+  min-width: 0;
+}
+.goalWrap {
+  min-width: 0;
+}
+@media (hover: none) {
+  .arrow {
+    display: none;
+  }
+}
+
+/* ---- Mobile (< 700px): full-bleed app sections split by thin lines, rows swipe sideways ---- */
+@media (max-width: 700px) {
+  .page {
+    background: var(--fb-card);
+  }
+  .pageTitle {
+    font-size: 26px;
+    line-height: 32px;
+    margin: 0;
+    padding: 12px 16px 4px;
+  }
+  .section {
+    margin: 0;
+    padding: 12px 0 16px;
+    border-bottom: 1px solid var(--fb-divider);
+  }
+  .sectionHead {
+    padding: 0 16px;
+    margin-bottom: 10px;
+    gap: 2px 8px;
+  }
+  .sectionTitle {
+    font-size: 19px;
+  }
+  .sectionSub .ghost {
+    padding: 4px 0 4px 6px;
+  }
+  .status {
+    margin: 0 16px;
+    box-shadow: none;
+    background: var(--fb-bg);
+  }
+  .heroWrap {
+    padding: 0 16px;
+  }
+  .goalWrap {
+    padding: 12px 16px 0;
+    border-bottom: 1px solid var(--fb-divider);
+  }
+  .goalWrap > section {
+    box-shadow: none;
+    border: 1px solid var(--fb-divider);
+  }
   .hero {
     flex-direction: column;
   }
@@ -368,53 +476,70 @@
     flex: none;
     aspect-ratio: 16 / 9;
   }
-  .grid {
-    grid-template-columns: 1fr;
+  .card,
+  .hero {
+    box-shadow: none;
+    border: 1px solid var(--fb-divider);
   }
-  .sectionTitle {
-    font-size: 17px;
+  /* Card grids become a swipeable row with the next card peeking in. */
+  .grid,
+  .carousel {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 16px;
+    padding: 0 0 2px 16px;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
   }
-}
-
-.wide {
-  width: 100%;
-  display: flex;
-  align-items: flex-start;
-  min-height: calc(100vh - var(--fb-header-h));
-}
-.panel {
-  position: sticky;
-  top: var(--fb-header-h);
-  width: var(--fb-sidebar-w);
-  flex: 0 0 var(--fb-sidebar-w);
-  height: calc(100vh - var(--fb-header-h));
-  overflow-y: auto;
-  background: var(--fb-card);
-  box-shadow: var(--fb-shadow-card);
-  padding: 8px;
-  box-sizing: border-box;
-}
-.content {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 16px;
-}
-@media (max-width: 900px) {
-  .wide {
-    flex-direction: column;
+  .grid::-webkit-scrollbar {
+    display: none;
   }
-  .panel {
-    order: 2;
-    position: static;
-    width: 100%;
-    flex: none;
-    height: auto;
-    overflow: visible;
+  /* Trailing gutter: iOS Safari drops end padding in flex scrollers. */
+  .grid::after,
+  .carousel::after {
+    content: '';
+    flex: 0 0 6px;
   }
-  .content {
-    order: 1;
-    width: 100%;
-    box-sizing: border-box;
-    padding: 12px;
+  .grid > * {
+    flex: 0 0 78%;
+    max-width: 320px;
+    scroll-snap-align: start;
+  }
+  .slide {
+    flex: 0 0 42%;
+    max-width: 180px;
+  }
+  .arrow {
+    display: none;
+  }
+  /* Bento: tall lead tile, two stacked beside it, a pair, then one wide. */
+  .bento {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: 56vw;
+    gap: 4px;
+    padding: 0 16px;
+  }
+  .reelTile:first-child {
+    grid-column: span 1;
+    grid-row: span 2;
+  }
+  .reelTile:nth-child(6) {
+    grid-column: span 2;
+  }
+  .reelTile:first-child .reelCaption {
+    font-size: 16px;
+  }
+  .board > section {
+    margin: 0;
+    padding: 0 16px;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+  }
+  .toast {
+    bottom: calc(86px + env(safe-area-inset-bottom));
   }
 }

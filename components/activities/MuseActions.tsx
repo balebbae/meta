@@ -65,11 +65,11 @@ export function MuseActions({initial, viewerName, say}: {initial: MuseActionsPay
 
   const done = open?.status === 'done';
   return (
-    <section className={styles.section} aria-label="From your Muse" aria-busy={asking}>
+    <section className={styles.section} aria-label="Action items" aria-busy={asking}>
       <div className={styles.sectionHead}>
-        <h2 className={styles.sectionTitle}>From your Muse</h2>
+        <h2 className={styles.sectionTitle}>Action items</h2>
         <span className={styles.sectionSub}>
-          Only you see these · demo checkout, no real money{' '}
+          From your Muse · only you see these · demo checkout{' '}
           <button type="button" className={styles.ghost} onClick={() => ask(data.needsLocation)} disabled={asking}>
             {asking ? 'Muse is looking…' : 'Ask Muse again'}
           </button>

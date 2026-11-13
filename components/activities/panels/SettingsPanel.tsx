@@ -24,8 +24,8 @@ const TABS = [
 ] as const;
 type Tab = (typeof TABS)[number][0];
 const FLASH_KEYS = {source: null, connected: null, imported: null, error: null};
-// phone-synced sources also show the Devices block (phone sync + raw readings)
-const PHONE = new Set(['apple_health', 'health_connect', 'google_health', 'phone_steps']);
+// phone-synced sources and Whoop also show the Devices block (phone sync, Whoop link + sync, raw readings)
+const PHONE = new Set(['apple_health', 'health_connect', 'google_health', 'phone_steps', 'whoop']);
 
 /** Settings panel: Sources, Privacy, Muse. Replaces /activities/{muse,privacy,connect}. */
 export function SettingsPanel({sp}: {sp: URLSearchParams}) {

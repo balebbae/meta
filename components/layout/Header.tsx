@@ -260,7 +260,7 @@ function SearchBox() {
           {searching && results.users.length > 0 && <div className={styles.searchHeading}><span>People</span></div>}
           {searching && results.users.map(c => row(`u${c.id}`, `/profile/${c.id}`, c.name, '', {id: c.id, name: c.name, avatarUrl: c.avatarUrl, isOnline: false}))}
           {searching && results.posts.length > 0 && <div className={styles.searchHeading}><span>Posts</span></div>}
-          {searching && results.posts.map(p => row(`p${p.id}`, `/profile/${p.authorId}`, p.snippet, p.authorName))}
+          {searching && results.posts.map(p => row(`p${p.id}`, `/posts/${p.id}`, p.snippet, p.authorName))}
           {searching && results.groups.length > 0 && <div className={styles.searchHeading}><span>Groups</span></div>}
           {searching && results.groups.map(g => row(`g${g.id}`, `/groups/${g.id}`, g.name, 'Group'))}
           {searching && results.listings.length > 0 && <div className={styles.searchHeading}><span>Marketplace</span></div>}

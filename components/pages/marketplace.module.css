@@ -102,6 +102,39 @@
   text-align: center;
   color: var(--fb-text-secondary);
 }
+.tabs {
+  display: flex;
+  gap: 8px;
+  overflow: auto;
+  padding-bottom: 12px;
+}
+.tab,
+.tabOn {
+  flex: none;
+  padding: 8px 12px;
+  border-radius: var(--fb-radius-pill);
+  background: var(--fb-hover);
+  color: var(--fb-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.tabOn {
+  background: var(--fb-blue);
+  color: var(--fb-on-media);
+}
+.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.note {
+  display: block;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--fb-card);
+  color: var(--fb-text);
+  border: 1px solid var(--fb-divider);
+}
 
 /* ---------- detail page ---------- */
 .detail {

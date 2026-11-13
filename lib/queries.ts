@@ -37,6 +37,16 @@ export async function getPost(id: number, viewerId: number): Promise<Post | null
   return rows[0] ? mapPost(rows[0]) : null;
 }
 
+export async function canViewPost(post: Post, viewerId: number) {
+  if (post.author.id === viewerId || post.audience === 'public') return true;
+  if (post.audience !== 'friends') return false;
+  const rows = await sql`
+    select 1 from friendships
+    where status = 'accepted' and user_id = ${viewerId} and friend_id = ${post.author.id}
+    limit 1`;
+  return rows.length > 0;
+}
+
 export async function listComments(postId: number): Promise<Comment[]> {
   const rows = await sql`
     select c.id, c.post_id, c.content, c.created_at, u.id as author_id, u.name as author_name, u.avatar_url as author_avatar

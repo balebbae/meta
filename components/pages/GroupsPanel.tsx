@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import {useState} from 'react';
+import {useSearchParams} from 'next/navigation';
 import type {Group} from '@/lib/secondary-queries';
 import {timeAgo} from '@/lib/secondary-data';
 import {PanelDivider, PanelHeader, PanelRow, PanelSearch, PanelSection} from './SecondaryLayout';
@@ -12,7 +13,8 @@ import styles from './groups.module.css';
 
 export function GroupsPanel({groups, active, activeGroupId}: {groups: Group[]; active?: 'feed' | 'discover' | 'yours'; activeGroupId?: number}) {
   const [open, setOpen] = useState(false);
-  const joined = groups.filter(g => g.isMember);
+  const q = (useSearchParams().get('q') ?? '').trim().toLowerCase();
+  const joined = groups.filter(g => g.isMember && (!q || g.name.toLowerCase().includes(q)));
   return (
     <>
       <PanelHeader title="Groups" />

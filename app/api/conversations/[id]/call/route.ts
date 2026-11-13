@@ -1,6 +1,7 @@
 import {NextResponse, type NextRequest} from 'next/server';
 import {badRequest, notFound, readJson, withUser} from '@/lib/api';
-import {isCallState, reduceCall, type CallAction, type CallMode, type CallState} from '@/lib/calls';
+import {CALL_XP, callConnected, isCallState, reduceCall, type CallAction, type CallMode, type CallState} from '@/lib/calls';
+import {insertXpEvent} from '@/lib/closeness-queries';
 import {sql} from '@/lib/db';
 import {isMember, sendMessage} from '@/lib/messaging-queries';
 
@@ -56,8 +57,20 @@ export async function POST(req: NextRequest, {params}: Ctx) {
         : null;
     if (!action) return badRequest('That call update is not valid');
     const next = reduceCall(current, action);
-    if (next === 'busy' || next === 'gone') return badRequest('That call ended');
+    if (next === 'busy' || next === 'gone' || !next) return badRequest('That call ended');
     await sql`update conversations set call_state = ${JSON.stringify(next)}::jsonb where id = ${id}`;
+    if (callConnected(current, next)) {
+      const reason = next.mode === 'video' ? 'Video call connected' : 'Voice call connected';
+      const pair = [next.from, user.id];
+      await Promise.all(pair.map(userId => insertXpEvent({
+        userId,
+        friendId: pair.find(other => other !== userId) ?? null,
+        sourceType: 'call',
+        sourceId: id,
+        xp: CALL_XP,
+        reason,
+      }).catch(() => undefined)));
+    }
     return NextResponse.json({call: next});
   });
 }

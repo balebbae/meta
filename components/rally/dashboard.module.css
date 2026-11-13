@@ -13,20 +13,3 @@
 .arenaCanvas canvas {
   display: block;
 }
-/* Fade the bottom of the scene so the overlaid HUD text stays readable. */
-.arenaStage::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 45%;
-  background: linear-gradient(to bottom, transparent, var(--color-background-orange));
-  pointer-events: none;
-}
-.arenaHud {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}

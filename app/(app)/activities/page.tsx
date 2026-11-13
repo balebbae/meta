@@ -9,7 +9,7 @@ import {DiscoverPage, type MyGame} from '@/components/activities/DiscoverPage';
 import {listGoals} from '@/lib/activities/goals';
 import {OnboardingGate} from '@/components/activities/OnboardingGate';
 import {CoachMode} from '@/components/activities/CoachMode';
-import {coachModeOn, setCoachMode} from '@/lib/activities/coach';
+import {setCoachMode} from '@/lib/activities/coach';
 import {fitnessLevel} from '@/lib/activities/level';
 import {listVaultEvents} from '@/lib/activities/vault';
 
@@ -33,12 +33,10 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
     listQuestsForUser(user.id),
     listActiveGamesForUser(user.id),
   ]);
-  // ?coach=on (old /activities/coach and Your Muse links) switches Coach mode on; otherwise the saved choice
-  if (params.coach === 'on') await setCoachMode(user.id, true).catch(() => {});
-  const [coachOn, recent] = await Promise.all([
-    params.coach === 'on' ? true : coachModeOn(user.id).catch(() => false),
-    listVaultEvents(user.id, {since: new Date(Date.now() - 28 * 86_400_000).toISOString(), limit: 500}).catch(() => []),
-  ]);
+  // Coach mode always opens off; only an explicit ?coach=on (Your Muse link, old /activities/coach) opens it on
+  const coachOn = params.coach === 'on';
+  if (coachOn) await setCoachMode(user.id, true).catch(() => {});
+  const recent = await listVaultEvents(user.id, {since: new Date(Date.now() - 28 * 86_400_000).toISOString(), limit: 500}).catch(() => []);
   const level = recent.length ? fitnessLevel(recent) : null;
   const games: MyGame[] = [
     ...quests

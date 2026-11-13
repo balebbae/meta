@@ -58,6 +58,12 @@
   /* text and scrims drawn over camera/video: same in both themes */
   --fb-scrim: rgba(0, 0, 0, 0.55);
   --fb-on-media: #fff;
+  /* Coach mode on /activities: dark training surface + lime accent, same in both themes */
+  --fb-coach-bg: #0b0d10;
+  --fb-coach-raised: #1d2128;
+  --fb-coach-accent: #c6ff3d;
+  --fb-coach-accent-muted: #3d4d16;
+  --fb-coach-accent-ink: #0b0d10;
   --fb-disabled-bg: #e4e6eb;
   /* Mobile tab bar: dark liquid glass (same in both themes, like Instagram's) */
   --fb-glass-tint: rgba(6, 6, 10, 0.4);

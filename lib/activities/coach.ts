@@ -55,6 +55,11 @@ async function blockedReason(userId: number): Promise<string | null> {
   return p.workouts.only_me === 'none' ? 'Your Muse is set to not see your workouts, so it has nothing to compare. Change that under Privacy.' : null;
 }
 
+export async function coachModeOn(userId: number): Promise<boolean> {
+  const [row] = await sql`select coach_mode from activity_profiles where user_id = ${userId}`;
+  return Boolean(row?.coach_mode);
+}
+
 export async function getCoach(userId: number): Promise<CoachState> {
   const [[profile], blocked] = await Promise.all([sql`select coach_mode from activity_profiles where user_id = ${userId}`, blockedReason(userId)]);
   const enabled = Boolean(profile?.coach_mode);

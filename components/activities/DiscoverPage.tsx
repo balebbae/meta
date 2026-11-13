@@ -31,13 +31,16 @@ import type {Goal} from '@/lib/activities/goals';
 import {GoalSpotlight} from '@/components/activities/goals/GoalSpotlight';
 import type {MuseActionsPayload} from '@/lib/activities/actions';
 import type {ListingBrief} from '@/lib/rally/queries';
+import type {FitnessLevel} from '@/lib/activities/level';
 import {ActivityLeaderboard} from './ActivityLeaderboard';
+import {CoachToggle} from './CoachMode';
+import {LevelCard} from './LevelCard';
 import {MuseActions} from './MuseActions';
 import b from './reels-bento.module.css';
 
 type Viewer = {id: number; name: string; avatarUrl: string};
 export type MyGame = {key: string; href: string; title: string; subtitle: string; boss: {kind: string; name: string} | null};
-type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; listings: ListingBrief[]; start: string | null; eventId: number | null; goal?: Goal | null; games?: MyGame[]};
+type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; listings: ListingBrief[]; start: string | null; eventId: number | null; goal?: Goal | null; games?: MyGame[]; level?: FitnessLevel | null};
 type Chat = {id: number; title: string; isGroup: boolean};
 
 const json = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
@@ -57,7 +60,7 @@ export function SectionHead({title, sub, href}: {title: string; sub?: string; hr
   );
 }
 
-export function DiscoverPage({viewer, data, museActions, listings, start, eventId, goal = null, games = []}: Props) {
+export function DiscoverPage({viewer, data, museActions, listings, start, eventId, goal = null, games = [], level = null}: Props) {
   const router = useRouter();
   const showToast = useToast();
   const [sections, setSections] = useState<DiscoverSection[]>(data.sections);
@@ -180,7 +183,10 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
 
   return (
     <VStack gap={6} paddingBlock={4}>
-      <Heading level={1}>Activities</Heading>
+      <HStack gap={3} vAlign="center" justify="between" wrap="wrap">
+        <Heading level={1}>Activities</Heading>
+        <CoachToggle />
+      </HStack>
 
       <VStack gap={3} as="section" aria-label="Your games">
         <SectionHead title="Your games" />
@@ -209,6 +215,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
         )}
       </VStack>
 
+      {level && <LevelCard level={level} />}
       <GoalSpotlight goal={goal} />
       <MuseActions initial={museActions} viewerName={viewer.name} say={say} />
       {firstMove && renderSection(firstMove)}

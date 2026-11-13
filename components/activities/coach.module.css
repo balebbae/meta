@@ -1,0 +1,26 @@
+/* Coach mode surface. Sits inside a nested dark Astryx <Theme>, and swaps Astryx's accent for the coach lime. */
+.surface {
+  --color-accent: var(--fb-coach-accent);
+  --color-accent-muted: var(--fb-coach-accent-muted);
+  --color-on-accent: var(--fb-coach-accent-ink);
+  --color-text-accent: var(--fb-coach-accent);
+  background: radial-gradient(120% 50% at 100% 0%, var(--fb-coach-raised) 0%, var(--fb-coach-bg) 60%);
+  border-radius: 16px;
+  padding: 20px 16px;
+  margin-block: 16px;
+  min-height: calc(100vh - var(--fb-header-h) - 32px);
+  animation: coachIn 220ms ease-out;
+}
+
+@keyframes coachIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .surface {
+    animation: none;
+  }
+}

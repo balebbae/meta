@@ -1,5 +1,5 @@
 'use client';
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {TrendingDown, TrendingUp} from 'lucide-react';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
@@ -27,47 +27,29 @@ const ROWS: {key: keyof WeekStats; label: string}[] = [
   {key: 'stepsPerDay', label: 'Steps a day'},
 ];
 const fmt = (n: number | null) => (n == null ? '—' : n.toLocaleString());
+const COL = {display: 'inline-block', minWidth: 76, textAlign: 'end'} as const;
 
-/** Coach mode: opt-in toggle, then this week vs last week, improvements, gaps and the Muse's plan to bridge them. */
-export function CoachPanel() {
-  const [state, setState] = useState<CoachState | null>(null);
+/** The Coach view inside Coach mode (CoachMode owns on/off): this week vs last week, improvements, gaps, bridge plan. */
+export function CoachPanel({state, onState, error: outerError, onTurnOff}: {state: CoachState | null; onState: (s: CoachState) => void; error: string | null; onTurnOff: (deleteHistory: boolean) => void}) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [turningOff, setTurningOff] = useState(false);
 
-  const call = async (init?: {action: string; deleteHistory?: boolean}) => {
-    setBusy(init?.action ?? 'load');
+  const refresh = async () => {
+    setBusy('refresh');
     setError(null);
     try {
-      const res = await fetch('/api/activities/coach', init ? {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(init)} : undefined);
+      const res = await fetch('/api/activities/coach', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({action: 'refresh'})});
       if (!res.ok) throw new Error();
-      setState(await res.json());
-      setTurningOff(false);
+      onState(await res.json());
     } catch {
       setError('Could not reach your Muse. Try again in a moment.');
     } finally {
       setBusy(null);
     }
   };
-  useEffect(() => {
-    void call();
-  }, []);
 
-  if (!state) return <Card>{error ? <EmptyState title="Coach is unavailable" description={error} isCompact /> : <Spinner label="Your Muse is comparing your weeks…" />}</Card>;
-
-  if (!state.enabled)
-    return (
-      <Card>
-        <VStack gap={3}>
-          <Heading level={2}>Coach mode</Heading>
-          <Text color="secondary">Compare my weeks and help me close the gaps. Your Muse uses your synced and logged workouts, rounded, and never your WHOOP numbers.</Text>
-          <HStack>
-            <Button label="Turn on Coach mode" variant="primary" isLoading={busy === 'enable'} onClick={() => void call({action: 'enable'})} />
-          </HStack>
-          {error && <Banner status="error" title={error} />}
-        </VStack>
-      </Card>
-    );
+  if (!state) return <Card>{outerError ? <EmptyState title="Coach is unavailable" description={outerError} isCompact /> : <Spinner label="Your Muse is comparing your weeks…" />}</Card>;
 
   const r = state.report;
   return (
@@ -75,23 +57,27 @@ export function CoachPanel() {
       {state.blocked && <Banner status="warning" title={state.blocked} />}
       {r && (
         <>
-          <Card variant="blue">
+          <Card>
             <VStack gap={3}>
               <Heading level={3}>{r.headline}</Heading>
               {r.easyWeek && <Text color="secondary">Your Muse is keeping next week easy.</Text>}
-              <List hasDividers density="compact" header={<HStack gap={4} justify="between"><Text type="label" color="secondary">Metric</Text><HStack gap={4}><Text type="label">This week</Text><Text type="label" color="secondary">Last week</Text></HStack></HStack>}>
+              <List hasDividers density="compact" header={<HStack gap={4} justify="between"><Text type="label" color="secondary">Metric</Text><HStack gap={2}><span style={COL}><Text type="label">This week</Text></span><span style={COL}><Text type="label" color="secondary">Last week</Text></span></HStack></HStack>}>
                 {ROWS.filter(row => (row.key !== 'km' && row.key !== 'longestKm' && row.key !== 'stepsPerDay' ? true : Boolean(r.thisWeek[row.key] || r.lastWeek[row.key]))).map(row => (
                   <ListItem
                     key={row.key}
                     label={row.label}
                     endContent={
-                      <HStack gap={4}>
-                        <Text weight="bold" hasTabularNumbers>
-                          {fmt(r.thisWeek[row.key] as number | null)}
-                        </Text>
-                        <Text color="secondary" hasTabularNumbers>
-                          {fmt(r.lastWeek[row.key] as number | null)}
-                        </Text>
+                      <HStack gap={2}>
+                        <span style={COL}>
+                          <Text weight="bold" hasTabularNumbers>
+                            {fmt(r.thisWeek[row.key] as number | null)}
+                          </Text>
+                        </span>
+                        <span style={COL}>
+                          <Text color="secondary" hasTabularNumbers>
+                            {fmt(r.lastWeek[row.key] as number | null)}
+                          </Text>
+                        </span>
                       </HStack>
                     }
                   />
@@ -141,10 +127,17 @@ export function CoachPanel() {
                   <ListItem
                     key={i}
                     align="start"
-                    startContent={<Token label={String(i + 1)} size="sm" color="blue" />}
+                    startContent={<Token label={String(i + 1)} size="sm" color="green" />}
                     label={<Text weight="bold">{s.title}</Text>}
-                    description={`${s.why}${s.when ? ` · ${s.when}` : ''}`}
-                    endContent={s.href ? <Button label={s.kind === 'event' ? 'See event' : s.kind === 'ahead' ? 'Ask their Muse' : s.kind === 'rally' ? 'Start a game' : 'Open goal'} size="sm" href={s.href} /> : undefined}
+                    description={
+                      <VStack gap={2} hAlign="start">
+                        <Text type="supporting" color="secondary">
+                          {s.why}
+                          {s.when ? ` · ${s.when}` : ''}
+                        </Text>
+                        {s.href && <Button label={s.kind === 'event' ? 'See event' : s.kind === 'ahead' ? 'Ask their Muse' : s.kind === 'rally' ? 'Start a game' : 'Open goal'} size="sm" href={s.href} />}
+                      </VStack>
+                    }
                   />
                 ))}
               </List>
@@ -156,25 +149,24 @@ export function CoachPanel() {
         </>
       )}
       <HStack gap={2} wrap="wrap">
-        <Button label="Refresh" isLoading={busy === 'refresh'} isDisabled={(busy != null && busy !== 'refresh') || Boolean(state.blocked)} onClick={() => void call({action: 'refresh'})} />
-        <Button label="Turn off Coach mode" variant="ghost" isDisabled={busy != null} onClick={() => setTurningOff(true)} />
+        <Button label="Refresh" isLoading={busy === 'refresh'} isDisabled={Boolean(state.blocked)} onClick={() => void refresh()} />
+        <Button label="Delete my Coach history" variant="ghost" isDisabled={busy != null} onClick={() => setTurningOff(true)} />
       </HStack>
       {error && <Banner status="error" title={error} />}
-      <Dialog isOpen={turningOff} onOpenChange={o => !o && busy !== 'disable' && setTurningOff(false)} width={440}>
+      <Dialog isOpen={turningOff} onOpenChange={o => !o && setTurningOff(false)} width={440}>
         <Layout
-          header={<DialogHeader title="Turn off Coach mode?" onOpenChange={() => busy !== 'disable' && setTurningOff(false)} />}
+          header={<DialogHeader title="Delete your Coach history?" onOpenChange={() => setTurningOff(false)} />}
           footer={
             <LayoutFooter>
               <HStack gap={2} hAlign="end" wrap="wrap">
-                <Button label="Cancel" variant="ghost" isDisabled={busy === 'disable'} onClick={() => setTurningOff(false)} />
-                <Button label="Keep reports" isDisabled={busy === 'disable'} onClick={() => void call({action: 'disable', deleteHistory: false})} />
-                <Button label="Delete reports" variant="destructive" isLoading={busy === 'disable'} onClick={() => void call({action: 'disable', deleteHistory: true})} />
+                <Button label="Cancel" variant="ghost" onClick={() => setTurningOff(false)} />
+                <Button label="Turn off and delete" variant="destructive" onClick={() => onTurnOff(true)} />
               </HStack>
             </LayoutFooter>
           }
           content={
             <LayoutContent>
-              <Text>Your Muse stops comparing your weeks. Keep your past Coach reports, or delete them too?</Text>
+              <Text>Coach mode turns off and your past weekly reports are deleted. To just leave Coach mode and keep them, use the switch at the top.</Text>
             </LayoutContent>
           }
         />

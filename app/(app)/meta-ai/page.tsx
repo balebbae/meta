@@ -1,8 +1,8 @@
 import type {Metadata} from 'next';
-import {PlaceholderPage} from '@/components/pages/PlaceholderPage';
+import {MetaAiChat} from '@/components/muse/MetaAiChat';
 
 export const metadata: Metadata = {title: 'Meta AI | Facebook'};
 
 export default function Page() {
-  return <PlaceholderPage title="Meta AI" blurb="Meta AI isn't part of this demo yet. Ask your Muse under Activities instead." />;
+  return <MetaAiChat />;
 }

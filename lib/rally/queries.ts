@@ -5,7 +5,7 @@
  */
 import {sql} from '@/lib/db';
 import {ask} from '@/lib/activities/answers';
-import type {Answer, GameSpec, QuestCardPayload, RallyGamePayload, Trust} from '@/lib/activities/types';
+import type {GameSpec, QuestCardPayload, RallyGamePayload, Trust} from '@/lib/activities/types';
 import {insertXpEvent} from '@/lib/closeness-queries';
 import {sendMessage} from '@/lib/messaging-queries';
 import {museConfigured} from '@/lib/muse/client';
@@ -13,9 +13,9 @@ import {generateBadgeArt} from '@/lib/muse/image';
 import {sendPushToUser} from '@/lib/push';
 import {narrate, recapText} from '@/lib/rally/narration';
 import {verifyProofImage} from '@/lib/rally/proof';
+import {CONFIDENT, EXERCISE_LABEL, countReps, type ClipExercise} from '@/lib/rally/repcount';
 import {
   adaptiveAdjust,
-  applyDamage,
   classifyMoveEvent,
   computeMove,
   contributions,
@@ -23,8 +23,6 @@ import {
   gearForEvents,
   isBigMoment,
   isRainDare,
-  MAX_MOVES_PER_DAY,
-  movesToday,
   personalTarget,
   relayState,
   streakState,
@@ -32,6 +30,7 @@ import {
   type BossEvent,
 } from '@/lib/rally/scoring';
 import {bossKindFor, generateGameSpec, thisMonday, type Member, type SpecSource} from '@/lib/rally/spec';
+import {planHandicaps} from '@/lib/rally/handicap';
 
 export type QuestRow = {
   id: number;
@@ -79,6 +78,10 @@ function mapQuest(r: Record<string, unknown>): QuestRow {
   };
 }
 
+/** Regular moves per player per level day (dares don't count), and the gap that stops double taps. */
+export const MAX_MOVES_PER_DAY = 3;
+const MOVE_COOLDOWN_MS = 30_000;
+
 const mapMove = (r: Record<string, unknown>): MoveRow => ({
   id: Number(r.id),
   questId: r.quest_id as number,
@@ -88,7 +91,8 @@ const mapMove = (r: Record<string, unknown>): MoveRow => ({
   damage: r.damage as number,
   proofStatus: (r.proof_status as string | null) ?? null,
   proofVerdict: (r.proof_verdict as string | null) ?? null,
-  hasProof: r.proof_image_url != null,
+  // has_proof is selected instead of the photo itself: proofs are data URLs up to 1.5 MB and the dashboard polls every 3 s.
+  hasProof: r.has_proof != null ? Boolean(r.has_proof) : r.proof_image_url != null,
   createdAt: new Date(r.created_at as string).toISOString(),
 });
 
@@ -118,6 +122,12 @@ export async function isQuestMember(questId: number, userId: number): Promise<bo
   return Boolean(r);
 }
 
+/** Leaving drops your quest_progress row; your past moves stay in the log and keep their damage. */
+export async function leaveQuest(questId: number, userId: number): Promise<boolean> {
+  const rows = await sql`delete from quest_progress where quest_id = ${questId} and user_id = ${userId} returning id`;
+  return rows.length > 0;
+}
+
 async function conversationMembers(conversationId: number): Promise<Member[]> {
   const rows = await sql`select u.id, u.name from conversation_members cm join users u on u.id = cm.user_id where cm.conversation_id = ${conversationId} order by u.id`;
   return rows.map(r => ({id: r.id as number, name: r.name as string}));
@@ -138,17 +148,12 @@ export async function getReelSource(reelId: number): Promise<SpecSource | null> 
 }
 
 /** Reel/sentence -> GameSpec -> quest row + progress rows + quest_card in the thread + push (§15.6, §16.1). */
-export async function createQuest(opts: {source: SpecSource; conversationId: number; creator: {id: number; name: string}}): Promise<{quest: QuestRow; museUsed: boolean}> {
+export async function createQuest(opts: {source: SpecSource; conversationId: number; creator: {id: number; name: string}; goalId?: number}): Promise<{quest: QuestRow; museUsed: boolean}> {
   const members = await conversationMembers(opts.conversationId);
-  const answers: Record<number, Answer | null> = {};
-  for (const m of members) {
-    try {
-      answers[m.id] = await ask(m.id, 'game_participants', 'workouts_this_week', 'quest:new');
-    } catch {
-      answers[m.id] = null;
-    }
-  }
-  const {spec, museUsed} = await generateGameSpec({source: opts.source, members, answers});
+  // Handicaps (per-activity, Spark) and the game itself (Spark) are independent calls: run them together.
+  const [plan, generated] = await Promise.all([planHandicaps(opts.source, members), generateGameSpec({source: opts.source, members, answers: {}})]);
+  const spec: GameSpec = {...generated.spec, handicaps: plan.handicaps};
+  const museUsed = generated.museUsed;
   const bossKind = bossKindFor(spec.boss?.name ?? spec.title);
   let bossImageUrl: string | null = null;
   if (museConfigured() && spec.boss) {
@@ -159,14 +164,16 @@ export async function createQuest(opts: {source: SpecSource; conversationId: num
     }
   }
   const hp = spec.boss?.hp ?? 0;
-  const meta = JSON.stringify({museUsed, bossKind, buffed: false});
+  const meta = JSON.stringify({museUsed, bossKind, buffed: false, focus: plan.focus, fairness: plan.fairness, handicapsByMuse: plan.museUsed, ...(opts.goalId ? {goalId: opts.goalId} : {})});
   const [row] = await sql`
     insert into quests (title, description, xp_reward, goal_type, goal_count, week_start, muse_meta, template, spec, conversation_id, reel_id, created_by, status, starts_at, ends_at, boss_hp, boss_hp_left, boss_image_url)
     values (${spec.title}, ${spec.story}, 100, 'rally', ${spec.levels.length}, ${thisMonday().toISOString().slice(0, 10)}, ${meta}::jsonb, ${spec.template}, ${JSON.stringify(spec)}::jsonb, ${opts.conversationId}, ${opts.source.kind === 'reel' ? opts.source.reelId : null}, ${opts.creator.id}, 'active', ${spec.startsAt}, ${spec.endsAt}, ${hp}, ${hp}, ${bossImageUrl})
     returning *`;
   const quest = mapQuest(row);
   for (const m of members) {
-    await sql`insert into quest_progress (quest_id, user_id, status, progress) values (${quest.id}, ${m.id}, 'active', '{}'::jsonb) on conflict (quest_id, user_id) do nothing`;
+    // handicapWhy is private to that player: getQuestState only returns it to them.
+    const progress = JSON.stringify({handicapWhy: plan.reasons[m.id] ?? null});
+    await sql`insert into quest_progress (quest_id, user_id, status, progress) values (${quest.id}, ${m.id}, 'active', ${progress}::jsonb) on conflict (quest_id, user_id) do nothing`;
   }
   const payload: QuestCardPayload = {questId: quest.id, title: spec.title, template: spec.template, bossName: spec.boss?.name, bossHp: hp, ...(quest.reelId ? {reelId: quest.reelId} : {})};
   await sendMessage(opts.conversationId, opts.creator, `${opts.creator.name.split(' ')[0]} started ${spec.title}`, null, {kind: 'quest_card', payload});
@@ -179,7 +186,7 @@ export async function createQuest(opts: {source: SpecSource; conversationId: num
 }
 
 export async function listMoves(questId: number): Promise<MoveRow[]> {
-  const rows = await sql`select id, quest_id, user_id, kind, dare_id, damage, proof_status, proof_verdict, proof_image_url, created_at from quest_moves where quest_id = ${questId} order by id asc`;
+  const rows = await sql`select id, quest_id, user_id, kind, dare_id, damage, proof_status, proof_verdict, proof_image_url is not null as has_proof, created_at from quest_moves where quest_id = ${questId} order by id asc`;
   return rows.map(mapMove);
 }
 
@@ -188,8 +195,10 @@ export function levelDayFor(quest: Pick<QuestRow, 'startsAt' | 'spec'>, now = ne
   return Math.min(quest.spec.levels.length, Math.max(1, day));
 }
 
-export type MoveSource = 'manual' | 'photo' | 'voice' | 'vault';
-export type LogMoveInput = {source: MoveSource; vaultEventId?: number | null; note?: string | null; image?: string | null; amount?: number | null; dareId?: string | null};
+export type MoveSource = 'manual' | 'photo' | 'voice' | 'vault' | 'clip';
+/** Clip proof: the per-frame joint signal the phone extracted (the video itself never leaves the phone) + 1-3 stills. */
+export type ClipInput = {exercise: ClipExercise; fps: number; signal: (number | null)[]; frames: string[]};
+export type LogMoveInput = {source: MoveSource; vaultEventId?: number | null; note?: string | null; image?: string | null; amount?: number | null; dareId?: string | null; clip?: ClipInput | null};
 export type LogMoveResult =
   | {ok: true; move: MoveRow; event: BossEvent; damage: number; critical: boolean; hpLeft: number; narration: string; museUsed: boolean; proof?: {status: string; verdict: string}; completed: boolean}
   | {ok: false; error: string; status: number};
@@ -205,9 +214,13 @@ export async function logMove(questId: number, user: {id: number; name: string},
   if (dare?.needsProof && !input.image) return {ok: false, error: 'This dare needs a photo', status: 400};
   const existing = dare ? await sql`select 1 from quest_moves where quest_id = ${questId} and user_id = ${user.id} and dare_id = ${dare.id}` : [];
   if (existing.length) return {ok: false, error: 'Dare already completed', status: 409};
-  const moves = await listMoves(questId);
-  const dayStart = new Date().setHours(0, 0, 0, 0);
-  if (!dare && movesToday(moves, user.id, dayStart) >= MAX_MOVES_PER_DAY) return {ok: false, error: `That's ${MAX_MOVES_PER_DAY} moves today. Come back tomorrow, or try a dare.`, status: 429};
+  if (!dare) {
+    // Without a cap one player could tap "Log a move" over and over and kill the boss alone.
+    const dayStart = new Date(new Date(quest.startsAt).getTime() + (levelDayFor(quest) - 1) * 86_400_000).toISOString();
+    const [recent] = await sql`select count(*)::int as today, max(created_at) as last from quest_moves where quest_id = ${questId} and user_id = ${user.id} and kind = 'move' and created_at >= ${dayStart}`;
+    if (recent?.last && Date.now() - new Date(recent.last as string).getTime() < MOVE_COOLDOWN_MS) return {ok: false, error: 'You just logged a move. Give it a moment.', status: 429};
+    if (Number(recent?.today ?? 0) >= MAX_MOVES_PER_DAY) return {ok: false, error: `That's ${MAX_MOVES_PER_DAY} moves today. Try a dare, or come back tomorrow.`, status: 409};
+  }
 
   // Answers (never vault_events): best trust the owner's policy lets game participants see for today's move.
   let sourceTrust: Trust | null = null;
@@ -220,7 +233,22 @@ export async function logMove(questId: number, user: {id: number; name: string},
   if (input.source === 'vault' && !sourceTrust) return {ok: false, error: 'No shareable workout found for today. Log it manually or adjust your sharing settings.', status: 400};
 
   let proof: {status: 'pending' | 'approved' | 'rejected'; verdict: string; museUsed: boolean} | undefined;
-  if (input.image) {
+  let clip: {reps: number} | null = null;
+  let clipLine = '';
+  if (input.clip && !dare) {
+    // the server's recount is what scores; the phone's number was only a preview
+    const c = countReps(input.clip.signal, input.clip.fps, input.clip.exercise);
+    const label = EXERCISE_LABEL[input.clip.exercise];
+    if (c.reps === 0) return {ok: false, error: `No full ${label} counted in that clip. Film from the side with your whole body in frame.`, status: 422};
+    const r = await verifyProofImage({image: input.clip.frames[0], frames: input.clip.frames, task: `${label}, about ${c.reps} reps`});
+    if (r.status === 'rejected') return {ok: false, error: `Clip not accepted: ${r.verdict}`, status: 422};
+    const confident = c.confidence >= CONFIDENT;
+    if (confident) clip = {reps: c.reps};
+    clipLine = `${c.reps} ${label} counted on camera${confident ? '' : ' (shaky count, photo credit)'}`;
+    proof = {status: r.status, verdict: `${clipLine}. ${r.verdict}`.slice(0, 200), museUsed: r.museUsed};
+    input = {...input, image: input.clip.frames[0]};
+    if (!sourceTrust) sourceTrust = 'photo';
+  } else if (input.image) {
     const task = dare ? dare.text : quest.spec.levels[levelDayFor(quest) - 1]?.exercises.map(e => e.name).join(', ') || 'a workout';
     const r = await verifyProofImage({image: input.image, task});
     proof = {status: r.status, verdict: r.verdict, museUsed: r.museUsed};
@@ -229,12 +257,20 @@ export async function logMove(questId: number, user: {id: number; name: string},
   }
 
   const levelDay = levelDayFor(quest);
-  const result = computeMove({spec: quest.spec, userId: user.id, levelDay, sourceTrust, amount: input.amount ?? null, dareId: dare?.id ?? null});
-  const hpBefore = quest.bossHpLeft;
+  const moves = await listMoves(questId);
+  const result = computeMove({spec: quest.spec, userId: user.id, levelDay, sourceTrust, amount: input.amount ?? null, dareId: dare?.id ?? null, clip});
   // Fail closed: an unverified proof is saved as pending and deals no damage.
   const damage = damageAfterProof(result.damage, proof?.status);
   const critical = result.critical && damage > 0;
-  const hpAfter = quest.template === 'boss' ? applyDamage(hpBefore, damage) : hpBefore;
+  // Subtract in the database: two moves at the same moment both land, and only the move that takes HP to 0 ends the quest.
+  let hpBefore = quest.bossHpLeft;
+  let hpAfter = hpBefore;
+  if (quest.template === 'boss' && damage > 0) {
+    const [hp] = await sql`update quests set boss_hp_left = greatest(0, boss_hp_left - ${damage}) where id = ${questId} and boss_hp_left > 0 returning boss_hp_left`;
+    if (!hp) return {ok: false, error: 'The boss is already down', status: 409};
+    hpAfter = Number(hp.boss_hp_left);
+    hpBefore = hpAfter + damage;
+  }
   const myMovesBefore = moves.filter(m => m.userId === user.id && m.kind === 'move').length;
   const levelFinished = !dare && myMovesBefore + 1 >= levelDay && myMovesBefore < levelDay;
   const event: BossEvent = quest.template === 'boss' ? classifyMoveEvent({critical, hpBefore, hpAfter, hpMax: quest.bossHp, levelFinished}) : levelFinished ? 'level' : critical ? 'critical' : 'move';
@@ -242,13 +278,14 @@ export async function logMove(questId: number, user: {id: number; name: string},
   const [moveRow] = await sql`
     insert into quest_moves (quest_id, user_id, vault_event_id, kind, dare_id, damage, note, proof_image_url, proof_status, proof_verdict)
     values (${questId}, ${user.id}, ${input.vaultEventId ?? null}, ${dare ? 'dare' : 'move'}, ${dare?.id ?? null}, ${damage}, ${input.note?.slice(0, 200) ?? null}, ${input.image ?? null}, ${proof?.status ?? null}, ${proof?.verdict ?? null})
-    returning id, quest_id, user_id, kind, dare_id, damage, proof_status, proof_verdict, proof_image_url, created_at`;
+    returning id, quest_id, user_id, kind, dare_id, damage, proof_status, proof_verdict, proof_image_url is not null as has_proof, created_at`;
   const move = mapMove(moveRow);
-  await sql`update quests set boss_hp_left = ${hpAfter} where id = ${questId}`;
   await sql`update quest_progress set progress = coalesce(progress, '{}'::jsonb) || ${JSON.stringify({lastMoveAt: move.createdAt, level: levelDay})}::jsonb, updated_at = now() where quest_id = ${questId} and user_id = ${user.id}`;
 
   const bossName = quest.spec.boss?.name ?? quest.title;
-  const {text, museUsed} = await narrate({event, actor: user.name, damage, hpLeft: hpAfter, hpMax: quest.bossHp, bossName, dareText: dare?.text});
+  const narration = await narrate({event, actor: user.name, damage, hpLeft: hpAfter, hpMax: quest.bossHp, bossName, dareText: dare?.text});
+  const museUsed = narration.museUsed;
+  const text = clipLine ? `${narration.text} (${clipLine})` : narration.text;
   if (quest.conversationId) {
     const payload: RallyGamePayload = {questId, event: dare && event === 'move' ? 'dare' : event, userId: user.id, text, damage, hpLeft: hpAfter};
     await sendMessage(quest.conversationId, user, text, null, {kind: 'rally_game', payload});
@@ -380,17 +417,24 @@ export type QuestState = {
   streak: Record<number, ReturnType<typeof streakState>>;
   levelDay: number;
   museUsed: boolean;
+  /** Group-visible balance line. Null for quests made before per-activity handicaps. */
+  fairness: {label: string; summary: string} | null;
+  /** The viewer's own handicap and private reason; never other players'. */
+  myHandicap: {targetScale: number; damageScale: number; why: string | null} | null;
 };
 
 export async function getQuestState(questId: number, viewerId: number): Promise<QuestState | null> {
   const quest = await getQuest(questId);
   if (!quest) return null;
-  const [members, moves, gearRows, rewardRows] = await Promise.all([
+  const [members, moves, gearRows, rewardRows, [mine]] = await Promise.all([
     questMembers(questId),
     listMoves(questId),
     sql`select g.user_id, g.slug, g.label, g.description from avatar_gear g join quest_progress p on p.user_id = g.user_id where p.quest_id = ${questId}`,
     sql`select id, user_id, tier, label, sponsor, code, status from reward_claims where quest_id = ${questId} order by id`,
+    sql`select q.muse_meta->'fairness' as fairness, p.progress->>'handicapWhy' as why from quests q left join quest_progress p on p.quest_id = q.id and p.user_id = ${viewerId} where q.id = ${questId}`,
   ]);
+  const fairnessRaw = (mine?.fairness ?? null) as {label?: string; summary?: string} | null;
+  const myScale = quest.spec.handicaps.find(x => x.userId === viewerId);
   const gear: GearRow[] = gearRows.map(r => ({userId: r.user_id as number, slug: r.slug as string, label: r.label as string, description: (r.description as string | null) ?? null}));
   const rewards: RewardRow[] = rewardRows.map(r => ({id: r.id as number, userId: r.user_id as number, tier: r.tier as RewardRow['tier'], label: r.label as string, sponsor: (r.sponsor as string | null) ?? null, code: (r.code as string | null) ?? null, status: r.status as RewardRow['status']}));
   const contrib = contributions(moves);
@@ -428,13 +472,15 @@ export async function getQuestState(questId: number, viewerId: number): Promise<
     streak,
     levelDay,
     museUsed: quest.museUsed,
+    fairness: fairnessRaw?.label ? {label: fairnessRaw.label, summary: fairnessRaw.summary ?? ''} : null,
+    myHandicap: myScale ? {targetScale: myScale.targetScale, damageScale: myScale.damageScale, why: (mine?.why as string | null) ?? null} : null,
   };
 }
 
-async function listingsForTags(tags: string[]): Promise<ListingBrief[]> {
+export async function listingsForTags(tags: string[], limit = 4): Promise<ListingBrief[]> {
   if (!tags.length) return [];
   const pattern = tags.map(t => t.toLowerCase().split(/\s+/)[0]).filter(Boolean).map(t => `%${t}%`);
-  const rows = await sql`select id, title, price_cents, image_url, location from marketplace_listings where lower(title) like any(${pattern}::text[]) or lower(category) like any(${pattern}::text[]) or category = 'Sporting Goods' order by case when lower(title) like any(${pattern}::text[]) then 0 else 1 end, created_at desc limit 4`;
+  const rows = await sql`select id, title, price_cents, image_url, location from marketplace_listings where lower(title) like any(${pattern}::text[]) or lower(category) like any(${pattern}::text[]) or category = 'Sporting Goods' order by case when lower(title) like any(${pattern}::text[]) then 0 else 1 end, created_at desc limit ${limit}`;
   return rows.map(r => ({id: r.id as number, title: r.title as string, priceCents: r.price_cents as number, imageUrl: r.image_url as string, location: r.location as string}));
 }
 

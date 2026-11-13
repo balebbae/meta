@@ -91,7 +91,17 @@ export type QuestionType =
   | 'steps_today'
   | 'avg_hr_this_week'
   | 'sleep_last_night_hours'
-  | 'last_workout';
+  | 'last_workout'
+  // Sessions of one kind over the last 14 days, banded like workouts_this_week. Feeds per-game handicaps.
+  | 'runs_2w'
+  | 'rides_2w'
+  | 'strength_2w'
+  | 'yoga_2w'
+  | 'workouts_2w'
+  // Code-decided level over 4 weeks (lib/activities/level.ts): rounded = tier only.
+  | 'level_4w'
+  | 'steps_avg_7d'
+  | 'sleep_avg_7d';
 
 export const QUESTION_CATEGORY: Record<QuestionType, Category> = {
   workouts_this_week: 'workouts',
@@ -102,9 +112,17 @@ export const QUESTION_CATEGORY: Record<QuestionType, Category> = {
   completed_move_today: 'workouts',
   completed_run_3km_today: 'workouts',
   last_workout: 'workouts',
+  runs_2w: 'workouts',
+  rides_2w: 'workouts',
+  strength_2w: 'workouts',
+  yoga_2w: 'workouts',
+  workouts_2w: 'workouts',
+  level_4w: 'workouts',
   steps_today: 'steps',
+  steps_avg_7d: 'steps',
   avg_hr_this_week: 'heart',
   sleep_last_night_hours: 'sleep',
+  sleep_avg_7d: 'sleep',
 };
 
 // ---- Tags (§4 step 1) -----------------------------------------------------

@@ -16,6 +16,8 @@ export const LIMITS = {
 export const clamp = (n: number, [lo, hi]: readonly [number, number]) => Math.min(hi, Math.max(lo, Number.isFinite(n) ? n : lo));
 
 export const TRUST_BONUS: Record<Trust, number> = {self_reported: 1, photo: 1.1, device: 1.1, verified: 1.1};
+/** A confident camera-counted clip beats a photo: the reps were counted, not typed. */
+export const CLIP_BONUS = 1.25;
 export const CRITICAL_MULTIPLIER = 1.5;
 export const CRITICAL_THRESHOLD = 1.2;
 
@@ -39,6 +41,8 @@ export type MoveInput = {
   amount?: number | null;
   /** Dare id when this move is a dare. */
   dareId?: string | null;
+  /** Confident clip proof: its counted reps replace the typed amount and the clip bonus replaces trust. */
+  clip?: {reps: number} | null;
 };
 
 export type MoveResult = {damage: number; critical: boolean; base: number; damageScale: number; dareBonus: number};
@@ -59,22 +63,16 @@ export function computeMove(input: MoveInput): MoveResult {
   const level = input.spec.levels.find(l => l.day === input.levelDay) ?? input.spec.levels[input.spec.levels.length - 1];
   const base = baseDamage(level);
   const h = handicapFor(input.spec, input.userId);
-  const trust = TRUST_BONUS[input.sourceTrust ?? 'self_reported'];
+  const trust = input.clip ? CLIP_BONUS : TRUST_BONUS[input.sourceTrust ?? 'self_reported'];
   const target = personalTarget(level, h.targetScale);
-  const critical = target != null && input.amount != null && input.amount >= target * CRITICAL_THRESHOLD;
+  const amount = input.clip ? input.clip.reps : input.amount;
+  const critical = target != null && amount != null && amount >= target * CRITICAL_THRESHOLD;
   const dare = input.dareId ? input.spec.dares.find(d => d.id === input.dareId) : undefined;
   const dareBonus = dare ? clamp(dare.bonus, LIMITS.bonus) : 0;
   let damage = base * h.damageScale * trust;
   if (critical) damage *= CRITICAL_MULTIPLIER;
   damage += dareBonus;
   return {damage: Math.max(1, Math.round(damage)), critical, base, damageScale: h.damageScale, dareBonus};
-}
-
-/** Regular moves (not dares) a player may log per quest per day (plan 5b anti-farming). */
-export const MAX_MOVES_PER_DAY = 3;
-
-export function movesToday(moves: {userId: number; kind: string; createdAt: string}[], userId: number, dayStart: number): number {
-  return moves.filter(m => m.userId === userId && m.kind === 'move' && new Date(m.createdAt).getTime() >= dayStart).length;
 }
 
 /** Fail closed: when the vision check could not run, the proof stays pending and the move deals no damage. */

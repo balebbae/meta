@@ -820,3 +820,55 @@
   gap: 8px;
   padding: 12px 16px;
 }
+.callSheet {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  z-index: 70;
+  background: var(--fb-card);
+  border: 1px solid var(--fb-divider);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--fb-shadow-popover);
+}
+.callVideo {
+  width: 100%;
+  max-height: 240px;
+  border-radius: 8px;
+  background: var(--fb-text);
+}
+.callStatus {
+  margin: 8px 0;
+  font-weight: 600;
+}
+.callActions {
+  display: flex;
+  gap: 8px;
+}
+.callEnd {
+  color: var(--fb-red);
+  font-weight: 600;
+  padding: 8px 12px;
+}
+.callBanner {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  top: calc(64px + env(safe-area-inset-top));
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--fb-card);
+  color: var(--fb-text);
+  border: 1px solid var(--fb-divider);
+  box-shadow: var(--fb-shadow-popover);
+  font-weight: 600;
+}
+.callBanner a {
+  color: var(--fb-blue);
+}

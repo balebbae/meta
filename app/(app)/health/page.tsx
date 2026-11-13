@@ -8,9 +8,10 @@ import styles from './health.module.css';
 type Sample = HealthReading & {source: string};
 type Summary = {whoop: {userId: string | null; connectedAt: string} | null; samples: Sample[]};
 
-const SOURCES = [
-  {source: 'apple_health', title: 'Apple Health', hint: 'Activity is the last 24 hours. Heart, body, and vitals are the latest reading on this iPhone. Workouts are the last 14 days.'},
-  {source: 'health_connect', title: 'Google Health', hint: 'The same readings from Health Connect, when an Android phone syncs.'},
+const TABS = [
+  {id: 'apple_health', label: 'Apple Health'},
+  {id: 'whoop', label: 'Whoop'},
+  {id: 'health_connect', label: 'Google Health'},
 ];
 
 declare global {
@@ -20,13 +21,11 @@ declare global {
   }
 }
 
-function Board({title, hint, samples}: {title: string; hint: string; samples: HealthReading[]}) {
+function Board({samples}: {samples: HealthReading[]}) {
   const layout = layoutHealth(samples);
+  if (samples.length === 0) return <div className={styles.empty}>Nothing synced yet.</div>;
   return (
-    <section className={styles.card}>
-      <div className={styles.heading}>{title}</div>
-      <p className={styles.sub}>{hint}</p>
-      {samples.length === 0 && <p className={styles.sub}>Nothing synced yet.</p>}
+    <>
       {layout.highlights.length > 0 && (
         <div className={styles.grid}>
           {layout.highlights.map(item => (
@@ -39,7 +38,10 @@ function Board({title, hint, samples}: {title: string; hint: string; samples: He
       )}
       {layout.sections.map(section => (
         <div key={section.title} className={styles.section}>
-          <div className={styles.sectionTitle}>{section.title}</div>
+          <div className={styles.sectionTitle}>
+            {section.title}
+            <span className={styles.count}>{section.rows.length}</span>
+          </div>
           {section.rows.map(item => (
             <div key={item.key} className={styles.row}>
               <span>
@@ -51,7 +53,7 @@ function Board({title, hint, samples}: {title: string; hint: string; samples: He
           ))}
         </div>
       ))}
-    </section>
+    </>
   );
 }
 
@@ -59,6 +61,7 @@ export default function HealthPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tab, setTab] = useState('apple_health');
 
   const load = () =>
     fetch('/api/health/summary')
@@ -68,19 +71,25 @@ export default function HealthPage() {
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
-    if (q.get('whoop') === 'connected') setNote('Whoop connected.');
+    if (q.get('whoop') === 'connected') {
+      setNote('Whoop connected.');
+      setTab('whoop');
+    }
     if (q.get('whoop') === 'error') setNote(q.get('msg') ?? 'Whoop connection failed.');
     void load();
     window.__onHealthSync = result => {
       setBusy(false);
       setNote(result.ok ? `Saved ${result.saved ?? 0} readings.` : (result.error ?? 'Sync failed'));
-      if (result.ok) void load();
+      if (result.ok) {
+        setTab('apple_health');
+        void load();
+      }
     };
   }, []);
 
   const syncPhone = async () => {
     if (!window.ReactNativeWebView) {
-      setNote('Apple Health and Health Connect only sync inside the mobile app, and not from Expo Go. Use a development build.');
+      setNote('Open this page in the phone app to read Apple Health or Google Health.');
       return;
     }
     setBusy(true);
@@ -94,38 +103,53 @@ export default function HealthPage() {
     window.ReactNativeWebView.postMessage(JSON.stringify({type: 'sync-health', token: data.token}));
   };
 
+  const syncWhoop = async () => {
+    setBusy(true);
+    const res = await fetch('/api/whoop/sync', {method: 'POST'});
+    const data = await res.json().catch(() => ({}));
+    setBusy(false);
+    setNote(res.ok ? `Saved ${data.saved ?? 0} Whoop readings.` : (data.error ?? 'Whoop sync failed'));
+    if (res.ok) {
+      setTab('whoop');
+      void load();
+    }
+  };
+
   const samples = summary?.samples ?? [];
+  const visible = samples.filter(sample => sample.source === tab);
+  const linked = Boolean(summary?.whoop);
   return (
     <main className={styles.page}>
       <section className={styles.card}>
-        <div className={styles.heading}>Health</div>
+        <h1 className={styles.heading}>Health</h1>
         <p className={styles.sub}>
-          Sync reads every category this phone is allowed to share. On the Apple sheet, turn on all of them or the missing ones stay blank.
+          {linked ? 'Whoop is linked. ' : ''}
+          Apple Health and Google Health sync from the phone. Allow every category or those readings stay blank.
         </p>
         {note && <div className={styles.note}>{note}</div>}
-        <p className={styles.sub}>{summary?.whoop ? `Whoop linked${summary.whoop.userId ? ` (${summary.whoop.userId})` : ''}.` : 'Whoop not linked.'}</p>
         <div className={styles.actions}>
-          <a className={`${buttons.btn} ${buttons.btnPrimary}`} href="/api/whoop/connect">Connect Whoop</a>
+          <a className={`${buttons.btn} ${buttons.btnPrimary}`} href="/api/whoop/connect">{linked ? 'Reconnect Whoop' : 'Connect Whoop'}</a>
+          {linked && (
+            <button className={buttons.btn} type="button" disabled={busy} onClick={() => void syncWhoop()}>
+              {busy ? 'Syncing…' : 'Sync Whoop'}
+            </button>
+          )}
           <button className={buttons.btn} type="button" disabled={busy} onClick={() => void syncPhone()}>
-            {busy ? 'Syncing…' : 'Sync Apple Health / Google Health'}
+            {busy ? 'Syncing…' : 'Sync phone'}
           </button>
         </div>
       </section>
-      {SOURCES.map(source => (
-        <Board
-          key={source.source}
-          title={source.title}
-          hint={source.hint}
-          samples={samples.filter(sample => sample.source === source.source)}
-        />
-      ))}
-      {summary?.whoop && (
-        <Board
-          title="Whoop"
-          hint="Latest recovery from the Whoop account linked above."
-          samples={samples.filter(sample => sample.source === 'whoop')}
-        />
-      )}
+      <section className={styles.card}>
+        <div className={styles.tabs}>
+          {TABS.map(item => (
+            <button key={item.id} type="button" className={tab === item.id ? styles.tabOn : styles.tab} onClick={() => setTab(item.id)}>
+              {item.label}
+              {samples.some(sample => sample.source === item.id) ? ` ${samples.filter(sample => sample.source === item.id).length}` : ''}
+            </button>
+          ))}
+        </div>
+        <Board samples={visible} />
+      </section>
     </main>
   );
 }

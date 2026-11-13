@@ -2,7 +2,7 @@ import {NextResponse} from 'next/server';
 import {getSessionUser} from '@/lib/auth';
 import {sql} from '@/lib/db';
 import {insertHealthSamples} from '@/lib/health';
-import {exchangeWhoopCode, whoopGet} from '@/lib/whoop';
+import {exchangeWhoopCode, fetchWhoopSamples, whoopGet} from '@/lib/whoop';
 import {GET as connectCallback} from '@/app/api/connect/[source]/callback/route';
 
 export async function GET(req: Request) {
@@ -40,15 +40,7 @@ export async function GET(req: Request) {
         expires_at = excluded.expires_at,
         connected_at = now()`;
 
-    const recovery = (await whoopGet('/recovery?limit=1', token.access_token).catch(() => null)) as {
-      records?: {score?: {recovery_score?: number; resting_heart_rate?: number; hrv_rmssd_milli?: number}; created_at?: string}[];
-    } | null;
-    const rec = recovery?.records?.[0];
-    const when = rec?.created_at ?? new Date().toISOString();
-    const samples = [];
-    if (rec?.score?.recovery_score != null) samples.push({metric: 'recovery_score', value: rec.score.recovery_score, unit: 'score', recordedAt: when});
-    if (rec?.score?.resting_heart_rate != null) samples.push({metric: 'resting_hr', value: rec.score.resting_heart_rate, unit: 'bpm', recordedAt: when});
-    if (rec?.score?.hrv_rmssd_milli != null) samples.push({metric: 'hrv_ms', value: rec.score.hrv_rmssd_milli, unit: 'ms', recordedAt: when});
+    const samples = await fetchWhoopSamples(token.access_token);
     if (samples.length) await insertHealthSamples(user.id, 'whoop', samples);
 
     const res = NextResponse.redirect(new URL('/health?whoop=connected', url.origin));

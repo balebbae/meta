@@ -27,9 +27,7 @@ export async function insertHealthSamples(
 ) {
   const clean = samples.map(cleanHealthSample).filter(s => s != null).slice(0, 200);
   if (!clean.length) return 0;
-  if (source !== 'whoop') {
-    await sql`delete from health_samples where user_id = ${userId} and source = ${source}`;
-  }
+  await sql`delete from health_samples where user_id = ${userId} and source = ${source}`;
   for (const s of clean) {
     await sql`
       insert into health_samples (user_id, source, metric, value, unit, recorded_at)

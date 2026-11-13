@@ -199,6 +199,7 @@ create table if not exists conversations (
   updated_at timestamptz not null default now()
 );
 create index if not exists conversations_updated_idx on conversations (updated_at desc);
+alter table conversations add column if not exists call_state jsonb;
 
 create table if not exists conversation_members (
   conversation_id integer not null references conversations(id) on delete cascade,
@@ -479,6 +480,16 @@ create table if not exists reels (
   created_at timestamptz not null default now()
 );
 
+create table if not exists reel_comments (
+  id serial primary key,
+  reel_id integer not null,
+  reel_kind text not null check (reel_kind in ('fitness', 'feed')),
+  author_id integer not null references users(id) on delete cascade,
+  content text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists reel_comments_reel_idx on reel_comments (reel_kind, reel_id, created_at);
+
 -- Rally quests reuse the Closeness quests table (§19.1). template null = legacy closeness quest.
 alter table quests add column if not exists template text check (template in ('boss', 'relay', 'streak'));
 alter table quests add column if not exists spec jsonb;
@@ -568,6 +579,46 @@ create index if not exists turf_privacy_zones_user_idx on turf_privacy_zones (us
 -- lat/lng/radius_m hold the offset, enlarged circle (lib/turf/engine.ts obfuscateZone); false rows are converted on first read
 alter table turf_privacy_zones add column if not exists obfuscated boolean not null default false;
 
+-- Goals + roadmap (lib/activities/goals.ts): one row per goal; the plan (phases, milestones, components)
+-- and the latest Muse check-in live in jsonb so the roadmap is one read.
+create table if not exists goals (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  raw_text text not null,
+  title text not null,
+  event_kind text not null default 'custom',
+  event_date date,
+  plan jsonb not null,
+  checkin jsonb,
+  conversation_id integer references conversations(id) on delete set null,
+  quest_id integer references quests(id) on delete set null,
+  status text not null default 'active' check (status in ('active', 'done', 'archived')),
+  muse_used boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists goals_user_idx on goals (user_id, status, created_at desc);
+
+-- General "For you" Reels (the default /reels page). Fitness Reels stay in `reels`; swiping left on
+-- /reels moves from this feed to the fitness one. Seeded by scripts/seed-feed-reels.mjs (Pixabay).
+create table if not exists feed_reels (
+  id serial primary key,
+  pixabay_id bigint unique,
+  video_url text not null,
+  poster_url text,
+  duration_sec integer,
+  width integer,
+  height integer,
+  creator_name text,
+  creator_url text,
+  source_url text,
+  topic text not null,
+  caption text,
+  tags text[] not null default '{}',
+  plays integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
 -- Group activities: a Rally quest posted into groups as a sign-up post; capacity caps quest_progress rows
 alter table quests add column if not exists capacity integer check (capacity between 2 and 100);
 alter table group_posts add column if not exists quest_id integer references quests(id) on delete cascade;
@@ -640,6 +691,16 @@ create table if not exists health_sync_tokens (
   token text primary key,
   user_id integer not null references users(id) on delete cascade,
   expires_at timestamptz not null
+);
+
+-- Coach mode (docs/scheduler-coach.md §2): opt-in, one stored report per user per day
+alter table activity_profiles add column if not exists coach_mode boolean not null default false;
+create table if not exists coach_reports (
+  user_id integer not null references users(id) on delete cascade,
+  day date not null,
+  report jsonb not null,
+  created_at timestamptz not null default now(),
+  primary key (user_id, day)
 );
 
 -- Integrity (plan 5b): 64-bit dHash of each Photo Proof image, per user, to flag reused photos.

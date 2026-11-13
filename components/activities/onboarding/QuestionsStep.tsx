@@ -4,7 +4,18 @@ import {StepShell} from './StepShell';
 import {SCHEDULE_OPTIONS, WEEKLY_OPTIONS, WITH_WHOM_OPTIONS, type StarterChatResult} from '@/lib/activities/starter-chat';
 import type {ActivityProfile, StarterAnswers} from '@/lib/activities/onboarding';
 import type {TagKind} from '@/lib/activities/types';
-import styles from '../activities.module.css';
+import {Button} from '@astryxdesign/core/Button';
+import {Card} from '@astryxdesign/core/Card';
+import {CheckboxInput} from '@astryxdesign/core/CheckboxInput';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Tab, TabList} from '@astryxdesign/core/TabList';
+import {Text} from '@astryxdesign/core/Text';
+import {TextArea} from '@astryxdesign/core/TextArea';
+import {TextInput} from '@astryxdesign/core/TextInput';
+import {ToggleButton} from '@astryxdesign/core/ToggleButton';
+import {Token} from '@astryxdesign/core/Token';
+import {VStack} from '@astryxdesign/core/VStack';
 
 const WEEKLY_LABEL: Record<string, string> = {'0': 'Not yet', '1-2': '1–2 days', '3-4': '3–4 days', '5+': '5+ days'};
 const GOALS = ['Get started', 'Be consistent', 'Train for an event', 'Get faster', 'Get stronger', 'Lose the phone and go outside', 'Sleep better', 'Do it with friends'];
@@ -41,80 +52,80 @@ export function QuestionsStep({profile, invite}: {profile: ActivityProfile; invi
     if (!res.ok) throw new Error('Could not save answers');
   }
 
-  const chip = (on: boolean, label: string, onClick: () => void) => (
-    <button key={label} className={on ? styles.chipOn : styles.chip} aria-pressed={on} onClick={onClick}>
-      {label}
-    </button>
+  const chip = (on: boolean, label: string, onClick: () => void) => <ToggleButton key={label} label={label} size="sm" isPressed={on} onPressedChange={onClick} />;
+  const question = (title: string, body: React.ReactNode, hint?: string) => (
+    <Card>
+      <VStack gap={3}>
+        <VStack gap={1}>
+          <Heading level={2}>{title}</Heading>
+          {hint && (
+            <Text type="supporting" color="secondary">
+              {hint}
+            </Text>
+          )}
+        </VStack>
+        {body}
+      </VStack>
+    </Card>
+  );
+  const chips = (children: React.ReactNode) => (
+    <HStack gap={2} wrap="wrap">
+      {children}
+    </HStack>
   );
 
   return (
     <StepShell step="questions" invite={invite} save={save}>
-      <p className={styles.sub}>Your Muse uses these to size your first games. Answers are Muse-only unless you share them later.</p>
-      <div className={styles.tabs} role="tablist">
-        <button role="tab" aria-selected={mode === 'tap'} className={mode === 'tap' ? styles.tabOn : styles.tab} onClick={() => setMode('tap')}>
-          Tap answers
-        </button>
-        <button role="tab" aria-selected={mode === 'chat'} className={mode === 'chat' ? styles.tabOn : styles.tab} onClick={() => setMode('chat')}>
-          Just tell my Muse
-        </button>
-      </div>
+      <Text color="secondary">Your Muse uses these to size your first games. Answers are Muse-only unless you share them later.</Text>
+      <TabList value={mode} onChange={v => setMode(v as 'tap' | 'chat')} hasDivider>
+        <Tab value="tap" label="Tap answers" />
+        <Tab value="chat" label="Just tell my Muse" />
+      </TabList>
       {mode === 'chat' && (
-        <div className={styles.card}>
-          <label className={styles.label} htmlFor="ob-chat">
-            One message is enough
-          </label>
-          <textarea id="ob-chat" className={styles.textarea} value={chat} onChange={e => setChat(e.target.value)} placeholder="“I used to run but mostly walk now, maybe twice a week. Evenings after work. I'd love to get back into it with my roommates. Bad left knee so nothing with jumping.”" />
-          <div className={styles.row} style={{marginTop: 8}}>
-            <button className={styles.btnPrimary} onClick={() => void askMuse()} disabled={chatBusy || !chat.trim()}>
-              {chatBusy ? 'Thinking…' : 'Send to my Muse'}
-            </button>
-            {chatResult && !chatResult.usedMuse && <span className={styles.offline}>Muse offline: keyword rules used</span>}
-          </div>
-          {chatResult && (
-            <div style={{marginTop: 12}}>
-              <div className={styles.small} style={{marginBottom: 6}}>
-                Here&apos;s what I got. Tap to toggle, then check the answers below.
-              </div>
-              <div className={styles.chips}>
-                {chatTags.map((t, i) => chip(t.on, `${t.tag} · ${t.kind}`, () => setChatTags(ts => ts.map((x, j) => (i === j ? {...x, on: !x.on} : x)))))}
-                {!chatTags.length && <span className={styles.small}>No tags spotted; pick some on the previous step.</span>}
-              </div>
-            </div>
-          )}
-        </div>
+        <Card>
+          <VStack gap={3}>
+            <TextArea label="One message is enough" value={chat} onChange={setChat} rows={3} placeholder="“I used to run but mostly walk now, maybe twice a week. Evenings after work. I'd love to get back into it with my roommates. Bad left knee so nothing with jumping.”" />
+            <HStack gap={2} vAlign="center" wrap="wrap">
+              <Button label="Send to my Muse" variant="primary" isLoading={chatBusy} isDisabled={!chat.trim()} onClick={() => void askMuse()} />
+              {chatResult && !chatResult.usedMuse && <Token label="Muse offline: keyword rules used" size="sm" color="gray" />}
+            </HStack>
+            {chatResult && (
+              <VStack gap={2}>
+                <Text type="supporting" color="secondary">
+                  Here&apos;s what I got. Tap to toggle, then check the answers below.
+                </Text>
+                {chatTags.length ? (
+                  chips(chatTags.map((t, i) => chip(t.on, `${t.tag} · ${t.kind}`, () => setChatTags(ts => ts.map((x, j) => (i === j ? {...x, on: !x.on} : x))))))
+                ) : (
+                  <Text type="supporting" color="secondary">
+                    No tags spotted; pick some on the previous step.
+                  </Text>
+                )}
+              </VStack>
+            )}
+          </VStack>
+        </Card>
       )}
-      <div className={styles.card}>
-        <h2 className={styles.h2}>1. How many days a week do you move for 30+ minutes?</h2>
-        <div className={styles.chips}>{WEEKLY_OPTIONS.map(o => chip(a.weeklyActiveDays === o, WEEKLY_LABEL[o], () => setA({...a, weeklyActiveDays: o})))}</div>
-      </div>
-      <div className={styles.card}>
-        <h2 className={styles.h2}>2. One goal for the next 4 weeks</h2>
-        <div className={styles.chips}>{GOALS.map(g => chip(a.primaryGoal === g, g, () => setA({...a, primaryGoal: g})))}</div>
-      </div>
-      <div className={styles.card}>
-        <h2 className={styles.h2}>3. When do you usually have time?</h2>
-        <div className={styles.chips}>
-          {SCHEDULE_OPTIONS.map(s => {
+      {question('1. How many days a week do you move for 30+ minutes?', chips(WEEKLY_OPTIONS.map(o => chip(a.weeklyActiveDays === o, WEEKLY_LABEL[o], () => setA({...a, weeklyActiveDays: o})))))}
+      {question('2. One goal for the next 4 weeks', chips(GOALS.map(g => chip(a.primaryGoal === g, g, () => setA({...a, primaryGoal: g})))))}
+      {question(
+        '3. When do you usually have time?',
+        chips(
+          SCHEDULE_OPTIONS.map(s => {
             const on = (a.schedule ?? []).includes(s);
             return chip(on, s, () => setA({...a, schedule: on ? (a.schedule ?? []).filter(x => x !== s) : [...(a.schedule ?? []), s]}));
-          })}
-        </div>
-      </div>
-      <div className={styles.card}>
-        <h2 className={styles.h2}>4. Who with?</h2>
-        <div className={styles.chips}>{WITH_WHOM_OPTIONS.map(o => chip(a.withWhom === o.id, o.label, () => setA({...a, withWhom: o.id})))}</div>
-      </div>
-      <div className={styles.card}>
-        <h2 className={styles.h2}>5. Anything your Muse should go easy on?</h2>
-        <p className={styles.small} style={{marginBottom: 6}}>
-          Muse-only. Never shown to anyone, never used as a label; it only shapes your targets.
-        </p>
-        <input className={styles.input} value={a.goEasyNote ?? ''} onChange={e => setA({...a, goEasyNote: e.target.value})} placeholder="Optional: “left knee”, “low impact only”, “new to this”" aria-label="Go easy on" />
-        <label className={styles.row} style={{marginTop: 12, cursor: 'pointer'}}>
-          <input type="checkbox" checked={Boolean(a.interestSuggestionsEnabled)} onChange={e => setA({...a, interestSuggestionsEnabled: e.target.checked})} />
-          <span className={styles.small}>Let my Muse suggest tags from what I like on Facebook (off by default; you confirm each one).</span>
-        </label>
-      </div>
+          }),
+        ),
+      )}
+      {question('4. Who with?', chips(WITH_WHOM_OPTIONS.map(o => chip(a.withWhom === o.id, o.label, () => setA({...a, withWhom: o.id})))))}
+      {question(
+        '5. Anything your Muse should go easy on?',
+        <VStack gap={3}>
+          <TextInput label="Go easy on" isLabelHidden isOptional value={a.goEasyNote ?? ''} onChange={v => setA({...a, goEasyNote: v})} placeholder="Optional: “left knee”, “low impact only”, “new to this”" />
+          <CheckboxInput label="Let my Muse suggest tags from what I like on Facebook" description="Off by default; you confirm each one." value={Boolean(a.interestSuggestionsEnabled)} onChange={checked => setA({...a, interestSuggestionsEnabled: checked})} />
+        </VStack>,
+        'Muse-only. Never shown to anyone, never used as a label; it only shapes your targets.',
+      )}
     </StepShell>
   );
 }

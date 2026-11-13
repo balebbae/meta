@@ -76,7 +76,7 @@ async function readAndroid(start: Date, end: Date): Promise<HealthSample[]> {
   const day = range(start, end);
   const year = range(new Date(end.getTime() - 365 * DAY), end);
   const sleepWindow = range(new Date(end.getTime() - 2 * DAY), end);
-  const workouts = range(new Date(end.getTime() - 14 * DAY), end);
+  const workouts = range(new Date(end.getTime() - 90 * DAY), end);
   const recordedAt = end.toISOString();
   const samples: HealthSample[] = [];
   const add = (metric: string, value: number, unit: string, when = recordedAt) => {
@@ -178,6 +178,30 @@ async function readAndroid(start: Date, end: Date): Promise<HealthSample[]> {
   add('dietary_carbs', meals.reduce((sum: number, row: {totalCarbohydrate?: Measure}) => sum + grams(row.totalCarbohydrate), 0), 'g');
   add('dietary_fat', meals.reduce((sum: number, row: {totalFat?: Measure}) => sum + grams(row.totalFat), 0), 'g');
   add('dietary_caffeine', meals.reduce((sum: number, row: {caffeine?: Measure}) => sum + grams(row.caffeine) * 1000, 0), 'mg');
+  const nutrients: [string, string, string][] = [
+    ['dietary_sugar', 'sugar', 'g'],
+    ['dietary_fiber', 'dietaryFiber', 'g'],
+    ['dietary_sat_fat', 'saturatedFat', 'g'],
+    ['dietary_mono_fat', 'monounsaturatedFat', 'g'],
+    ['dietary_poly_fat', 'polyunsaturatedFat', 'g'],
+    ['dietary_sodium', 'sodium', 'mg'],
+    ['dietary_cholesterol', 'cholesterol', 'mg'],
+    ['dietary_calcium', 'calcium', 'mg'],
+    ['dietary_iron', 'iron', 'mg'],
+    ['dietary_potassium', 'potassium', 'mg'],
+    ['dietary_vitamin_c', 'vitaminC', 'mg'],
+    ['dietary_vitamin_a', 'vitaminA', 'µg'],
+    ['dietary_vitamin_d', 'vitaminD', 'µg'],
+  ];
+  for (const [metric, key, unit] of nutrients) {
+    const total = meals.reduce((sum: number, row: Record<string, Measure | undefined>) => {
+      const mass = grams(row[key]);
+      if (unit === 'mg') return sum + mass * 1000;
+      if (unit === 'µg') return sum + mass * 1_000_000;
+      return sum + mass;
+    }, 0);
+    add(metric, total, unit);
+  }
 
   const exercise = await rows('ExerciseSession', workouts);
   exercise.slice(-30).forEach((session: {startTime?: string; endTime?: string; title?: string; exerciseType?: number}, index: number) => {

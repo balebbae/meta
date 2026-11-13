@@ -1,6 +1,7 @@
 import {NextResponse, type NextRequest} from 'next/server';
 import {sql} from '@/lib/db';
 import {badRequest, readJson, withUser} from '@/lib/api';
+import {isPushEndpoint} from '@/lib/push';
 
 type SubscriptionJson = {endpoint?: string; keys?: {p256dh?: string; auth?: string}};
 
@@ -13,6 +14,7 @@ export async function POST(req: NextRequest) {
     const p256dh = sub?.keys?.p256dh;
     const auth = sub?.keys?.auth;
     if (!endpoint || !p256dh || !auth) return badRequest('subscription with endpoint and keys required');
+    if (!isPushEndpoint(endpoint) || p256dh.length > 200 || auth.length > 100) return badRequest('not a browser push subscription');
     const userAgent = req.headers.get('user-agent')?.slice(0, 500) ?? null;
     await sql`
       insert into push_subscriptions (user_id, endpoint, p256dh, auth, user_agent)

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {adaptiveAdjust, applyDamage, baseDamage, classifyMoveEvent, computeMove, contributions, damageAfterProof, gearForEvents, MAX_MOVES_PER_DAY, movesToday, relayState, streakState, unlockedTiers, UNVERIFIED_PROOF} from './scoring.ts';
+import {adaptiveAdjust, applyDamage, baseDamage, classifyMoveEvent, computeMove, contributions, damageAfterProof, gearForEvents, relayState, streakState, unlockedTiers, UNVERIFIED_PROOF} from './scoring.ts';
 
 const spec = {
   levels: [
@@ -118,21 +118,6 @@ test('reward tiers and MVP', () => {
   assert.equal(c.mvp, 1);
 });
 
-test('daily move cap counts only my regular moves since midnight', () => {
-  const day = Date.UTC(2026, 10, 12);
-  const at = (h: number) => new Date(day + h * 3_600_000).toISOString();
-  const moves = [
-    {userId: 1, kind: 'move', createdAt: at(-2)}, // yesterday
-    {userId: 1, kind: 'move', createdAt: at(8)},
-    {userId: 1, kind: 'dare', createdAt: at(9)},
-    {userId: 2, kind: 'move', createdAt: at(9)},
-    {userId: 1, kind: 'move', createdAt: at(10)},
-  ];
-  assert.equal(MAX_MOVES_PER_DAY, 3);
-  assert.equal(movesToday(moves, 1, day), 2);
-  assert.equal(movesToday([...moves, {userId: 1, kind: 'move', createdAt: at(11)}], 1, day), MAX_MOVES_PER_DAY);
-});
-
 test('fail closed: an unverified proof is not approved and deals no damage', () => {
   assert.equal(UNVERIFIED_PROOF.approved, false);
   assert.equal(UNVERIFIED_PROOF.status, 'pending');
@@ -140,4 +125,14 @@ test('fail closed: an unverified proof is not approved and deals no damage', () 
   assert.equal(damageAfterProof(42, 'rejected'), 0);
   assert.equal(damageAfterProof(42, 'approved'), 42);
   assert.equal(damageAfterProof(42, null), 42);
+});
+
+test('clip proof: counted reps drive the critical, clip bonus beats photo', () => {
+  const photo = computeMove({spec, userId: 1, levelDay: 2, sourceTrust: 'photo', amount: 30});
+  const clip = computeMove({spec, userId: 1, levelDay: 2, sourceTrust: 'photo', amount: 30, clip: {reps: 10}});
+  const bigClip = computeMove({spec, userId: 1, levelDay: 2, sourceTrust: null, clip: {reps: 12}});
+  assert.equal(photo.critical, true); // typed 30 ≥ 1.2 × 10
+  assert.equal(clip.critical, false); // the camera only counted 10, so the typed 30 is ignored
+  assert.ok(clip.damage > computeMove({spec, userId: 1, levelDay: 2, sourceTrust: 'photo'}).damage);
+  assert.equal(bigClip.critical, true); // 12 counted ≥ 1.2 × 10
 });

@@ -165,11 +165,12 @@ export const GAME_SPEC_SCHEMA = {
 type MuseSpec = Omit<GameSpec, 'source' | 'startsAt' | 'endsAt' | 'handicaps' | 'levels'> & {levels: {day: number; name: string; exercises: {name: string; reps: number | null; seconds: number | null}[]}[]};
 
 /**
- * Handicaps are computed in code from `answers` (one banded Answer per member) and are NOT sent to the
- * model; Muse only sees names and the workout. `museUsed` tells the UI when the offline generator ran.
+ * Handicaps come from `handicaps` (lib/rally/handicap.ts, already clamped) or, when absent, from
+ * `answers` via the fixed table. This call never sees them; Muse only gets names and the workout.
+ * `museUsed` tells the UI when the offline generator ran.
  */
-export async function generateGameSpec(opts: {source: SpecSource; members: Member[]; answers: Record<number, Answer | null>}): Promise<{spec: GameSpec; museUsed: boolean}> {
-  const handicaps = opts.members.map(m => handicapFromAnswer(m.id, opts.answers[m.id] ?? null));
+export async function generateGameSpec(opts: {source: SpecSource; members: Member[]; answers: Record<number, Answer | null>; handicaps?: GameSpec['handicaps']}): Promise<{spec: GameSpec; museUsed: boolean}> {
+  const handicaps = opts.handicaps ?? opts.members.map(m => handicapFromAnswer(m.id, opts.answers[m.id] ?? null));
   const fallback = fallbackSpec(opts.source, opts.members, handicaps);
   if (!museConfigured()) return {spec: fallback, museUsed: false};
   try {

@@ -1,8 +1,13 @@
 'use client';
 import {useEffect, useState} from 'react';
+import {Card} from '@astryxdesign/core/Card';
+import {Grid} from '@astryxdesign/core/Grid';
+import {Selector} from '@astryxdesign/core/Selector';
+import {Spinner} from '@astryxdesign/core/Spinner';
+import {Text} from '@astryxdesign/core/Text';
+import {VStack} from '@astryxdesign/core/VStack';
 import {AUDIENCE_LABEL, describeAnswer, LEVEL_LABEL} from '@/lib/activities/summary';
 import type {Answer, Audience, QuestionType} from '@/lib/activities/types';
-import styles from './activities.module.css';
 
 const QUESTIONS: {id: QuestionType; label: string}[] = [
   {id: 'avg_hr_this_week', label: 'Average heart rate this week'},
@@ -37,48 +42,26 @@ export function AnswerPreview({refreshKey = 0, defaultQuestion = 'avg_hr_this_we
   }, [question, audience, refreshKey]);
 
   return (
-    <div>
-      <div className={styles.grid2}>
-        <div>
-          <label className={styles.label} htmlFor="prev-q">
-            If someone asked my Muse…
-          </label>
-          <select id="prev-q" className={styles.select} style={{width: '100%'}} value={question} onChange={e => setQuestion(e.target.value as QuestionType)}>
-            {QUESTIONS.map(q => (
-              <option key={q.id} value={q.id}>
-                {q.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className={styles.label} htmlFor="prev-a">
-            …as
-          </label>
-          <select id="prev-a" className={styles.select} style={{width: '100%'}} value={audience} onChange={e => setAudience(e.target.value as Audience)}>
-            {AUDS.map(a => (
-              <option key={a} value={a}>
-                {AUDIENCE_LABEL[a]}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-      <div className={styles.answerBox} aria-live="polite">
+    <VStack gap={3}>
+      <Grid columns={{minWidth: 200}} gap={3}>
+        <Selector label="If someone asked my Muse…" options={QUESTIONS.map(q => ({value: q.id, label: q.label}))} value={question} onChange={v => setQuestion(v as QuestionType)} />
+        <Selector label="…as" options={AUDS.map(a => ({value: a, label: AUDIENCE_LABEL[a]}))} value={audience} onChange={v => setAudience(v as Audience)} />
+      </Grid>
+      <Card variant="muted" aria-live="polite">
         {busy && !answer ? (
-          <span className={styles.muted}>Asking…</span>
+          <Spinner label="Asking…" />
         ) : answer ? (
-          <>
-            <div style={{fontWeight: 700}}>{describeAnswer(answer)}</div>
-            <div className={styles.small}>
+          <VStack gap={1}>
+            <Text weight="bold">{describeAnswer(answer)}</Text>
+            <Text type="supporting" color="secondary">
               Level: {LEVEL_LABEL[answer.level]}
               {answer.sourceTrust ? ` · best source: ${answer.sourceTrust.replace('_', ' ')}` : ''} · logged to your audit trail
-            </div>
-          </>
+            </Text>
+          </VStack>
         ) : (
-          <span className={styles.muted}>Could not ask.</span>
+          <Text color="secondary">Could not ask.</Text>
         )}
-      </div>
-    </div>
+      </Card>
+    </VStack>
   );
 }

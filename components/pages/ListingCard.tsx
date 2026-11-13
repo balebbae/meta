@@ -4,7 +4,7 @@ import type {Listing} from '@/lib/secondary-queries';
 import {formatPrice} from '@/lib/secondary-data';
 import styles from './marketplace.module.css';
 
-export function ListingCard({listing, justListed}: {listing: Listing; justListed?: boolean}) {
+export function ListingCard({listing, justListed}: {listing: Pick<Listing, 'id' | 'title' | 'priceCents' | 'imageUrl' | 'location'>; justListed?: boolean}) {
   return (
     <Link href={`/marketplace/item/${listing.id}`} className={styles.card}>
       <div className={styles.cardImage}>

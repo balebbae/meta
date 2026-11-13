@@ -1,14 +1,31 @@
 'use client';
 
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {Dialog} from '@/components/ui/Dialog';
-import {CalendarIcon, CheckIcon, MarketplaceIcon} from '@/components/icons';
+import {CalendarDays, ShoppingBag, Sparkles} from 'lucide-react';
+import {AspectRatio} from '@astryxdesign/core/AspectRatio';
+import {Banner} from '@astryxdesign/core/Banner';
+import {Button} from '@astryxdesign/core/Button';
+import {Card} from '@astryxdesign/core/Card';
+import {Center} from '@astryxdesign/core/Center';
+import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
+import {EmptyState} from '@astryxdesign/core/EmptyState';
+import {Grid} from '@astryxdesign/core/Grid';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Icon} from '@astryxdesign/core/Icon';
+import {Layout, LayoutContent, LayoutFooter} from '@astryxdesign/core/Layout';
+import {Link} from '@astryxdesign/core/Link';
+import {MetadataList, MetadataListItem} from '@astryxdesign/core/MetadataList';
+import {StackItem} from '@astryxdesign/core/Stack';
+import {Text} from '@astryxdesign/core/Text';
+import {Token} from '@astryxdesign/core/Token';
+import {VStack} from '@astryxdesign/core/VStack';
 import type {MuseAction, MuseActionsPayload} from '@/lib/activities/actions';
-import styles from './discover.module.css';
 
 const post = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
 const verb = (a: MuseAction) => (a.kind === 'event' ? 'Register' : 'Buy');
 const doneLabel = (a: MuseAction) => (a.kind === 'event' ? 'Registered' : 'Ordered');
+
 /** "From your Muse": private action items. Register and Buy are simulated: nothing is charged or sent out. */
 export function MuseActions({initial, viewerName, say}: {initial: MuseActionsPayload; viewerName: string; say: (text: string) => void}) {
   const [data, setData] = useState(initial);
@@ -64,121 +81,128 @@ export function MuseActions({initial, viewerName, say}: {initial: MuseActionsPay
   };
 
   const done = open?.status === 'done';
+  const glyph = (a: MuseAction) => (a.kind === 'event' ? CalendarDays : ShoppingBag);
   return (
-    <section className={styles.section} aria-label="From your Muse" aria-busy={asking}>
-      <div className={styles.sectionHead}>
-        <h2 className={styles.sectionTitle}>From your Muse</h2>
-        <span className={styles.sectionSub}>
-          Only you see these · demo checkout, no real money{' '}
-          <button type="button" className={styles.ghost} onClick={() => ask(data.needsLocation)} disabled={asking}>
-            {asking ? 'Muse is looking…' : 'Ask Muse again'}
-          </button>
-        </span>
-      </div>
+    <VStack gap={3} as="section" aria-label="Action items" aria-busy={asking}>
+      <HStack gap={2} vAlign="center" justify="between" wrap="wrap">
+        <VStack gap={0.5}>
+          <Heading level={2}>Action items</Heading>
+          <Text type="supporting" color="secondary">
+            From your Muse · only you see these · demo checkout
+          </Text>
+        </VStack>
+        <Button label={asking ? 'Muse is looking…' : 'Ask Muse again'} variant="ghost" size="sm" isLoading={asking} onClick={() => void ask(data.needsLocation)} />
+      </HStack>
       {data.actions.length === 0 ? (
-        <div className={styles.status} role="status">
-          {asking
-            ? 'Muse is looking at what you do and what is coming up near you. This takes about half a minute.'
-            : data.needsLocation
-              ? 'Nothing yet. Add your city to your profile, or tap Ask Muse again to use your approximate location.'
-              : 'Nothing yet. Log a few activities and ask Muse again.'}
-        </div>
+        <Card>
+          <EmptyState
+            title={asking ? 'Muse is looking' : 'Nothing yet'}
+            description={
+              asking
+                ? 'Muse is looking at what you do and what is coming up near you. This takes about half a minute.'
+                : data.needsLocation
+                  ? 'Add your city to your profile, or tap Ask Muse again to use your approximate location.'
+                  : 'Log a few activities and ask Muse again.'
+            }
+            isCompact
+          />
+        </Card>
       ) : (
-        <div className={styles.grid}>
+        <Grid columns={{minWidth: 220}} gap={3}>
           {data.actions.map(a => (
-            <article key={a.id} className={styles.card}>
-              <div className={styles.img}>
-                {a.imageUrl ? <img src={a.imageUrl} alt="" loading="lazy" /> : <span className={styles.imgIcon}>{a.kind === 'event' ? <CalendarIcon size={36} /> : <MarketplaceIcon size={36} />}</span>}
-              </div>
-              <div className={styles.body}>
-                <span className={styles.pill}>{a.kind === 'event' ? 'Event' : 'Suggested buy'}{a.price ? ` · ${a.price}` : ''}</span>
-                <div className={styles.title}>{a.title}</div>
-                {a.detail && <div className={styles.subtitle}>{a.detail}</div>}
-                {a.why && (
-                  <div className={styles.why}>
-                    <span className={styles.whyDot} aria-hidden />
-                    <span>{a.why}</span>
-                  </div>
-                )}
-                <div className={styles.actions}>
-                  {a.status === 'done' ? (
-                    <button type="button" className={styles.secondary} onClick={() => setOpen(a)}>
-                      <CheckIcon size={16} style={{display: 'inline-block', verticalAlign: '-3px'}} /> {doneLabel(a)}
-                    </button>
+            <Card key={a.id} padding={0}>
+              <VStack>
+                <AspectRatio ratio={16 / 9}>
+                  {a.imageUrl ? (
+                    <img src={a.imageUrl} alt="" loading="lazy" />
+                  ) : (
+                    <Center>
+                      <Icon icon={glyph(a)} size="lg" color="secondary" />
+                    </Center>
+                  )}
+                </AspectRatio>
+                <VStack gap={2} padding={4}>
+                  <HStack>
+                    <Token label={`${a.kind === 'event' ? 'Event' : 'Suggested buy'}${a.price ? ` · ${a.price}` : ''}`} size="sm" color={a.kind === 'event' ? 'blue' : 'green'} />
+                  </HStack>
+                  <Heading level={3}>{a.title}</Heading>
+                  {a.detail && (
+                    <Text type="supporting" color="secondary">
+                      {a.detail}
+                    </Text>
+                  )}
+                  {a.why && (
+                    <HStack gap={1.5} vAlign="center">
+                      <Icon icon={Sparkles} size="xsm" color="accent" />
+                      <StackItem size="fill">
+                        <Text type="supporting" color="secondary">
+                          {a.why}
+                        </Text>
+                      </StackItem>
+                    </HStack>
+                  )}
+                  <HStack gap={2} wrap="wrap">
+                    {a.status === 'done' ? (
+                      <Button label={doneLabel(a)} size="sm" icon={<Icon icon="check" />} onClick={() => setOpen(a)} />
+                    ) : (
+                      <>
+                        <Button label={verb(a)} variant="primary" size="sm" onClick={() => setOpen(a)} />
+                        <Button label="Not now" variant="ghost" size="sm" onClick={() => void act(a, 'dismiss')} />
+                      </>
+                    )}
+                  </HStack>
+                </VStack>
+              </VStack>
+            </Card>
+          ))}
+        </Grid>
+      )}
+      <Dialog isOpen={!!open} onOpenChange={o => !o && setOpen(null)} width={480}>
+        {open && (
+          <Layout
+            header={<DialogHeader title={done ? (open.kind === 'event' ? "You're registered" : 'Order placed') : open.kind === 'event' ? 'Register for this event' : 'Buy this'} onOpenChange={() => setOpen(null)} />}
+            content={
+              <LayoutContent>
+                <VStack gap={4}>
+                  {done && <Banner status="success" title={open.kind === 'event' ? `You're registered, ${viewerName.split(' ')[0]}` : 'Your order is placed'} description={`Confirmation ${open.confirmation}`} />}
+                  <MetadataList>
+                    <MetadataListItem label={open.kind === 'event' ? 'Event' : 'Item'}>{open.title}</MetadataListItem>
+                    {open.detail && <MetadataListItem label="Details">{open.detail}</MetadataListItem>}
+                    <MetadataListItem label={open.kind === 'event' ? 'Entry' : 'Price'}>{open.price ?? 'Not listed'}</MetadataListItem>
+                    <MetadataListItem label={open.kind === 'event' ? 'Registering as' : 'Buyer'}>{viewerName}</MetadataListItem>
+                    <MetadataListItem label="Payment">Demo card ···· 4242 · not charged</MetadataListItem>
+                  </MetadataList>
+                  <Text type="supporting" color="secondary">
+                    Demo: {done ? 'no money moved' : 'no money moves'} and {open.kind === 'event' ? 'the organizer' : 'the seller'} {done ? 'was' : 'is'} not contacted.
+                    {open.url && (
+                      <>
+                        {' '}
+                        <Link href={open.url} target="_blank">
+                          {open.kind === 'event' ? 'See the event page' : 'See the product page'}
+                        </Link>
+                      </>
+                    )}
+                  </Text>
+                </VStack>
+              </LayoutContent>
+            }
+            footer={
+              <LayoutFooter>
+                <HStack gap={2} hAlign="end">
+                  {done ? (
+                    <Button label="Done" variant="primary" onClick={() => setOpen(null)} />
                   ) : (
                     <>
-                      <button type="button" className={styles.primary} onClick={() => setOpen(a)}>
-                        {verb(a)}
-                      </button>
-                      <button type="button" className={styles.ghost} onClick={() => act(a, 'dismiss')}>
-                        Not now
-                      </button>
+                      <Button label="Cancel" onClick={() => setOpen(null)} />
+                      <Button label={open.kind === 'event' ? 'Confirm registration' : 'Confirm purchase'} variant="primary" isLoading={busy} onClick={() => void act(open, 'do')} />
                     </>
                   )}
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
-      <Dialog open={!!open} onClose={() => setOpen(null)} title={!open ? '' : done ? (open.kind === 'event' ? "You're registered" : 'Order placed') : open.kind === 'event' ? 'Register for this event' : 'Buy this'}>
-        {open && (
-          <div className={styles.introBody}>
-            {done && (
-              <div className={styles.confirmed}>
-                <span className={styles.confirmedIcon}>
-                  <CheckIcon size={28} />
-                </span>
-                <strong>{open.kind === 'event' ? `You're registered, ${viewerName.split(' ')[0]}` : 'Your order is placed'}</strong>
-                <span>Confirmation {open.confirmation}</span>
-              </div>
-            )}
-            <dl className={styles.receipt}>
-              <dt>{open.kind === 'event' ? 'Event' : 'Item'}</dt>
-              <dd>{open.title}</dd>
-              {open.detail && (
-                <>
-                  <dt>Details</dt>
-                  <dd>{open.detail}</dd>
-                </>
-              )}
-              <dt>{open.kind === 'event' ? 'Entry' : 'Price'}</dt>
-              <dd>{open.price ?? 'Not listed'}</dd>
-              <dt>{open.kind === 'event' ? 'Registering as' : 'Buyer'}</dt>
-              <dd>{viewerName}</dd>
-              <dt>Payment</dt>
-              <dd>Demo card ···· 4242 · not charged</dd>
-            </dl>
-            <p className={styles.demoNote}>
-              Demo: {done ? 'no money moved' : 'no money moves'} and {open.kind === 'event' ? 'the organizer' : 'the seller'} {done ? 'was' : 'is'} not contacted.
-              {open.url && (
-                <>
-                  {' '}
-                  <a href={open.url} target="_blank" rel="noopener noreferrer">
-                    {open.kind === 'event' ? 'See the event page' : 'See the product page'}
-                  </a>
-                </>
-              )}
-            </p>
-            <div className={styles.actions}>
-              {done ? (
-                <button type="button" className={styles.primary} onClick={() => setOpen(null)}>
-                  Done
-                </button>
-              ) : (
-                <>
-                  <button type="button" className={styles.primary} disabled={busy} onClick={() => act(open, 'do')}>
-                    {busy ? 'Confirming…' : open.kind === 'event' ? 'Confirm registration' : 'Confirm purchase'}
-                  </button>
-                  <button type="button" className={styles.secondary} onClick={() => setOpen(null)}>
-                    Cancel
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
+                </HStack>
+              </LayoutFooter>
+            }
+          />
         )}
       </Dialog>
-    </section>
+    </VStack>
   );
 }

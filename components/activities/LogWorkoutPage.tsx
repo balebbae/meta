@@ -1,28 +1,27 @@
 'use client';
-import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useEffect, useState} from 'react';
+import {Button} from '@astryxdesign/core/Button';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Text} from '@astryxdesign/core/Text';
+import {VStack} from '@astryxdesign/core/VStack';
 import {LogWorkoutSheet, type LogTab} from './LogWorkoutSheet';
-import styles from './activities.module.css';
 
-/** /activities/log: opens the sheet immediately (nav target for "Log a workout"). */
+/** /activities/log: opens the sheet immediately (target of the connector hub's "Log a workout" cards). */
 export function LogWorkoutPage({initialTab}: {initialTab: LogTab}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   useEffect(() => setOpen(true), []);
   return (
-    <main className={styles.page}>
-      <h1 className={styles.h1}>Log a workout</h1>
-      <p className={styles.sub}>Manual, photo proof or voice. Everything goes to your private vault first.</p>
-      <div className={styles.row}>
-        <button className={styles.btnPrimary} onClick={() => setOpen(true)}>
-          Open the log sheet
-        </button>
-        <Link href="/activities/muse" className={styles.btn}>
-          See my vault
-        </Link>
-      </div>
+    <VStack gap={3} paddingBlock={4}>
+      <Heading level={1}>Log a workout</Heading>
+      <Text color="secondary">Manual, photo proof or voice. Everything goes to your private vault first.</Text>
+      <HStack gap={2} wrap="wrap">
+        <Button label="Open the log sheet" variant="primary" onClick={() => setOpen(true)} />
+        <Button label="See my vault" href="/activities/muse" />
+      </HStack>
       <LogWorkoutSheet open={open} initialTab={initialTab} onClose={() => setOpen(false)} onLogged={() => router.refresh()} />
-    </main>
+    </VStack>
   );
 }

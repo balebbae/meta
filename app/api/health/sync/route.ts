@@ -1,6 +1,7 @@
 import {NextResponse} from 'next/server';
 import {badRequest, readJson, withUser} from '@/lib/api';
 import {insertXpEvent} from '@/lib/closeness-queries';
+import {sql} from '@/lib/db';
 import {insertHealthSamples, userIdForHealthToken, type HealthSource} from '@/lib/health';
 import {requireDatabase} from '@/lib/muse/guard';
 
@@ -21,8 +22,10 @@ export async function POST(req: Request) {
   const bearer = header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : '';
 
   const save = async (userId: number) => {
-    const saved = await insertHealthSamples(userId, body.source as HealthSource, body.samples!.slice(0, 200));
-    if (saved > 0) {
+    const saved = await insertHealthSamples(userId, body.source as HealthSource, body.samples!.slice(0, 500));
+    // XP once per day: otherwise re-posting the same samples farms the leaderboard.
+    const [already] = saved > 0 ? await sql`select 1 from xp_events where user_id = ${userId} and source_type = 'health' and created_at > now() - interval '1 day' limit 1` : [];
+    if (saved > 0 && !already) {
       await insertXpEvent({
         userId,
         sourceType: 'health',

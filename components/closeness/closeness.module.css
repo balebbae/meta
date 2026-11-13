@@ -5,6 +5,12 @@
   margin-bottom: 12px;
   box-shadow: var(--fb-shadow-1, 0 1px 2px rgba(0, 0, 0, 0.1));
 }
+/* Leaderboard sits flat in its surroundings: no shadow, no outline. */
+.board {
+  composes: card;
+  box-shadow: none;
+  border: 0;
+}
 
 .heading {
   display: flex;
@@ -107,11 +113,41 @@
 
 .tabs {
   display: flex;
+  align-items: center;
   gap: 4px;
   margin-bottom: 8px;
 }
-.tab,
-.tabOn {
+.tabsAction {
+  margin-left: auto;
+}
+/* Closeness | Fitness: one shaded pill holding two smaller pills; the selected one is dark with light text. */
+.segment {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--fb-radius-pill);
+  background: var(--fb-icon-bg);
+}
+.segmentItem,
+.segmentOn {
+  border: 0;
+  border-radius: var(--fb-radius-pill);
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--fb-text-secondary);
+}
+.segmentItem:hover {
+  color: var(--fb-text);
+}
+.segmentOn {
+  background: var(--fb-text);
+  color: var(--fb-card);
+}
+.tab {
   border: 0;
   border-radius: 999px;
   padding: 4px 12px;
@@ -122,7 +158,11 @@
   background: var(--fb-icon-bg);
   color: var(--fb-text);
 }
-.tabOn {
-  background: #e7f0ff;
-  color: var(--fb-blue);
+/* Right-rail "Weekly quests": a tab-sized pill in Facebook primary blue. */
+.tabBlue {
+  background: var(--fb-blue);
+  color: var(--fb-on-media);
+}
+.tabBlue:hover {
+  background: var(--fb-blue-hover);
 }

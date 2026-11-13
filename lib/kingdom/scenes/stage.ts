@@ -11,6 +11,7 @@ import {blockGeometry, box, cube, mesh, softMaterial, type MatKind} from '../fac
 import type {BuildOptions, HeroPreset, Rig} from '../types';
 import type {Input, Phase} from '../games/common';
 import {dress} from './costumes';
+import {scenery} from './scenery';
 import {WORLDS, tint, type World, type WorldId} from './worlds';
 
 export type Hud = {phase: Phase; score: number; message: string; left: string; right: string};
@@ -26,7 +27,7 @@ export type GameScene = {
   hud: () => Hud; dispose: () => void;
 };
 export const SKY = 0xbfe3ff;
-type StageOpts = {fov: number; sun: [number, number, number]; radius: number; /** z of the far backdrop (clouds, hills); omit for top-down scenes. */ far?: number};
+type StageOpts = {fov: number; sun: [number, number, number]; radius: number; /** z of the far backdrop (clouds, hills); omit for top-down scenes. */ far?: number; /** z of the row of world scenery behind the action; a little in front of the backdrop when left out. */ row?: number};
 type Particle = {mesh: Mesh; vel: Vector3; life: number; max: number; size: number};
 
 export class Stage {
@@ -42,6 +43,8 @@ export class Stage {
   private readonly drift: {o: Object3D; vx: number; vy: number}[] = [];
   readonly world: World;
   private swept = -1;
+  /** Show-only motion: scenery, costumes and weather register a function of the stage clock. */
+  private readonly live: ((t: number) => void)[] = [];
   private readonly floats: {sprite: Sprite; life: number; max: number}[] = [];
   private readonly made: {dispose: () => void}[] = [];
   private trauma = 0;
@@ -56,7 +59,7 @@ export class Stage {
     sun.target.position.set(0, 0, o.far !== undefined ? Math.sign(o.far) * o.radius * 0.4 : 0); this.group.add(sun, sun.target);
     const pool = new Group(); this.group.add(pool);
     for (let i = 0; i < 140; i++) { const m = new Mesh(cube(2, 2, 2), this.mat(0xffffff)); m.visible = false; pool.add(m); this.parts.push({mesh: m, vel: new Vector3(), life: 0, max: 1, size: 1}); }
-    if (o.far !== undefined) this.backdrop(o.far);
+    if (o.far !== undefined) { this.backdrop(o.far); scenery(this, o.row ?? o.far - Math.sign(o.far) * 4, this.live); }
   }
   private mat(color: number): MeshBasicMaterial { let m = this.mats.get(color); if (!m) { m = new MeshBasicMaterial({color}); this.mats.set(color, m); } return m; }
   /** The sky colour of this stage's world: scenes hand it out as their background. */
@@ -77,7 +80,8 @@ export class Stage {
   /** Stepped hills and the world's weather along the far edge: clouds, stars and a planet, bubbles or snow. */
   private backdrop(z: number): void {
     const hill = softMaterial('grass', C.grassDark), white = this.mat(0xffffff), w = this.world.weather, side = Math.sign(z), rnd = (i: number, k: number): number => (((Math.sin(i * 12.9898 + k * 78.233) * 43758.5453) % 1) + 1) % 1;
-    [[-22, 112], [-9, 80], [5, 128], [19, 96], [31, 72]].forEach(([x, base]) => { const g = new Group(); for (let i = 0; i < 3; i++) box(g, hill, base - i * 28, 16, base - i * 28, 0, 8 + i * 16, 0, false); g.position.set(x, -0.2, z + Math.sign(z) * 6); this.group.add(g); });
+    const snow = w === 'snow' ? softMaterial('cloth', 0xf4f8ff) : null, stars: Mesh[] = [];
+    [[-22, 112], [-9, 80], [5, 128], [19, 96], [31, 72]].forEach(([x, base]) => { const g = new Group(); for (let i = 0; i < 3; i++) { box(g, hill, base - i * 28, 16, base - i * 28, 0, 8 + i * 16, 0, false); if (snow) box(g, snow, base - i * 28 + 2, 3, base - i * 28 + 2, 0, 16 + i * 16 + 0.5, 0, false).userData.toned = true; } g.position.set(x, -0.2, z + Math.sign(z) * 6); this.group.add(g); });
     if (w === 'clouds') for (let i = 0; i < 7; i++) {
       const g = new Group(), cw = 40 + (i % 3) * 14;
       box(g, white, cw, 8, 14, 0, 0, 0, false); box(g, white, cw - 16, 7, 12, (i % 2 ? 6 : -6), 7, 0, false);
@@ -86,8 +90,9 @@ export class Stage {
     else for (let i = 0; i < (w === 'bubbles' ? 26 : 70); i++) { // stars hang behind the hills; bubbles rise and snow falls over the whole stage
       const dot = new Mesh(cube(w === 'stars' ? 1 + (i % 2) : 2, w === 'stars' ? 1 + (i % 2) : 2, 1), white), depth = w === 'stars' ? z + side * (5 + rnd(i, 3) * 6) : z * (0.1 + rnd(i, 3) * 0.95);
       dot.position.set(-36 + rnd(i, 1) * 72, 0.4 + rnd(i, 2) * (w === 'stars' ? 20 : 15), depth); this.group.add(dot);
-      if (w !== 'stars') this.drift.push({o: dot, vx: (rnd(i, 4) - 0.5) * 0.5, vy: w === 'bubbles' ? 0.5 + rnd(i, 5) * 0.6 : -(0.7 + rnd(i, 5) * 0.8)});
+      if (w === 'stars') stars.push(dot); else this.drift.push({o: dot, vx: (rnd(i, 4) - 0.5) * 0.5, vy: w === 'bubbles' ? 0.5 + rnd(i, 5) * 0.6 : -(0.7 + rnd(i, 5) * 0.8)});
     }
+    if (stars.length) this.live.push((t) => stars.forEach((s, i) => s.scale.setScalar(0.55 + 0.75 * Math.abs(Math.sin(t * (0.8 + (i % 5) * 0.25) + i)))));
     if (w === 'stars') { // a ringed planet low on the horizon
       const g = new Group(), body = this.mat(0xffb36b), ring = this.mat(0xfff1c9);
       box(g, body, 40, 24, 6, 0, 0, 0, false); box(g, body, 24, 40, 6, 0, 0, 0, false); box(g, body, 34, 34, 6, 0, 0, 0, false); box(g, ring, 72, 4, 8, 0, 0, 0, false).rotation.z = 0.3;
@@ -103,7 +108,7 @@ export class Stage {
   make(id: string, options: BuildOptions = {}): Rig { const def = assetById(id); if (!def) throw new Error(`Unknown asset ${id}`); const r = def.build(options); this.made.push(r); return r; }
   /** Put a rig on the stage: it is drawn and animated from now on. */
   place(r: Rig, x: number, y: number, z: number, ry = 0, parent: Object3D = this.group): Rig {
-    if (!r.group.userData.dressed) { r.group.userData.dressed = true; dress(r, this.world.id); } // before the first placement, while the rig still stands at the origin
+    if (!r.group.userData.dressed) { r.group.userData.dressed = true; const move = dress(r, this.world.id); if (move) this.live.push(move); } // before the first placement, while the rig still stands at the origin
     if (r.species === 'hero' || r.species === 'avatar' || r.species === 'pony') r.group.userData.noTone = true; else this.tone(r.group);
     r.group.position.set(x, y, z); r.group.rotation.y = ry; parent.add(r.group); if (!this.rigs.includes(r)) this.rigs.push(r); return r; }
   /** A placed copy of a rig built with make(): shares geometry, animates on its own. */
@@ -151,6 +156,7 @@ export class Stage {
     for (const [o, p] of this.pulses) { p.extra *= Math.exp(-dt * 14); o.scale.setScalar(p.base * (1 + p.extra)); if (p.extra < 0.004) { o.scale.setScalar(p.base); this.pulses.delete(o); } }
     for (let i = this.dying.length - 1; i >= 0; i--) { const d = this.dying[i]; d.t += dt; const k = Math.max(0, 1 - d.t / 0.55); d.rig.group.scale.setScalar(d.base * k); d.rig.group.rotation.y += dt * 9; if (k <= 0) { this.drop(d.rig); this.dying.splice(i, 1); } }
     for (let i = this.floats.length - 1; i >= 0; i--) { const f = this.floats[i]; f.life -= dt; f.sprite.position.y += dt * 1.3; f.sprite.material.opacity = Math.min(1, (f.life / f.max) * 2.2); if (f.life <= 0) { f.sprite.removeFromParent(); f.sprite.material.map?.dispose(); f.sprite.material.dispose(); this.floats.splice(i, 1); } }
+    for (const f of this.live) f(this.clock);
     for (const d of this.drift) { const p = d.o.position; p.x += dt * d.vx; p.y += dt * d.vy; if (p.x > 38) p.x = -38; else if (p.x < -38) p.x = 38; if (p.y > 16) p.y = 0.3; else if (p.y < 0.2) p.y = 16; }
     // things a scene builds by hand (tiles, keeps, lanes) are recoloured here: twice a second is plenty and costs a walk of a few hundred objects
     if (this.world.id !== 'kingdom' && this.clock - this.swept > 0.5) { this.swept = this.clock; this.tone(this.group); }

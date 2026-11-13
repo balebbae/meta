@@ -30,7 +30,7 @@ const BLOOD: Record<string, number> = {'creature-slime': C.slime, 'creature-gobl
 const ease = (k: number): number => k * k * (3 - 2 * k);
 
 export function createBossFight(host: Host, o: BossFightOpts): BossFight {
-  const st = new Stage(host, {fov: 30, sun: [-5, 11, 8], radius: 15, far: -13});
+  const st = new Stage(host, {fov: 30, sun: [-5, 11, 8], radius: 15, far: -13, row: -6.4});
   st.ground(70, 40); st.block(22, 0.125, 9, 'rock', C.stoneLight, 0.5, -0.05, 0.4); // the plaza the fight happens on
   // the kingdom the squad defends on the left, the wild on the right
   st.place(st.make('world-castle-starter'), -12.5, 0, -6, 0.45).group.scale.setScalar(1.5);

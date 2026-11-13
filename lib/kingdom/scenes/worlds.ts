@@ -28,7 +28,8 @@ export const WORLDS: Record<WorldId, World> = {
   },
   reef: {
     id: 'reef', name: 'Under the Sea', tagline: 'Sand, coral and kaijus from the deep.', sky: 0x2e9cc4, light: {sky: 0xc9f6ff, ground: 0x2f7d99, sun: 0xe2fbff},
-    props: {grass: [0.12, 0.55, 1.3], leaf: [0.97, 0.75, 1.2], stone: [0.5, 0.3, 0.95], rock: [0.52, 0.28, 0.9], wood: [0.07, 0.5, 1]},
+    props: {grass: [0.12, 0.55, 1.3], leaf: [0.97, 0.75, 1.2], stone: [0.11, 0.55, 0.92], // the castle is a sandcastle down here
+      rock: [0.52, 0.28, 0.9], wood: [0.07, 0.5, 1]},
     kaiju: [0.62, 0.6, 0.95], weather: 'bubbles',
   },
   frost: {

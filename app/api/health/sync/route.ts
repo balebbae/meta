@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   const bearer = header.toLowerCase().startsWith('bearer ') ? header.slice(7).trim() : '';
 
   const save = async (userId: number) => {
-    const saved = await insertHealthSamples(userId, body.source as HealthSource, body.samples!.slice(0, 200));
+    const saved = await insertHealthSamples(userId, body.source as HealthSource, body.samples!.slice(0, 500));
     if (saved > 0) {
       await insertXpEvent({
         userId,

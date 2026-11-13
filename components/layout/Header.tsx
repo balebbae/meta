@@ -331,7 +331,7 @@ function MenuPanel() {
         Group
       </Link>
       <Link href="/events" className={styles.menuRow}>
-        <span className={styles.menuIcon}><RailEventsIcon size={20} /></span>
+        <span className={styles.menuIcon}><RailEventsIcon /></span>
         Event
       </Link>
       <CreateStoryDialog open={storyOpen} onClose={() => setStoryOpen(false)} />

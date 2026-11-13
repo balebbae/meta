@@ -117,3 +117,13 @@ test('reward tiers and MVP', () => {
   assert.equal(c.total, 90);
   assert.equal(c.mvp, 1);
 });
+
+test('clip proof: counted reps drive the critical, clip bonus beats photo', () => {
+  const photo = computeMove({spec, userId: 1, levelDay: 2, sourceTrust: 'photo', amount: 30});
+  const clip = computeMove({spec, userId: 1, levelDay: 2, sourceTrust: 'photo', amount: 30, clip: {reps: 10}});
+  const bigClip = computeMove({spec, userId: 1, levelDay: 2, sourceTrust: null, clip: {reps: 12}});
+  assert.equal(photo.critical, true); // typed 30 ≥ 1.2 × 10
+  assert.equal(clip.critical, false); // the camera only counted 10, so the typed 30 is ignored
+  assert.ok(clip.damage > computeMove({spec, userId: 1, levelDay: 2, sourceTrust: 'photo'}).damage);
+  assert.equal(bigClip.critical, true); // 12 counted ≥ 1.2 × 10
+});

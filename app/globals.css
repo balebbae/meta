@@ -1,6 +1,25 @@
 @import '@astryxdesign/core/reset.css';
 @import '@astryxdesign/core/astryx.css';
 @import '@astryxdesign/theme-neutral/theme.css';
+/* Tailwind for the mapcn map (components/ui/map.tsx) only: theme + utilities, no preflight so Facebook styles stay untouched */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+@source '../components/ui/map.tsx';
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+@theme inline {
+  --color-background: var(--fb-card);
+  --color-foreground: var(--fb-text);
+  --color-muted: var(--fb-input-bg);
+  --color-muted-foreground: var(--fb-text-secondary);
+  --color-popover: var(--fb-card);
+  --color-popover-foreground: var(--fb-text);
+  --color-accent: var(--fb-hover);
+  --color-accent-foreground: var(--fb-text);
+  --color-border: var(--fb-divider-soft);
+  --color-ring: var(--fb-blue);
+  --color-primary: var(--fb-blue);
+  --color-primary-foreground: #fff;
+}
 
 /* Facebook design tokens (measured against facebook.com desktop, Nov 2026) */
 :root {
@@ -34,6 +53,9 @@
   --fb-bubble: #f0f2f5;
   --fb-input-bg: #f0f2f5;
   --fb-overlay: rgba(255, 255, 255, 0.8);
+  /* text and scrims drawn over camera/video: same in both themes */
+  --fb-scrim: rgba(0, 0, 0, 0.55);
+  --fb-on-media: #fff;
   --fb-disabled-bg: #e4e6eb;
   --fb-text-disabled: #bcc0c4;
   --fb-shimmer: #e4e6eb;
@@ -215,4 +237,26 @@ main:has([data-layout='full']) > div {
 div:has(> main [data-layout='wide']) > :not(main),
 div:has(> main [data-layout='full']) > :not(main) {
   display: none;
+}
+
+/* mapcn (registry css for @mapcn/map) */
+@layer base {
+  .maplibregl-popup-content {
+    @apply bg-transparent! shadow-none! p-0! rounded-none!;
+  }
+  .maplibregl-popup-tip {
+    @apply hidden!;
+  }
+  .maplibregl-ctrl-attrib {
+    @apply bg-background! text-muted-foreground! border-border! rounded-md! border! shadow-sm!;
+  }
+  .maplibregl-ctrl-attrib a {
+    @apply text-muted-foreground!;
+  }
+  .maplibregl-ctrl-attrib a:hover {
+    @apply text-foreground!;
+  }
+  .maplibregl-ctrl-attrib-button {
+    @apply bg-transparent! dark:invert;
+  }
 }

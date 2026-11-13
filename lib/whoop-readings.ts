@@ -23,7 +23,7 @@ function hours(ms: unknown) {
   return value == null ? null : value / 3_600_000;
 }
 
-export function whoopReadings(input: {recovery?: Rec | null; sleep?: Rec | null; cycle?: Rec | null; workouts?: Rec | null}, now = new Date().toISOString()) {
+export function whoopReadings(input: {recovery?: Rec | null; sleep?: Rec | null; cycle?: Rec | null; workouts?: Rec | null; body?: Rec | null}, now = new Date().toISOString()) {
   const out: WhoopSample[] = [];
   const recovery = record(input.recovery);
   const recoveryScore = obj(recovery?.score);
@@ -47,6 +47,7 @@ export function whoopReadings(input: {recovery?: Rec | null; sleep?: Rec | null;
   push(out, 'sleep_rem_hours', hours(stages?.total_rem_sleep_time_milli), 'hours', sleepAt);
   push(out, 'sleep_awake_hours', hours(stages?.total_awake_time_milli), 'hours', sleepAt);
   push(out, 'sleep_in_bed_hours', hours(stages?.total_in_bed_time_milli), 'hours', sleepAt);
+  push(out, 'sleep_no_data_hours', hours(stages?.total_no_data_time_milli), 'hours', sleepAt);
   push(out, 'sleep_cycles', num(stages?.sleep_cycle_count), 'count', sleepAt);
   push(out, 'sleep_disturbances', num(stages?.disturbance_count), 'count', sleepAt);
   push(out, 'respiratory_rate', num(sleepScore?.respiratory_rate), 'breaths/min', sleepAt);
@@ -67,8 +68,14 @@ export function whoopReadings(input: {recovery?: Rec | null; sleep?: Rec | null;
   push(out, 'cycle_avg_hr', num(cycleScore?.average_heart_rate), 'bpm', cycleAt);
   push(out, 'cycle_max_hr', num(cycleScore?.max_heart_rate), 'bpm', cycleAt);
 
+  const body = obj(input.body);
+  const height = num(body?.height_meter);
+  push(out, 'height_cm', height == null ? null : height * 100, 'cm', now);
+  push(out, 'weight_kg', num(body?.weight_kilogram), 'kg', now);
+  push(out, 'max_hr', num(body?.max_heart_rate), 'bpm', now);
+
   const workouts = Array.isArray(input.workouts?.records) ? input.workouts.records as Rec[] : [];
-  workouts.slice(0, 10).forEach((workout, index) => {
+  workouts.slice(0, 25).forEach((workout, index) => {
     const score = obj(workout.score);
     const start = Date.parse(String(workout.start ?? ''));
     const end = Date.parse(String(workout.end ?? ''));
@@ -80,24 +87,33 @@ export function whoopReadings(input: {recovery?: Rec | null; sleep?: Rec | null;
     const max = num(score?.max_heart_rate);
     const distance = num(score?.distance_meter);
     const kcal = num(score?.kilojoule);
+    const zones = obj(score?.zone_durations) ?? obj(score?.zone_duration);
     if (strain) bits.push(`${strain.toFixed(1)} strain`);
     if (avg && max) bits.push(`${Math.round(avg)}–${Math.round(max)} bpm`);
     else if (avg) bits.push(`${Math.round(avg)} bpm`);
     if (distance) bits.push(distance >= 1000 ? `${(distance / 1000).toFixed(2)} km` : `${Math.round(distance)} m`);
     if (kcal) bits.push(`${Math.round(kcal / 4.184)} kcal`);
+    const gain = num(score?.altitude_gain_meter);
+    const change = num(score?.altitude_change_meter);
+    if (gain) bits.push(`+${Math.round(gain)} m`);
+    if (change) bits.push(`${change > 0 ? '+' : ''}${Math.round(change)} m`);
+    const recorded = num(score?.percent_recorded);
+    if (recorded) bits.push(`${Math.round(recorded)}% recorded`);
+    const zoneBits = ['zone_zero_milli', 'zone_one_milli', 'zone_two_milli', 'zone_three_milli', 'zone_four_milli', 'zone_five_milli']
+      .map(key => Math.round(zoneMin(zones?.[key]) ?? 0));
+    if (zoneBits.some(value => value > 0)) bits.push(`z ${zoneBits.join('/')}`);
     const at = when(workout, now);
-    push(out, `workout_${index + 1}`, minutes, bits.join(' · ').slice(0, 80), at);
+    push(out, `workout_${index + 1}`, minutes, bits.join(' · ').slice(0, 160), at);
     if (index === 0) {
-      const zones = obj(score?.zone_duration);
       push(out, 'zone_0_min', zoneMin(zones?.zone_zero_milli), 'min', at);
       push(out, 'zone_1_min', zoneMin(zones?.zone_one_milli), 'min', at);
       push(out, 'zone_2_min', zoneMin(zones?.zone_two_milli), 'min', at);
       push(out, 'zone_3_min', zoneMin(zones?.zone_three_milli), 'min', at);
       push(out, 'zone_4_min', zoneMin(zones?.zone_four_milli), 'min', at);
       push(out, 'zone_5_min', zoneMin(zones?.zone_five_milli), 'min', at);
-      push(out, 'workout_altitude_m', num(score?.altitude_gain_meter), 'm', at);
-      const change = num(score?.altitude_change_meter);
+      push(out, 'workout_altitude_m', gain, 'm', at);
       if (change) push(out, 'workout_altitude_change_m', change, 'm', at);
+      if (recorded) push(out, 'workout_recorded_pct', recorded, '%', at);
     }
   });
   return out;

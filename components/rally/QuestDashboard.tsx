@@ -147,35 +147,36 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
           </HStack>
 
           {spec.boss && (
-            <VStack gap={4} hAlign="center" padding={4} className={s.arenaStage}>
-              <VStack gap={2} hAlign="center" width="100%" maxWidth={560}>
-                {arenaFailed ? (
-                  <BossArt kind={q.bossKind} name={spec.boss.name} size={150} hurt={Boolean(anim?.hurt)} down={done} />
-                ) : (
-                  <div className={s.arenaCanvas} role="img" aria-label={`${spec.boss.name}${done ? ', defeated,' : ''} facing the squad: ${state.members.map(m => m.name.split(' ')[0]).join(', ')}`}>
-                    <Arena boss={bossCast} bossName={spec.boss.name} hp={q.bossHp} hpLeft={done ? 0 : q.bossHpLeft} heroes={arenaHeroes} strikes={strikes} reducedMotion={reducedMotion} onError={() => setArenaFailed(true)} />
-                  </div>
-                )}
-                <Heading level={3}>{spec.boss.name}</Heading>
-                <ProgressBar
-                  label={done ? 'Defeated' : `Boss HP · ${Math.round(hpPct)}%`}
-                  value={q.bossHpLeft}
-                  max={q.bossHp || 1}
-                  variant="error"
-                  hasValueLabel
-                  formatValueLabel={(v, m) => `${v} / ${m} HP`}
-                />
+            <VStack hAlign="center" className={s.arenaStage}>
+              {!arenaFailed && (
+                <div className={s.arenaCanvas} role="img" aria-label={`${spec.boss.name}${done ? ', defeated,' : ''} facing the squad: ${state.members.map(m => m.name.split(' ')[0]).join(', ')}`}>
+                  <Arena boss={bossCast} bossName={spec.boss.name} hp={q.bossHp} hpLeft={done ? 0 : q.bossHpLeft} heroes={arenaHeroes} strikes={strikes} reducedMotion={reducedMotion} onError={() => setArenaFailed(true)} />
+                </div>
+              )}
+              <VStack gap={4} hAlign="center" width="100%" padding={4} className={s.arenaHud}>
+                <VStack gap={2} hAlign="center" width="100%" maxWidth={560}>
+                  {arenaFailed && <BossArt kind={q.bossKind} name={spec.boss.name} size={150} hurt={Boolean(anim?.hurt)} down={done} />}
+                  <Heading level={3}>{spec.boss.name}</Heading>
+                  <ProgressBar
+                    label={done ? 'Defeated' : `Boss HP · ${Math.round(hpPct)}%`}
+                    value={q.bossHpLeft}
+                    max={q.bossHp || 1}
+                    variant="error"
+                    hasValueLabel
+                    formatValueLabel={(v, m) => `${v} / ${m} HP`}
+                  />
+                </VStack>
+                <HStack gap={4} hAlign="center" wrap="wrap" aria-label="Squad">
+                  {state.members.map(m => (
+                    <VStack key={m.id} gap={1} hAlign="center">
+                      <RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} hero={m.hero} size={64} mvp={state.mvp === m.id} state={anim?.userId === m.id ? anim.state : done ? 'celebrate' : 'idle'} />
+                      <Text type="supporting" weight="bold">
+                        {m.name.split(' ')[0]}
+                      </Text>
+                    </VStack>
+                  ))}
+                </HStack>
               </VStack>
-              <HStack gap={4} hAlign="center" wrap="wrap" aria-label="Squad">
-                {state.members.map(m => (
-                  <VStack key={m.id} gap={1} hAlign="center">
-                    <RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} hero={m.hero} size={64} mvp={state.mvp === m.id} state={anim?.userId === m.id ? anim.state : done ? 'celebrate' : 'idle'} />
-                    <Text type="supporting" weight="bold">
-                      {m.name.split(' ')[0]}
-                    </Text>
-                  </VStack>
-                ))}
-              </HStack>
             </VStack>
           )}
 

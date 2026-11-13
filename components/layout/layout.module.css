@@ -479,7 +479,7 @@
   margin: 0 8px 8px;
   padding: 8px;
   border-radius: 8px;
-  box-shadow: var(--fb-shadow-card);
+  border: 1px solid var(--fb-divider);
   background: var(--fb-card);
 }
 .acctRow {

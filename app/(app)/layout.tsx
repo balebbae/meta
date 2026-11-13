@@ -5,6 +5,7 @@ import {MobileTabBar} from '@/components/layout/MobileTabBar';
 import {MobileHeader} from '@/components/mobile/MobileHeader';
 import {RightSidebar} from '@/components/layout/RightSidebar';
 import {ComposeFab} from '@/components/layout/ComposeFab';
+import {IncomingCall} from '@/components/messages/IncomingCall';
 import {PushProvider} from '@/components/push/PushProvider';
 import {getSessionUser} from '@/lib/auth';
 import {listContacts} from '@/lib/queries';
@@ -32,6 +33,7 @@ export default async function AppLayout({children}: {children: React.ReactNode})
         </div>
       </div>
       <ComposeFab />
+      <IncomingCall />
       <PushProvider userId={user.id} />
       <MobileTabBar user={user} />
     </>

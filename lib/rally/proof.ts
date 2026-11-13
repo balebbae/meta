@@ -1,15 +1,16 @@
 /**
  * Photo Proof for moves and dares (§5.2, §19.1 "verify becomes the move and proof check"). Ember vision
- * returns {approved, verdict}; offline the proof is accepted as 'pending' so the demo still works and the UI
- * shows "Muse offline".
+ * returns {approved, verdict}. Fails closed (plan 5b): offline or on error the proof is 'pending', not approved,
+ * and the move deals no damage until verified; the UI shows "Muse offline".
  */
 import {MODELS, getMuseClient, museConfigured} from '@/lib/muse/client';
+import {UNVERIFIED_PROOF} from '@/lib/rally/scoring';
 
 export type ProofResult = {approved: boolean; verdict: string; status: 'approved' | 'rejected' | 'pending'; museUsed: boolean};
 
 /** One photo, or 2-3 still frames from a clip (then the question is about the clip). */
 export async function verifyProofImage(opts: {image: string; task: string; frames?: string[]}): Promise<ProofResult> {
-  if (!museConfigured()) return {approved: true, verdict: 'Muse offline: proof saved for review.', status: 'pending', museUsed: false};
+  if (!museConfigured()) return {...UNVERIFIED_PROOF, verdict: 'Muse offline: proof saved, it counts once verified.'};
   try {
     const c = getMuseClient();
     const res = await c.responses.create({
@@ -32,6 +33,6 @@ export async function verifyProofImage(opts: {image: string; task: string; frame
     return {approved, verdict: String(parsed.verdict ?? '').slice(0, 120), status: approved ? 'approved' : 'rejected', museUsed: true};
   } catch (err) {
     console.error('[rally] proof check failed', err instanceof Error ? err.message : err);
-    return {approved: true, verdict: 'Muse unavailable: proof saved for review.', status: 'pending', museUsed: false};
+    return {...UNVERIFIED_PROOF, verdict: 'Muse unavailable: proof saved, it counts once verified.'};
   }
 }

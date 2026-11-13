@@ -17,6 +17,12 @@ def test_realistic_set_is_held_out():
     assert not any(t.lower() in train for t, _ in realistic_test())
 
 
+def test_gear_aliases_use_ontology_ids():
+    from rally_embed.data import GEAR_ALIASES
+
+    assert set(GEAR_ALIASES) <= set(ontology.activity_ids())
+
+
 def test_pairs_cover_all_activities():
     docs = set(activity_docs().values())
     assert {p["positive"] for p in train_pairs(3000)} == docs

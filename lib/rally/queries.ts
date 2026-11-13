@@ -19,6 +19,7 @@ import {
   classifyMoveEvent,
   computeMove,
   contributions,
+  damageAfterProof,
   gearForEvents,
   isBigMoment,
   isRainDare,
@@ -252,41 +253,44 @@ export async function logMove(questId: number, user: {id: number; name: string},
     const r = await verifyProofImage({image: input.image, task});
     proof = {status: r.status, verdict: r.verdict, museUsed: r.museUsed};
     if (r.status === 'rejected') return {ok: false, error: `Proof not accepted: ${r.verdict}`, status: 422};
-    if (!sourceTrust) sourceTrust = 'photo';
+    if (!sourceTrust && r.status === 'approved') sourceTrust = 'photo';
   }
 
   const levelDay = levelDayFor(quest);
   const moves = await listMoves(questId);
   const result = computeMove({spec: quest.spec, userId: user.id, levelDay, sourceTrust, amount: input.amount ?? null, dareId: dare?.id ?? null, clip});
+  // Fail closed: an unverified proof is saved as pending and deals no damage.
+  const damage = damageAfterProof(result.damage, proof?.status);
+  const critical = result.critical && damage > 0;
   // Subtract in the database: two moves at the same moment both land, and only the move that takes HP to 0 ends the quest.
   let hpBefore = quest.bossHpLeft;
   let hpAfter = hpBefore;
-  if (quest.template === 'boss') {
-    const [hp] = await sql`update quests set boss_hp_left = greatest(0, boss_hp_left - ${result.damage}) where id = ${questId} and boss_hp_left > 0 returning boss_hp_left`;
+  if (quest.template === 'boss' && damage > 0) {
+    const [hp] = await sql`update quests set boss_hp_left = greatest(0, boss_hp_left - ${damage}) where id = ${questId} and boss_hp_left > 0 returning boss_hp_left`;
     if (!hp) return {ok: false, error: 'The boss is already down', status: 409};
     hpAfter = Number(hp.boss_hp_left);
-    hpBefore = hpAfter + result.damage;
+    hpBefore = hpAfter + damage;
   }
   const myMovesBefore = moves.filter(m => m.userId === user.id && m.kind === 'move').length;
   const levelFinished = !dare && myMovesBefore + 1 >= levelDay && myMovesBefore < levelDay;
-  const event: BossEvent = quest.template === 'boss' ? classifyMoveEvent({critical: result.critical, hpBefore, hpAfter, hpMax: quest.bossHp, levelFinished}) : levelFinished ? 'level' : result.critical ? 'critical' : 'move';
+  const event: BossEvent = quest.template === 'boss' ? classifyMoveEvent({critical, hpBefore, hpAfter, hpMax: quest.bossHp, levelFinished}) : levelFinished ? 'level' : critical ? 'critical' : 'move';
 
   const [moveRow] = await sql`
     insert into quest_moves (quest_id, user_id, vault_event_id, kind, dare_id, damage, note, proof_image_url, proof_status, proof_verdict)
-    values (${questId}, ${user.id}, ${input.vaultEventId ?? null}, ${dare ? 'dare' : 'move'}, ${dare?.id ?? null}, ${result.damage}, ${input.note?.slice(0, 200) ?? null}, ${input.image ?? null}, ${proof?.status ?? null}, ${proof?.verdict ?? null})
+    values (${questId}, ${user.id}, ${input.vaultEventId ?? null}, ${dare ? 'dare' : 'move'}, ${dare?.id ?? null}, ${damage}, ${input.note?.slice(0, 200) ?? null}, ${input.image ?? null}, ${proof?.status ?? null}, ${proof?.verdict ?? null})
     returning id, quest_id, user_id, kind, dare_id, damage, proof_status, proof_verdict, proof_image_url is not null as has_proof, created_at`;
   const move = mapMove(moveRow);
   await sql`update quest_progress set progress = coalesce(progress, '{}'::jsonb) || ${JSON.stringify({lastMoveAt: move.createdAt, level: levelDay})}::jsonb, updated_at = now() where quest_id = ${questId} and user_id = ${user.id}`;
 
   const bossName = quest.spec.boss?.name ?? quest.title;
-  const narration = await narrate({event, actor: user.name, damage: result.damage, hpLeft: hpAfter, hpMax: quest.bossHp, bossName, dareText: dare?.text});
+  const narration = await narrate({event, actor: user.name, damage, hpLeft: hpAfter, hpMax: quest.bossHp, bossName, dareText: dare?.text});
   const museUsed = narration.museUsed;
   const text = clipLine ? `${narration.text} (${clipLine})` : narration.text;
   if (quest.conversationId) {
-    const payload: RallyGamePayload = {questId, event: dare && event === 'move' ? 'dare' : event, userId: user.id, text, damage: result.damage, hpLeft: hpAfter};
+    const payload: RallyGamePayload = {questId, event: dare && event === 'move' ? 'dare' : event, userId: user.id, text, damage, hpLeft: hpAfter};
     await sendMessage(quest.conversationId, user, text, null, {kind: 'rally_game', payload});
   }
-  await insertXpEvent({userId: user.id, sourceType: 'rally_move', sourceId: Number(move.id), xp: Math.max(1, result.damage), reason: `${bossName}: ${dare ? 'dare' : 'move'} for ${result.damage}`});
+  if (damage > 0) await insertXpEvent({userId: user.id, sourceType: 'rally_move', sourceId: Number(move.id), xp: damage, reason: `${bossName}: ${dare ? 'dare' : 'move'} for ${damage}`});
 
   if (dare && isRainDare(dare.text)) await awardGear(user.id, questId, gearForEvents({owned: await ownedGear(user.id), rainDare: true}));
 
@@ -306,7 +310,7 @@ export async function logMove(questId: number, user: {id: number; name: string},
   } else {
     await maybeAdapt({...quest, bossHpLeft: hpAfter});
   }
-  return {ok: true, move, event, damage: result.damage, critical: result.critical, hpLeft: hpAfter, narration: text, museUsed: museUsed && (proof ? proof.museUsed : true), ...(proof ? {proof: {status: proof.status, verdict: proof.verdict}} : {}), completed};
+  return {ok: true, move, event, damage, critical, hpLeft: hpAfter, narration: text, museUsed: museUsed && (proof ? proof.museUsed : true), ...(proof ? {proof: {status: proof.status, verdict: proof.verdict}} : {}), completed};
 }
 
 /** §15.3: behind schedule -> comeback dare appended to the spec; far ahead -> boss gets +10% HP once. */

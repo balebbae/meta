@@ -1,6 +1,7 @@
 import {sql} from '@/lib/db';
 import {ask} from '@/lib/activities/answers';
 import {aheadFit, levelValue, type AheadFit, type Level} from '@/lib/activities/ahead';
+import {TIER_RANK, tierOf} from '@/lib/activities/level';
 import {MODELS, museConfigured, museJson} from '@/lib/muse/client';
 
 /** A Discover card. Everything about other people here came from ask() answers or public rows (events/groups/reels). */
@@ -291,7 +292,7 @@ const METRIC_GOALS: Record<string, string[]> = {
  * "A few months ahead": opted-in people whose level now ≈ where the seeker could be in ~3 months.
  * Their side is read only through ask(…, 'mentor_match') (rounded, their policy, audit-logged as 'ahead:match' with no
  * seeker id); their vault is never read here. Opt-in records + goal tags still match when activity data is thin.
- * shortcut: 2 ask() calls per opted-in person per page load; cache or precompute once the pool is more than a few dozen.
+ * shortcut: 3 ask() calls per opted-in person per page load; cache or precompute once the pool is more than a few dozen.
  */
 export async function matchMentors(seekerId: number, tags: string[]): Promise<MentorMatch[]> {
   const offers = await sql`
@@ -302,7 +303,8 @@ export async function matchMentors(seekerId: number, tags: string[]): Promise<Me
     left join lateral (select id, status, connect_status from mentor_requests where mentor_id = o.user_id and seeker_id = ${seekerId} order by id desc limit 1) r on true
     where o.user_id <> ${seekerId}`.catch(() => []);
   if (!offers.length) return [];
-  const [myKm, myDays] = await Promise.all([ask(seekerId, 'only_me', 'distance_last_7_days_km', 'ahead:self'), ask(seekerId, 'only_me', 'active_days_last_7_days', 'ahead:self')]);
+  const [myKm, myDays, myLevel] = await Promise.all([ask(seekerId, 'only_me', 'distance_last_7_days_km', 'ahead:self'), ask(seekerId, 'only_me', 'active_days_last_7_days', 'ahead:self'), ask(seekerId, 'only_me', 'level_4w', 'ahead:self')]);
+  const myTier = tierOf(myLevel.value);
   const me: Level = {km: levelValue(myKm.value), days: levelValue(myDays.value)};
   const out: MentorMatch[] = [];
   await Promise.all(offers.map(async o => {
@@ -314,21 +316,26 @@ export async function matchMentors(seekerId: number, tags: string[]): Promise<Me
     const record = metric ? `${metric}: ${o.from_value ?? ''} → ${o.to_value ?? ''}` : null;
     let fit: AheadFit | null = null;
     let theirs = '';
+    // 4-week tier one step above mine = the clearest "few months ahead" signal; last-7-days km/days can be one odd week
+    let gap: number | null = null;
     if ((o.consent as {workouts?: boolean} | null)?.workouts) {
       const uid = o.user_id as number;
-      const [km, days] = await Promise.all([ask(uid, 'mentor_match', 'distance_last_7_days_km', 'ahead:match'), ask(uid, 'mentor_match', 'active_days_last_7_days', 'ahead:match')]);
+      const [km, days, lvl] = await Promise.all([ask(uid, 'mentor_match', 'distance_last_7_days_km', 'ahead:match'), ask(uid, 'mentor_match', 'active_days_last_7_days', 'ahead:match'), ask(uid, 'mentor_match', 'level_4w', 'ahead:match')]);
       fit = aheadFit(me, {km: levelValue(km.value), days: levelValue(days.value)});
       theirs = fit?.metric === 'km' ? `Covers ${km.value} a week` : fit ? `Active ${days.value} days a week` : '';
+      const theirTier = tierOf(lvl.value);
+      if (myTier && theirTier) gap = TIER_RANK[theirTier] - TIER_RANK[myTier];
+      if (gap === 1 && !theirs) theirs = `Trains at the "${theirTier}" level`;
     }
-    if (!fit && !matched.length) return;
+    if (!fit && !matched.length && gap !== 1) return;
     const mine = fit?.metric === 'km' ? `about ${Math.round(fit.me)} km` : fit ? `${Math.round(fit.me)} ${Math.round(fit.me) === 1 ? 'day' : 'days'}` : '';
     out.push({
       mentorId: o.user_id as number,
-      title: fit ? theirs : (record as string),
-      subtitle: fit ? `You're at ${mine} now${record ? ` · ${record}` : ''}` : `Got there in ${Number(o.weeks ?? 0)} weeks`,
-      why: fit ? "That's about where you could be in 3 months." : `Their record matches your goal to ${matched[0].toLowerCase()}.`,
+      title: theirs || (record as string),
+      subtitle: fit ? `You're at ${mine} now${record ? ` · ${record}` : ''}` : !matched.length ? `You're at "${myTier}" now` : `Got there in ${Number(o.weeks ?? 0)} weeks`,
+      why: fit || !matched.length ? "That's about where you could be in 3 months." : `Their record matches your goal to ${matched[0].toLowerCase()}.`,
       goalTag: matched[0] ?? null,
-      score: (fit ? fit.fit * 10 : 0) + matched.length * 3 + (record ? 1 : 0),
+      score: (fit ? fit.fit * 10 : 0) + matched.length * 3 + (record ? 1 : 0) + (gap === 1 ? 4 : gap === 2 ? 1 : gap != null && gap <= 0 ? -3 : 0),
       requestId: (o.request_id as number) ?? null,
       status: (o.request_status as string) ?? null,
       connect: (o.connect_status as string) ?? null,

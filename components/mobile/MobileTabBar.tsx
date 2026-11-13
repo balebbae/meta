@@ -7,7 +7,7 @@ import {ActivitiesIcon, BellIcon, FriendsIcon, HomeIcon, MarketplaceIcon, VideoI
 import type {User} from '@/lib/types';
 import styles from './mobile.module.css';
 
-/** Floating pill tab bar from the Facebook iOS app (Nov 2026). Video/Marketplace carry the app's "new content" badge. */
+/** Floating pill tab bar from the Facebook iOS app (Nov 2026). */
 export function MobileTabBar({user}: {user?: Pick<User, 'id' | 'avatarUrl' | 'name'>}) {
   const pathname = usePathname();
   const [notif, setNotif] = useState(0);
@@ -19,17 +19,17 @@ export function MobileTabBar({user}: {user?: Pick<User, 'id' | 'avatarUrl' | 'na
   }, [pathname]);
 
   const tabs = [
-    {href: '/', label: 'Home', Icon: HomeIcon, badge: 0},
-    {href: '/reels', label: 'Reels', Icon: VideoIcon, badge: 1},
-    {href: '/activities', label: 'Activities', Icon: ActivitiesIcon, badge: 0},
-    {href: '/marketplace', label: 'Marketplace', Icon: MarketplaceIcon, badge: 1},
+    {href: '/', label: 'Home', Icon: HomeIcon},
+    {href: '/reels', label: 'Reels', Icon: VideoIcon},
+    {href: '/activities', label: 'Activities', Icon: ActivitiesIcon},
+    {href: '/marketplace', label: 'Marketplace', Icon: MarketplaceIcon},
     {href: '/notifications', label: 'Notifications', Icon: (p: {size?: number; active?: boolean}) => <BellIcon size={p.size} />, badge: notif},
   ];
   const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/'));
   const profileHref = user ? `/profile/${user.id}` : '/profile';
   return (
     <nav className={`${styles.mobileOnly} ${styles.tabBar}`} aria-label="Mobile navigation">
-      {tabs.map(({href, label, Icon, badge}) => {
+      {tabs.map(({href, label, Icon, badge = 0}) => {
         const active = isActive(href);
         return (
           <Link key={href} href={href} className={`${styles.tab} ${active ? styles.tabActive : ''}`} aria-label={label} aria-current={active ? 'page' : undefined}>

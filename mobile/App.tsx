@@ -47,6 +47,9 @@ export default function App() {
           source={{uri: WEB_URL}}
           style={styles.webview}
           allowsBackForwardNavigationGestures
+          allowsInlineMediaPlayback
+          mediaPlaybackRequiresUserAction={false}
+          mediaCapturePermissionGrantType="prompt"
           startInLoadingState
           onMessage={onMessage}
           injectedJavaScriptBeforeContentLoaded="window.__META_SHELL__=true; true;"

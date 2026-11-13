@@ -168,6 +168,13 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
                     />
                   </>
                 ))}
+              {live && <button type="button" className={styles.btn} disabled={busy != null || tracker.tracking} onClick={() => void run('strava', async () => {
+                setNote(null);
+                const result = await turfApi.importStrava(gameId);
+                setNote(`Strava import: ${result.gained} cells gained.${result.gained === 0 ? ' No new loops in this arena since the game started (already imported runs are skipped).' : ''}`);
+              })}>
+                {busy === 'strava' ? 'Importing Strava runs…' : 'Import Strava runs'}
+              </button>}
               {tracker.error && <p className={styles.error}>{tracker.error}</p>}
               {error && <p className={styles.error}>{error}</p>}
               {note && (

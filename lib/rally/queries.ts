@@ -16,7 +16,6 @@ import {verifyProofImage} from '@/lib/rally/proof';
 import {CONFIDENT, EXERCISE_LABEL, countReps, type ClipExercise} from '@/lib/rally/repcount';
 import {
   adaptiveAdjust,
-  applyDamage,
   classifyMoveEvent,
   computeMove,
   contributions,
@@ -78,6 +77,10 @@ function mapQuest(r: Record<string, unknown>): QuestRow {
   };
 }
 
+/** Regular moves per player per level day (dares don't count), and the gap that stops double taps. */
+export const MAX_MOVES_PER_DAY = 3;
+const MOVE_COOLDOWN_MS = 30_000;
+
 const mapMove = (r: Record<string, unknown>): MoveRow => ({
   id: Number(r.id),
   questId: r.quest_id as number,
@@ -87,7 +90,8 @@ const mapMove = (r: Record<string, unknown>): MoveRow => ({
   damage: r.damage as number,
   proofStatus: (r.proof_status as string | null) ?? null,
   proofVerdict: (r.proof_verdict as string | null) ?? null,
-  hasProof: r.proof_image_url != null,
+  // has_proof is selected instead of the photo itself: proofs are data URLs up to 1.5 MB and the dashboard polls every 3 s.
+  hasProof: r.has_proof != null ? Boolean(r.has_proof) : r.proof_image_url != null,
   createdAt: new Date(r.created_at as string).toISOString(),
 });
 
@@ -181,7 +185,7 @@ export async function createQuest(opts: {source: SpecSource; conversationId: num
 }
 
 export async function listMoves(questId: number): Promise<MoveRow[]> {
-  const rows = await sql`select id, quest_id, user_id, kind, dare_id, damage, proof_status, proof_verdict, proof_image_url, created_at from quest_moves where quest_id = ${questId} order by id asc`;
+  const rows = await sql`select id, quest_id, user_id, kind, dare_id, damage, proof_status, proof_verdict, proof_image_url is not null as has_proof, created_at from quest_moves where quest_id = ${questId} order by id asc`;
   return rows.map(mapMove);
 }
 
@@ -209,6 +213,13 @@ export async function logMove(questId: number, user: {id: number; name: string},
   if (dare?.needsProof && !input.image) return {ok: false, error: 'This dare needs a photo', status: 400};
   const existing = dare ? await sql`select 1 from quest_moves where quest_id = ${questId} and user_id = ${user.id} and dare_id = ${dare.id}` : [];
   if (existing.length) return {ok: false, error: 'Dare already completed', status: 409};
+  if (!dare) {
+    // Without a cap one player could tap "Log a move" over and over and kill the boss alone.
+    const dayStart = new Date(new Date(quest.startsAt).getTime() + (levelDayFor(quest) - 1) * 86_400_000).toISOString();
+    const [recent] = await sql`select count(*)::int as today, max(created_at) as last from quest_moves where quest_id = ${questId} and user_id = ${user.id} and kind = 'move' and created_at >= ${dayStart}`;
+    if (recent?.last && Date.now() - new Date(recent.last as string).getTime() < MOVE_COOLDOWN_MS) return {ok: false, error: 'You just logged a move. Give it a moment.', status: 429};
+    if (Number(recent?.today ?? 0) >= MAX_MOVES_PER_DAY) return {ok: false, error: `That's ${MAX_MOVES_PER_DAY} moves today. Try a dare, or come back tomorrow.`, status: 409};
+  }
 
   // Answers (never vault_events): best trust the owner's policy lets game participants see for today's move.
   let sourceTrust: Trust | null = null;
@@ -247,8 +258,15 @@ export async function logMove(questId: number, user: {id: number; name: string},
   const levelDay = levelDayFor(quest);
   const moves = await listMoves(questId);
   const result = computeMove({spec: quest.spec, userId: user.id, levelDay, sourceTrust, amount: input.amount ?? null, dareId: dare?.id ?? null, clip});
-  const hpBefore = quest.bossHpLeft;
-  const hpAfter = quest.template === 'boss' ? applyDamage(hpBefore, result.damage) : hpBefore;
+  // Subtract in the database: two moves at the same moment both land, and only the move that takes HP to 0 ends the quest.
+  let hpBefore = quest.bossHpLeft;
+  let hpAfter = hpBefore;
+  if (quest.template === 'boss') {
+    const [hp] = await sql`update quests set boss_hp_left = greatest(0, boss_hp_left - ${result.damage}) where id = ${questId} and boss_hp_left > 0 returning boss_hp_left`;
+    if (!hp) return {ok: false, error: 'The boss is already down', status: 409};
+    hpAfter = Number(hp.boss_hp_left);
+    hpBefore = hpAfter + result.damage;
+  }
   const myMovesBefore = moves.filter(m => m.userId === user.id && m.kind === 'move').length;
   const levelFinished = !dare && myMovesBefore + 1 >= levelDay && myMovesBefore < levelDay;
   const event: BossEvent = quest.template === 'boss' ? classifyMoveEvent({critical: result.critical, hpBefore, hpAfter, hpMax: quest.bossHp, levelFinished}) : levelFinished ? 'level' : result.critical ? 'critical' : 'move';
@@ -256,9 +274,8 @@ export async function logMove(questId: number, user: {id: number; name: string},
   const [moveRow] = await sql`
     insert into quest_moves (quest_id, user_id, vault_event_id, kind, dare_id, damage, note, proof_image_url, proof_status, proof_verdict)
     values (${questId}, ${user.id}, ${input.vaultEventId ?? null}, ${dare ? 'dare' : 'move'}, ${dare?.id ?? null}, ${result.damage}, ${input.note?.slice(0, 200) ?? null}, ${input.image ?? null}, ${proof?.status ?? null}, ${proof?.verdict ?? null})
-    returning id, quest_id, user_id, kind, dare_id, damage, proof_status, proof_verdict, proof_image_url, created_at`;
+    returning id, quest_id, user_id, kind, dare_id, damage, proof_status, proof_verdict, proof_image_url is not null as has_proof, created_at`;
   const move = mapMove(moveRow);
-  await sql`update quests set boss_hp_left = ${hpAfter} where id = ${questId}`;
   await sql`update quest_progress set progress = coalesce(progress, '{}'::jsonb) || ${JSON.stringify({lastMoveAt: move.createdAt, level: levelDay})}::jsonb, updated_at = now() where quest_id = ${questId} and user_id = ${user.id}`;
 
   const bossName = quest.spec.boss?.name ?? quest.title;

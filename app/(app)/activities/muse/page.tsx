@@ -39,6 +39,17 @@ export default async function MusePage({searchParams}: {searchParams: Promise<Re
         <Heading level={1}>Your Muse</Heading>
         <Text color="secondary">Only you can see this page. It is the whole of what your Muse knows about how you move.</Text>
       </VStack>
+      <Card>
+        <HStack gap={3} vAlign="center" justify="between" wrap="wrap">
+          <VStack gap={1}>
+            <Heading level={2}>Coach mode</Heading>
+            <Text type="supporting" color="secondary">
+              This week vs last week: what improved, the gaps, and a plan to bridge them.
+            </Text>
+          </VStack>
+          <Button label="Open Coach" variant="primary" href="/activities/coach" />
+        </HStack>
+      </Card>
       <Card variant="blue">
         <VStack gap={3}>
           <VStack gap={1}>

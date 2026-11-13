@@ -1,8 +1,10 @@
 /**
  * The pace a running Reel talks about, read from its caption, transcript and tags: "5:30/km", "8 minute miles",
- * "6 min per km", "12 km/h". Pure. No pace found means the game has no pace rule (any run counts).
+ * "6 min per km", "12 km/h". Pure. No pace found means the caller falls back to DEFAULT_PACE.
  */
 export type ReelPace = {secPerKm: number; distanceKm: number | null};
+/** When a running Reel names no pace the game takes one from the Reel's difficulty (7:30, 6:30, 5:30 per km), so a walk never claims land in a run game. */
+export const DEFAULT_PACE: Record<string, number> = {easy: 450, medium: 390, hard: 330};
 
 export const PACE_MIN = 150, PACE_MAX = 900; // 2:30 to 15:00 per km: anything outside is a typo or not a run
 const MILE = 1.609344;

@@ -5,7 +5,7 @@
  */
 import {sql} from '@/lib/db';
 import {MODELS, museConfigured, museJson} from '@/lib/muse/client';
-import {reelGameByText, type ReelGame} from '@/lib/rally/reel-kind';
+import {isRunReel, reelGameByText, type ReelGame} from '@/lib/rally/reel-kind';
 
 export type ReelInfo = {
   id: number;
@@ -14,12 +14,13 @@ export type ReelInfo = {
   slug: string;
   tags: string[];
   exercises: {name: string; reps?: number | null; seconds?: number | null}[];
+  difficulty: string | null;
   durationSec: number | null;
   videoUrl: string;
 };
 
 export async function getReelInfo(reelId: number): Promise<ReelInfo | null> {
-  const [r] = await sql`select id, caption, transcript, slug, tags, exercises, duration_sec, video_url from reels where id = ${reelId}`;
+  const [r] = await sql`select id, caption, transcript, slug, tags, exercises, difficulty, duration_sec, video_url from reels where id = ${reelId}`;
   if (!r) return null;
   return {
     id: Number(r.id),
@@ -28,6 +29,7 @@ export async function getReelInfo(reelId: number): Promise<ReelInfo | null> {
     slug: String(r.slug ?? ''),
     tags: (r.tags as string[] | null) ?? [],
     exercises: Array.isArray(r.exercises) ? (r.exercises as ReelInfo['exercises']) : [],
+    difficulty: (r.difficulty as string | null) ?? null,
     durationSec: r.duration_sec == null ? null : Number(r.duration_sec),
     videoUrl: String(r.video_url),
   };
@@ -45,6 +47,7 @@ const SCHEMA = {
 /** Ember picks the game; names are fixed (Mirror Yoga, Mirror Dance, Castle Crossing), so no title is asked for. */
 export async function classifyReel(r: ReelInfo): Promise<{game: ReelGame; museUsed: boolean}> {
   const backup = reelGameByText(describe(r));
+  if (isRunReel(describe(r), r.exercises)) return {game: 'run', museUsed: false};
   if (!museConfigured()) return {game: backup, museUsed: false};
   try {
     const out = await museJson<{game: ReelGame}>({

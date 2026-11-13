@@ -2,7 +2,7 @@ import type {LatLng} from './engine';
 import type {HeroPick} from '@/lib/kingdom/cast';
 
 /** `pace`: a paced game (from a running Reel): a loop only claims land if it was run at this pace or faster. `reelId`: the Reel it came from. */
-export type TurfSettings = {center: LatLng; radiusKm: number; lengthDays: number; arenaLabel: string; startsAt?: string | null; pace?: {secPerKm: number; distanceKm?: number | null} | null; reelId?: number | null};
+export type TurfSettings = {center: LatLng; radiusKm: number; lengthDays: number; arenaLabel: string; startsAt?: string | null; pace?: {secPerKm: number; distanceKm?: number | null; /** the Reel named no pace; this one comes from its difficulty */ assumed?: boolean} | null; reelId?: number | null};
 export type GameStatus = 'pending' | 'live' | 'ended' | 'cancelled';
 export type InviteStatus = 'invited' | 'accepted' | 'declined' | 'expired' | 'left';
 export type OutingStatus = 'open' | 'claimed' | 'cut' | 'discarded';
@@ -48,7 +48,7 @@ export type TurfState = {
   arena: {center: LatLng; radiusKm: number};
   lengthDays: number;
   /** Paced game: runs only count at this pace or faster. */
-  pace: {secPerKm: number; distanceKm?: number | null} | null;
+  pace: TurfSettings['pace'] & {} | null;
   /** The Reel this game was made from, to watch again. */
   reelId: number | null;
   startsAt: string | null;

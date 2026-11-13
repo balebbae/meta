@@ -184,7 +184,7 @@ export async function createGame(host: Actor, input: CreateInput): Promise<{game
     const p = Math.round(Number(s.pace.secPerKm));
     if (!Number.isFinite(p) || p < PACE_MIN || p > PACE_MAX) throw new TurfError('Pace must be between 2:30 and 15:00 per km');
     const d = Number(s.pace.distanceKm);
-    pace = {secPerKm: p, distanceKm: Number.isFinite(d) && d > 0 ? d : null};
+    pace = {secPerKm: p, distanceKm: Number.isFinite(d) && d > 0 ? d : null, ...(s.pace.assumed ? {assumed: true} : {})};
   }
   const reelId = Number.isInteger(Number(s.reelId)) && Number(s.reelId) > 0 ? Number(s.reelId) : null;
 

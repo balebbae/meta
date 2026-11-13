@@ -5,7 +5,7 @@ import {locate} from '@/lib/activities/geo';
 import {isMember} from '@/lib/messaging-queries';
 import {createMirrorMatch} from '@/lib/rally/mirror-store';
 import {createQuest, findRecentQuestForReel, getReelSource} from '@/lib/rally/queries';
-import {paceFromText} from '@/lib/rally/reel-pace';
+import {DEFAULT_PACE, paceFromText} from '@/lib/rally/reel-pace';
 import {classifyReel, getReelInfo} from '@/lib/rally/reel-router';
 import {createSwimJourney} from '@/lib/rally/swim-store';
 import {fmtPace} from '@/lib/turf/engine';
@@ -45,14 +45,15 @@ export async function POST(req: Request) {
     if (game === 'run') {
       const [dupTurf] = await sql`select id from games where game_type = 'turf' and conversation_id = ${conversationId} and settings->>'reelId' = ${String(reelId)} and created_at > now() - interval '2 minutes' limit 1`;
       if (dupTurf) return NextResponse.json({game: 'turf', gameId: Number(dupTurf.id), duplicate: true});
-      const pace = paceFromText(`${reel.caption} ${reel.transcript} ${reel.tags.join(' ')}`);
+      const said = paceFromText(`${reel.caption} ${reel.transcript} ${reel.tags.join(' ')}`);
+      const pace = said ?? {secPerKm: DEFAULT_PACE[reel.difficulty ?? ''] ?? DEFAULT_PACE.easy, distanceKm: null, assumed: true};
       // Arena centre: where the sender is, else their profile city. shortcut: with neither, the seed arena (Katy Trail); ask for a place in the dialog once users are outside Dallas.
       const lat = Number(body?.near?.lat), lng = Number(body?.near?.lng);
       const [home] = await sql`select current_city from user_details where user_id = ${user.id}`;
       const center = Number.isFinite(lat) && Number.isFinite(lng) ? {lat, lng} : (locate(String(home?.current_city ?? '')) ?? KATY_TRAIL);
-      const arenaLabel = pace ? `${pace.distanceKm ? `${pace.distanceKm} km at ` : ''}${fmtPace(pace.secPerKm)} pace run` : 'Reel run';
+      const arenaLabel = `${pace.distanceKm ? `${pace.distanceKm} km at ` : ''}${fmtPace(pace.secPerKm)} pace run`;
       try {
-        const made = await createGame(creator, {conversationId, settings: {center, radiusKm: 1.5, lengthDays: 3, arenaLabel, reelId, ...(pace ? {pace} : {})}, invitees: 'all'});
+        const made = await createGame(creator, {conversationId, settings: {center, radiusKm: 1.5, lengthDays: 3, arenaLabel, reelId, pace}, invitees: 'all'});
         return NextResponse.json({game: 'turf', gameId: made.game.id, pace, museUsed}, {status: 201});
       } catch (e) {
         return turfError(e);

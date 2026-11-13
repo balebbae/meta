@@ -97,7 +97,7 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
             </div>
             {(state.pace || state.reelId) && (
               <div className={styles.sub}>
-                {state.pace ? `Paced: a loop only counts at ${fmtPace(state.pace.secPerKm)} per km or faster${state.pace.distanceKm ? ` · the Reel runs ${state.pace.distanceKm} km` : ''}` : 'Any pace counts'}
+                {state.pace ? `Paced: a loop only counts at ${fmtPace(state.pace.secPerKm)} per km or faster${state.pace.distanceKm ? ` · the Reel runs ${state.pace.distanceKm} km` : ''}${state.pace.assumed ? ' · the Reel names no pace, so this is an easy one' : ''}` : 'Any pace counts'}
                 {state.reelId ? (
                   <>
                     {' · '}

@@ -121,6 +121,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
                 <Token label={`Day ${state.levelDay} of ${spec.levels.length}`} size="sm" color="blue" />
                 {q.buffed && <Token label="Boss buffed +10%" size="sm" color="orange" />}
                 {!state.museUsed && <Token label="Muse offline · template quest" size="sm" color="gray" />}
+                {state.myReadiness && <Token label={state.myReadiness.fit === 'good' ? 'Good match for you' : 'A stretch for you'} size="sm" color={state.myReadiness.fit === 'good' ? 'green' : 'orange'} />}
               </HStack>
             </VStack>
             <HStack gap={2} wrap="wrap">

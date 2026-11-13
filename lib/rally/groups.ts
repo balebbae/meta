@@ -2,6 +2,8 @@
  * Group activities: a Rally quest posted into groups as a sign-up post. Joining = a quest_progress row
  * (so the quest page, moves and scoring just work) + a seat in the quest's crew chat. quests.capacity caps the rows.
  */
+import {FOCUS_QUESTION, type Focus} from '@/lib/rally/fairness';
+import {readinessFor} from '@/lib/rally/handicap';
 import {getSql, sql} from '@/lib/db';
 import {addMembers, sendMessage} from '@/lib/messaging-queries';
 import {rankGroups} from '@/lib/rally/group-match';
@@ -95,6 +97,14 @@ export async function joinFromGroupPost(groupId: number, postId: number, user: {
     if (q.joined) return {ok: true, questId, going, capacity};
     const over = q.status !== 'active' || (q.ends_at && new Date(q.ends_at as string) <= new Date());
     return {ok: false, status: 409, error: over ? 'This activity has ended.' : `All ${capacity} spots are taken.`};
+  }
+  // the joiner's private good-match / stretch light, same rule as the players the game was built for
+  try {
+    const [m] = await sql`select muse_meta->>'focus' as focus from quests where id = ${questId}`;
+    const fit = await readinessFor(user.id, FOCUS_QUESTION[m?.focus as Focus] ? (m.focus as Focus) : 'general');
+    if (fit) await sql`update quest_progress set progress = coalesce(progress, '{}'::jsonb) || ${JSON.stringify({readiness: fit})}::jsonb where quest_id = ${questId} and user_id = ${user.id}`;
+  } catch {
+    // no light is fine; joining must not fail on it
   }
   const conversationId = q.conversation_id as number | null;
   if (conversationId) {

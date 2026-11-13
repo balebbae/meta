@@ -62,6 +62,12 @@ export default function QuestCard({message, conversation}: CardProps) {
             </div>
           </div>
         )}
+        {state?.myReadiness && state.quest.status !== 'completed' && (
+          <div className={`${s.fit} ${state.myReadiness.fit === 'good' ? s.fitGood : s.fitStretch}`} title={state.myReadiness.note}>
+            <span className={s.fitDot} aria-hidden="true" />
+            {state.myReadiness.fit === 'good' ? 'Good match for you' : 'A stretch for you'}
+          </div>
+        )}
         {state && !state.museUsed && <span className={s.offline}>Muse offline · template quest</span>}
       </div>
       <div className={s.cardActions}>

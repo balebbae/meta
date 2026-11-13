@@ -42,3 +42,15 @@ test('predictFairness: handicaps close the gap between a beginner and a regular'
   assert.equal(balanced.label, 'fairly even');
   assert.equal(predictFairness([{band: 2, damageScale: 1}]).label, 'close');
 });
+
+test('readiness: green light for a match, a stretch when the activity or the level is new, nothing when unshared', async () => {
+  const {readiness} = await import('./fairness.ts');
+  assert.equal(readiness('run', null, null, null), null);
+  assert.equal(readiness('run', 2, 2, 'regular')?.fit, 'good');
+  assert.equal(readiness('run', 1, 2, 'building')?.fit, 'good');
+  assert.equal(readiness('run', 0, 3, 'strong')?.fit, 'stretch'); // active, but not a runner lately
+  assert.equal(readiness('general', 0, 0, 'building')?.fit, 'stretch');
+  assert.equal(readiness('strength', 1, 1, 'new')?.fit, 'stretch');
+  assert.equal(readiness('general', null, null, 'strong')?.fit, 'good');
+  assert.doesNotMatch(readiness('run', 0, 0, 'new')!.note, /weak|slow|unfit|lazy/i);
+});

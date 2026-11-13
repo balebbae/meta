@@ -398,3 +398,23 @@
 .linkBtn:hover {
   text-decoration: underline;
 }
+
+/* Private good-match / stretch light on the quest card */
+.fit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fb-text-secondary);
+}
+.fitDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fb-green);
+}
+.fitStretch .fitDot {
+  background: var(--color-warning);
+}

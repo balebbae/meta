@@ -11,6 +11,8 @@ import {listListings} from '@/lib/secondary-queries';
 import {DiscoverPage, type MyGame} from '@/components/activities/DiscoverPage';
 import {listGoals} from '@/lib/activities/goals';
 import {OnboardingGate} from '@/components/activities/OnboardingGate';
+import {setOnboardingStep, shouldShowIntro} from '@/lib/activities/onboarding';
+import {panelHref} from '@/lib/activities/panel-href';
 import {CoachMode} from '@/components/activities/CoachMode';
 import {ActivitiesPanels} from '@/components/activities/panels/ActivitiesPanels';
 import {setCoachMode} from '@/lib/activities/coach';
@@ -25,6 +27,11 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
   const user = await getSessionUser();
   if (!user) redirect('/auth/signin');
   const params = await searchParams;
+  // First visit goes straight into onboarding; marking it started keeps later visits on Discover.
+  if (!params.panel && !params.invite && params.intro !== '1' && (await shouldShowIntro(user.id).catch(() => false))) {
+    await setOnboardingStep(user.id, 'character');
+    redirect(panelHref({panel: 'onboarding', step: 'character'}));
+  }
   // Goals are optional here: if the table isn't migrated yet Discover still renders without the spotlight.
   const [data, museActions, listings, goals, quests, turf, progress, nearby, mirrors, swims] = await Promise.all([
     getDiscover(user.id),

@@ -1,17 +1,7 @@
 import {redirect} from 'next/navigation';
-import {getSessionUser} from '@/lib/auth';
-import {getUserTags} from '@/lib/activities/discover';
-import {getOffer, isAdult, listRequests, matchMentors} from '@/lib/activities/mentor';
-import {MentorPage} from '@/components/activities/MentorPage';
 
-export const dynamic = 'force-dynamic';
-
-/** /activities/mentor — offer mentorship (opt-in) and find mentors who did what you want (§9, §11). */
-export default async function MentorRoute({searchParams}: {searchParams: Promise<{offer?: string}>}) {
-  const user = await getSessionUser();
-  if (!user) redirect('/auth/signin');
-  const params = await searchParams;
-  const tags = await getUserTags(user.id);
-  const [offer, matches, requests, adult] = await Promise.all([getOffer(user.id), matchMentors(user.id, tags), listRequests(user.id), isAdult(user.id)]);
-  return <MentorPage offer={offer} matches={matches} requests={requests} adult={adult} highlight={params.offer ? Number(params.offer) : null} />;
+/** Old URL (pushes and notifications already sent point here). */
+export default async function OldMentorRoute({searchParams}: {searchParams: Promise<{offer?: string}>}) {
+  const {offer} = await searchParams;
+  redirect(offer ? `/activities/ahead?offer=${encodeURIComponent(offer)}` : '/activities/ahead');
 }

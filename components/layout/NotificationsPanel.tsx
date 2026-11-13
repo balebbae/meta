@@ -53,7 +53,7 @@ export function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (
     } catch {}
   };
   const row = (n: Notification) => (
-    <Link key={n.id} href={n.postId ? `/?post=${n.postId}` : n.actor ? `/profile/${n.actor.id}` : '/'} className={styles.notif} onClick={() => !n.isRead && markRead([n.id])}>
+    <Link key={n.id} href={n.type === 'ahead' ? '/activities/ahead' : n.postId ? `/?post=${n.postId}` : n.actor ? `/profile/${n.actor.id}` : '/'} className={styles.notif} onClick={() => !n.isRead && markRead([n.id])}>
       <span className={styles.notifAvatar}>
         <Avatar src={n.actor?.avatarUrl ?? '/favicon.svg'} alt="" size={56} />
         <span className={styles.notifType} style={{background: n.type === 'reaction' ? 'var(--fb-blue)' : n.type === 'comment' ? '#31a24c' : n.type === 'friend_request' ? 'var(--fb-blue)' : '#65676b'}}>

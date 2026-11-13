@@ -42,6 +42,27 @@ export function DiscoverPage({viewer, data, museActions, interests: initialInter
   }, [startMode, chats.length]);
   const [busy, setBusy] = useState<string | null>(null);
 
+  // Ember's "why you see this" lines arrive after first paint: one batched request for every card
+  // still carrying its deterministic fallback, so the page itself never waits on Muse.
+  useEffect(() => {
+    const pending = data.sections.flatMap(s => s.cards.filter(c => c.whyPending));
+    if (!pending.length) return;
+    const ctrl = new AbortController();
+    fetch('/api/activities/why', {
+      method: 'POST',
+      headers: {'content-type': 'application/json'},
+      signal: ctrl.signal,
+      body: JSON.stringify({cards: pending.map(c => ({id: c.id, kind: c.kind, title: c.title, subtitle: c.subtitle, tag: c.tag, meta: c.meta, fallback: c.fallback ?? c.why}))}),
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then((d: {why?: Record<string, string>} | null) => {
+        if (!d?.why) return;
+        setSections(list => list.map(s => ({...s, cards: s.cards.map(c => (d.why![c.id] ? {...c, why: d.why![c.id], whyPending: false} : c))})));
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [data.sections]);
+
   const say = useCallback((t: string) => {
     setToast(t);
     window.setTimeout(() => setToast(null), 3500);

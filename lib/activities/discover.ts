@@ -10,6 +10,9 @@ export type DiscoverCard = {
   subtitle?: string;
   /** One-line "why you see this" (Muse Ember when configured, template otherwise). */
   why: string;
+  /** True when `why` is the deterministic fallback and Ember's line can still be fetched. */
+  whyPending?: boolean;
+  fallback?: string;
   href?: string;
   cta?: string;
   /** Tag removed by "Not interested". */
@@ -66,25 +69,39 @@ function first(name: string): string {
 const WHY_CACHE = new Map<string, {text: string; at: number}>();
 const WHY_TTL = 10 * 60 * 1000;
 
-/** Ember writes the "why you see this" line; cached per user+card for 10 min; template when offline. */
-async function whyLine(userId: number, card: Omit<DiscoverCard, 'why'>, fallback: string): Promise<{why: string; offline: boolean}> {
-  if (!museConfigured()) return {why: fallback, offline: true};
-  const key = `${userId}:${card.id}`;
-  const hit = WHY_CACHE.get(key);
-  if (hit && Date.now() - hit.at < WHY_TTL) return {why: hit.text, offline: false};
+export type WhyRequest = {id: string; kind: string; title: string; subtitle?: string; tag?: string; meta?: unknown; fallback: string};
+
+/** Ember writes the "why you see this" lines for a whole page of cards in one call (cached per user+card
+ *  for 10 min, 8 s budget, falls back to the deterministic reason). Called from /api/activities/why. */
+export async function discoverWhy(userId: number, cards: WhyRequest[]): Promise<{why: Record<string, string>; offline: boolean}> {
+  const why: Record<string, string> = {};
+  const missing: WhyRequest[] = [];
+  for (const c of cards) {
+    const hit = WHY_CACHE.get(`${userId}:${c.id}`);
+    if (hit && Date.now() - hit.at < WHY_TTL) why[c.id] = hit.text;
+    else missing.push(c);
+  }
+  if (!museConfigured() || missing.length === 0) return {why, offline: !museConfigured()};
   try {
-    const out = await museJson<{why: string}>({
-      model: MODELS.ember,
-      effort: 'minimal',
-      schemaName: 'discover_why',
-      schema: {type: 'object', properties: {why: {type: 'string'}}, required: ['why'], additionalProperties: false},
-      input: `Write one friendly sentence (max 14 words) telling a Facebook user why they see this Activities card. Never mention bodies, weight, health or performance judgements. Card: ${JSON.stringify({kind: card.kind, title: card.title, subtitle: card.subtitle, tag: card.tag, meta: card.meta})}. Deterministic reason: ${fallback}`,
-    });
-    const text = out.why?.trim() || fallback;
-    WHY_CACHE.set(key, {text, at: Date.now()});
-    return {why: text, offline: false};
+    const out = await Promise.race([
+      museJson<{items: {id: string; why: string}[]}>({
+        model: MODELS.ember,
+        effort: 'minimal',
+        schemaName: 'discover_why_batch',
+        schema: {type: 'object', properties: {items: {type: 'array', items: {type: 'object', properties: {id: {type: 'string'}, why: {type: 'string'}}, required: ['id', 'why'], additionalProperties: false}}}, required: ['items'], additionalProperties: false},
+        input: `For each Activities card below, write one friendly sentence (max 14 words) telling a Facebook user why they see it. Never mention bodies, weight, health or performance judgements. Return one item per card id. Cards: ${JSON.stringify(missing.slice(0, 40).map(c => ({id: c.id, kind: c.kind, title: c.title, subtitle: c.subtitle, tag: c.tag, meta: c.meta, reason: c.fallback})))}`,
+      }),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('muse timeout')), 8000)),
+    ]);
+    for (const item of out.items) {
+      const text = item.why?.trim();
+      if (!text || !missing.some(c => c.id === item.id)) continue;
+      why[item.id] = text;
+      WHY_CACHE.set(`${userId}:${item.id}`, {text, at: Date.now()});
+    }
+    return {why, offline: false};
   } catch {
-    return {why: fallback, offline: true};
+    return {why, offline: true};
   }
 }
 
@@ -141,12 +158,14 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   const firstName = (await sql`select name from users where id = ${userId}`)[0]?.name as string;
   void firstName;
   void profileRows;
-  let offline = false;
+  // Muse is deliberately kept out of the request path: cards ship with the deterministic reason
+  // (or a cached Ember line) and the client asks /api/activities/why for the rest in one batch.
+  const offline = !museConfigured();
   const sections: DiscoverSection[] = [];
-  const build = async (card: Omit<DiscoverCard, 'why'>, fallback: string): Promise<DiscoverCard> => {
-    const r = await whyLine(userId, card, fallback);
-    offline = offline || r.offline;
-    return {...card, why: r.why};
+  const build = (card: Omit<DiscoverCard, 'why'>, fallback: string): DiscoverCard => {
+    const hit = WHY_CACHE.get(`${userId}:${card.id}`);
+    const cached = hit && Date.now() - hit.at < WHY_TTL ? hit.text : null;
+    return {...card, why: cached ?? fallback, whyPending: !offline && !cached, fallback};
   };
 
   // --- Pending invites / friends' open games (Turf, owned by D) ---
@@ -187,14 +206,14 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   const friendTags = new Map<number, string[]>();
   for (const r of friendTagRows) friendTags.set(r.user_id as number, [...(friendTags.get(r.user_id as number) ?? []), r.tag as string]);
   const friendCards: DiscoverCard[] = [];
-  for (const f of friends.slice(0, 20)) {
+  await Promise.all(friends.slice(0, 20).map(async f => {
     const [thisWeek, today] = await Promise.all([ask(f.id, 'friends', 'workouts_this_week', `discover:${userId}`), ask(f.id, 'friends', 'completed_move_today', `discover:${userId}`)]);
     const active = thisWeek.value === true || (typeof thisWeek.value === 'number' && thisWeek.value > 0);
-    if (!active) continue;
+    if (!active) return;
     const shared = overlap(tags, friendTags.get(f.id) ?? []);
     const what = today.value === true ? 'moved today' : 'worked out this week';
     friendCards.push(await build({id: `friend-${f.id}`, kind: 'friend', title: f.name, subtitle: `${first(f.name)} ${what}`, href: `/profile/${f.id}`, cta: 'Invite to a game', avatarUrl: f.avatar_url, tag: (friendTags.get(f.id) ?? []).find(t => tags.includes(t)), score: 10 + shared * 3 + (today.value === true ? 2 : 0), meta: {shared}}, shared ? `You both tagged ${(friendTags.get(f.id) ?? []).find(t => tags.includes(t))}.` : `${first(f.name)} shares workout check-ins with friends.`));
-  }
+  }));
   friendCards.sort((a, b) => b.score - a.score);
   if (friendCards.length) sections.push({id: 'friends', title: 'Friends doing Activities', cards: friendCards});
 

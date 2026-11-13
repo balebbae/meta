@@ -362,6 +362,11 @@ export function RailGamingIcon() {
   return <FbSprite name="railGaming" />;
 }
 
+export function RailActivitiesIcon() {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/activities-icon.png" width={36} height={36} alt="" draggable={false} />;
+}
+
 export function RailMessengerIcon() {
   return <FbSprite name="railMessenger" />;
 }

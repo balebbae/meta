@@ -275,6 +275,14 @@ export async function resendInvites(game: Game, user: Actor): Promise<number> {
 }
 
 /** Leaving turns your cells neutral and drops any open outing. */
+/** Turf games the user has accepted and not left, that haven't ended. */
+export async function listActiveGamesForUser(userId: number): Promise<{id: number; label: string; status: GameStatus}[]> {
+  const rows = await sql`
+    select g.id, g.status, g.settings->>'arenaLabel' as label from games g join game_invites i on i.game_id = g.id
+    where i.user_id = ${userId} and i.status = 'accepted' and g.status in ('pending', 'live') order by g.created_at desc limit 20`;
+  return rows.map(r => ({id: Number(r.id), label: String(r.label ?? 'Turf'), status: r.status as GameStatus}));
+}
+
 export async function leaveGame(game: Game, user: Actor): Promise<void> {
   const rows = await sql`update game_invites set status = 'left', responded_at = now() where game_id = ${game.id} and user_id = ${user.id} and status = 'accepted' returning user_id`;
   if (!rows.length) throw new TurfError('You are not in this game');

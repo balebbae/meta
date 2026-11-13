@@ -1,43 +1,47 @@
 'use client';
-import {useRef, useState} from 'react';
-import {Dialog} from '@/components/ui/Dialog';
+import {useState} from 'react';
+import {Banner} from '@astryxdesign/core/Banner';
+import {Button} from '@astryxdesign/core/Button';
+import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
+import {FileInput} from '@astryxdesign/core/FileInput';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Layout, LayoutContent, LayoutFooter} from '@astryxdesign/core/Layout';
+import {NumberInput} from '@astryxdesign/core/NumberInput';
+import {Text} from '@astryxdesign/core/Text';
+import {TextInput} from '@astryxdesign/core/TextInput';
+import {Thumbnail} from '@astryxdesign/core/Thumbnail';
+import {Token} from '@astryxdesign/core/Token';
+import {VStack} from '@astryxdesign/core/VStack';
 import {fileToDataUrl, rallyApi, type OkMove} from './api';
 import {ClipProof, type ClipPayload} from './ClipProof';
-import styles from './rally.module.css';
 
 type Dare = {id: string; text: string; bonus: number; needsProof: boolean};
 
-/**
- * Minimal manual log for a move or a dare. (Subagent A's LogWorkoutSheet can replace the inner form later.)
- * Only what the player types leaves this sheet; the server scores it and posts the public card.
- */
+/** Manual log for a move or a dare. Only what the player types leaves this sheet; the server scores it and posts the public card. */
 export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises, target, onDone}: {questId: number; open: boolean; onClose: () => void; dare?: Dare | null; levelName?: string; exercises?: string[]; target?: number | null; onDone?: (r: OkMove) => void}) {
   const [note, setNote] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [clip, setClip] = useState<ClipPayload | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OkMove | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
-  const reset = () => {
+  const close = () => {
     setNote('');
-    setAmount('');
+    setAmount(null);
     setImage(null);
     setClip(null);
     setError(null);
     setResult(null);
-  };
-  const close = () => {
-    reset();
     onClose();
   };
   const submit = async () => {
     setBusy(true);
     setError(null);
     try {
-      const r = dare ? await rallyApi.dare(questId, dare.id, {image, note}) : await rallyApi.move(questId, clip ? {source: 'clip', note, clip, amount: amount ? Number(amount) : null} : {source: image ? 'photo' : 'manual', note, image, amount: amount ? Number(amount) : null});
+      const r = dare ? await rallyApi.dare(questId, dare.id, {image, note}) : await rallyApi.move(questId, clip ? {source: 'clip', note, clip, amount} : {source: image ? 'photo' : 'manual', note, image, amount});
       setResult(r);
       onDone?.(r);
     } catch (e) {
@@ -46,66 +50,78 @@ export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises
       setBusy(false);
     }
   };
+  const pickPhoto = (files: File | File[] | null) => {
+    const file = Array.isArray(files) ? files[0] : files;
+    if (file) fileToDataUrl(file).then(setImage).catch(() => setError('Could not read that image'));
+  };
 
   return (
-    <Dialog open={open} onClose={close} title={dare ? 'Do a dare' : 'Log a move'} width={440}>
-      {result ? (
-        <div className={styles.sheetResult}>
-          <div className={styles.sheetDamage}>{result.critical ? 'CRITICAL ' : ''}−{result.damage} HP</div>
-          <p className={styles.sheetNarration}>{result.narration}</p>
-          {result.proof && <p className={styles.sheetMeta}>Proof: {result.proof.status} · {result.proof.verdict}</p>}
-          {!result.museUsed && <span className={styles.offline}>Muse offline · template narration</span>}
-          <button type="button" className="fb-btn-primary" onClick={close} style={{marginTop: 12}}>
-            Done
-          </button>
-        </div>
-      ) : (
-        <div className={styles.sheetForm}>
-          {dare ? (
-            <p className={styles.sheetLead}>
-              {dare.text} <strong>+{dare.bonus} bonus</strong>
-              {dare.needsProof && <span className={styles.sheetMeta}> · photo required</span>}
-            </p>
-          ) : (
-            <p className={styles.sheetLead}>
-              {levelName ? <strong>{levelName}: </strong> : null}
-              {exercises?.join(', ') || 'Any workout counts.'}
-              {target != null && <span className={styles.sheetMeta}> · your target today: {target} (scaled to your recent weeks)</span>}
-            </p>
-          )}
-          {!dare && (
-            <label className={styles.field}>
-              <span>How much did you do? (reps, seconds or minutes)</span>
-              <input type="number" inputMode="numeric" min={0} value={amount} onChange={e => setAmount(e.target.value)} placeholder="e.g. 45" />
-            </label>
-          )}
-          <label className={styles.field}>
-            <span>Note for the squad (optional)</span>
-            <input type="text" maxLength={120} value={note} onChange={e => setNote(e.target.value)} placeholder="Done before coffee" />
-          </label>
-          {!dare && !image && <ClipProof exercises={exercises} target={target} onChange={setClip} />}
-          {!clip && <div className={styles.proofRow}>
-            {image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={image} alt="Proof preview" className={styles.proofImg} />
+    <Dialog isOpen={open} onOpenChange={o => !o && close()} purpose="form" width={440}>
+      <Layout
+        header={<DialogHeader title={dare ? 'Do a dare' : 'Log a move'} onOpenChange={() => close()} />}
+        content={
+          <LayoutContent>
+            {result ? (
+              <VStack gap={2}>
+                <Heading level={2}>
+                  {result.critical ? 'CRITICAL ' : ''}−{result.damage} HP
+                </Heading>
+                <Text>{result.narration}</Text>
+                {result.proof && (
+                  <Text type="supporting" color="secondary">
+                    Proof: {result.proof.status} · {result.proof.verdict}
+                  </Text>
+                )}
+                {!result.museUsed && <Token label="Muse offline · template narration" size="sm" color="gray" />}
+              </VStack>
             ) : (
-              <button type="button" className="fb-btn-secondary" onClick={() => fileRef.current?.click()}>
-                Add photo proof (+10% trust)
-              </button>
+              <VStack gap={4}>
+                {dare ? (
+                  <Text>
+                    {dare.text} <Text weight="bold">+{dare.bonus} bonus</Text>
+                    {dare.needsProof && <Text color="secondary"> · photo required</Text>}
+                  </Text>
+                ) : (
+                  <Text>
+                    {levelName && <Text weight="bold">{levelName}: </Text>}
+                    {exercises?.join(', ') || 'Any workout counts.'}
+                    {target != null && <Text color="secondary"> · your target today: {target} (scaled to your recent weeks)</Text>}
+                  </Text>
+                )}
+                {!dare && <NumberInput label="How much did you do?" description="Reps, seconds or minutes" value={amount} onChange={setAmount} min={0} placeholder="e.g. 45" />}
+                <TextInput label="Note for the squad" isOptional value={note} onChange={v => setNote(v.slice(0, 120))} placeholder="Done before coffee" />
+                {!dare && !image && <ClipProof exercises={exercises} target={target} onChange={setClip} />}
+                {!clip &&
+                  (image ? (
+                    <HStack gap={2} vAlign="center">
+                      <Thumbnail src={image} alt="Proof preview" label="Photo proof" onRemove={() => setImage(null)} />
+                      <Text type="supporting" color="secondary">
+                        Photo proof added (+10% trust)
+                      </Text>
+                    </HStack>
+                  ) : (
+                    <FileInput label="Photo proof" description="+10% trust" isOptional={!dare?.needsProof} accept="image/*" value={null} onChange={pickPhoto} />
+                  ))}
+                {error && <Banner status="error" title={error} />}
+              </VStack>
             )}
-            {image && (
-              <button type="button" className="fb-btn-secondary" onClick={() => setImage(null)}>
-                Remove
-              </button>
-            )}
-            <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={e => void (e.target.files?.[0] && fileToDataUrl(e.target.files[0]).then(setImage).catch(() => setError('Could not read that image')))} />
-          </div>}
-          {error && <p className={styles.error}>{error}</p>}
-          <button type="button" className="fb-btn-primary" disabled={busy || (dare?.needsProof && !image)} onClick={() => void submit()}>
-            {busy ? 'Scoring…' : dare ? 'Complete dare' : 'Hit the boss'}
-          </button>
-        </div>
-      )}
+          </LayoutContent>
+        }
+        footer={
+          <LayoutFooter>
+            <HStack gap={2} hAlign="end">
+              {result ? (
+                <Button label="Done" variant="primary" onClick={close} />
+              ) : (
+                <>
+                  <Button label="Cancel" variant="secondary" onClick={close} />
+                  <Button label={dare ? 'Complete dare' : 'Hit the boss'} variant="primary" isLoading={busy} isDisabled={Boolean(dare?.needsProof && !image)} onClick={() => void submit()} />
+                </>
+              )}
+            </HStack>
+          </LayoutFooter>
+        }
+      />
     </Dialog>
   );
 }

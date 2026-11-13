@@ -2,53 +2,82 @@
 
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {useCallback, useEffect, useRef, useState} from 'react';
-import {Avatar} from '@/components/ui/Avatar';
-import {Dialog} from '@/components/ui/Dialog';
-import {ChevronLeftIcon, ChevronRightIcon} from '@/components/icons';
-import {Leaderboard} from '@/components/closeness/Leaderboard';
-import {ListingCard} from '@/components/pages/ListingCard';
+import {useCallback, useEffect, useState} from 'react';
+import {MapPin, Play, Sparkles} from 'lucide-react';
+import {AspectRatio} from '@astryxdesign/core/AspectRatio';
+import {Avatar} from '@astryxdesign/core/Avatar';
+import {Button} from '@astryxdesign/core/Button';
+import {Card} from '@astryxdesign/core/Card';
+import {Carousel} from '@astryxdesign/core/Carousel';
+import {Center} from '@astryxdesign/core/Center';
+import {ClickableCard} from '@astryxdesign/core/ClickableCard';
+import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
+import {EmptyState} from '@astryxdesign/core/EmptyState';
+import {Grid} from '@astryxdesign/core/Grid';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Icon} from '@astryxdesign/core/Icon';
+import {Layout, LayoutContent, LayoutFooter} from '@astryxdesign/core/Layout';
+import {Selector} from '@astryxdesign/core/Selector';
+import {StackItem} from '@astryxdesign/core/Stack';
+import {Text} from '@astryxdesign/core/Text';
+import {TextInput} from '@astryxdesign/core/TextInput';
+import {useToast} from '@astryxdesign/core/Toast';
+import {Token} from '@astryxdesign/core/Token';
+import {VStack} from '@astryxdesign/core/VStack';
+import {BossArt} from '@/components/rally/BossArt';
 import type {DiscoverCard, DiscoverPayload, DiscoverSection} from '@/lib/activities/discover';
 import type {Goal} from '@/lib/activities/goals';
 import {GoalSpotlight} from '@/components/activities/goals/GoalSpotlight';
 import type {MuseActionsPayload} from '@/lib/activities/actions';
 import type {ListingBrief} from '@/lib/rally/queries';
+import {ActivityLeaderboard} from './ActivityLeaderboard';
 import {MuseActions} from './MuseActions';
-import styles from './discover.module.css';
+import b from './reels-bento.module.css';
 
 type Viewer = {id: number; name: string; avatarUrl: string};
-type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; listings: ListingBrief[]; showIntro: boolean; start: string | null; eventId: number | null; goal?: Goal | null};
+export type MyGame = {key: string; href: string; title: string; subtitle: string; boss: {kind: string; imageUrl: string | null; name: string} | null};
+type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; listings: ListingBrief[]; start: string | null; eventId: number | null; goal?: Goal | null; games?: MyGame[]};
+type Chat = {id: number; title: string; isGroup: boolean};
 
 const json = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
 
-export function DiscoverPage({viewer, data, museActions, listings, showIntro, start, eventId, goal = null}: Props) {
+/** Section title row: heading on the left, an optional note or "See all" on the right. */
+export function SectionHead({title, sub, href}: {title: string; sub?: string; href?: string}) {
+  return (
+    <HStack gap={2} vAlign="center" justify="between" wrap="wrap">
+      <Heading level={2}>{title}</Heading>
+      {sub && (
+        <Text type="supporting" color="secondary">
+          {sub}
+        </Text>
+      )}
+      {href && <Button label="See all" variant="ghost" size="sm" href={href} />}
+    </HStack>
+  );
+}
+
+export function DiscoverPage({viewer, data, museActions, listings, start, eventId, goal = null, games = []}: Props) {
   const router = useRouter();
+  const showToast = useToast();
   const [sections, setSections] = useState<DiscoverSection[]>(data.sections);
-  const rail = useRef<HTMLDivElement>(null);
-  const [railEdge, setRailEdge] = useState({start: true, end: listings.length <= 4});
-  const onRailScroll = () => {
-    const el = rail.current;
-    if (el) setRailEdge({start: el.scrollLeft < 8, end: el.scrollLeft + el.clientWidth > el.scrollWidth - 8});
-  };
-  const slide = (dir: 1 | -1) => rail.current?.scrollBy({left: dir * rail.current.clientWidth * 0.75, behavior: 'smooth'});
-  const [toast, setToast] = useState<string | null>(null);
-  const [intro, setIntro] = useState(showIntro);
   const [startMode, setStartMode] = useState<string | null>(start);
   const [sentence, setSentence] = useState('');
-  const [chats, setChats] = useState<{id: number; title: string; isGroup: boolean}[]>([]);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [chatId, setChatId] = useState<number | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
   useEffect(() => {
     if (!startMode || chats.length) return;
     fetch('/api/conversations')
       .then(r => (r.ok ? r.json() : {conversations: []}))
-      .then((d: {conversations?: {id: number; title: string; isGroup: boolean}[]}) => {
+      .then((d: {conversations?: Chat[]}) => {
         const list = [...(d.conversations ?? [])].sort((a, b) => Number(b.isGroup) - Number(a.isGroup));
         setChats(list);
         setChatId(prev => prev ?? list[0]?.id ?? null);
       })
       .catch(() => {});
   }, [startMode, chats.length]);
-  const [busy, setBusy] = useState<string | null>(null);
 
   // Ember's "why you see this" lines arrive after first paint: one batched request for every card
   // still carrying its deterministic fallback, so the page itself never waits on Muse.
@@ -71,10 +100,7 @@ export function DiscoverPage({viewer, data, museActions, listings, showIntro, st
     return () => ctrl.abort();
   }, [data.sections]);
 
-  const say = useCallback((t: string) => {
-    setToast(t);
-    window.setTimeout(() => setToast(null), 3500);
-  }, []);
+  const say = useCallback((t: string) => void showToast({body: t, autoHideDuration: 3500}), [showToast]);
 
   useEffect(() => {
     if (eventId) say('Training plan for this event starts with the friends going. Pick a game below.');
@@ -93,7 +119,7 @@ export function DiscoverPage({viewer, data, museActions, listings, showIntro, st
     setBusy(template);
     try {
       if (template === 'reel') {
-        router.push('/reels?tab=fitness');
+        router.push('/reels');
         return;
       }
       if (chatId == null) {
@@ -123,217 +149,214 @@ export function DiscoverPage({viewer, data, museActions, listings, showIntro, st
 
   const byId = (id: DiscoverSection['id']) => sections.find(s => s.id === id);
   const renderSection = (s: DiscoverSection) => (
-    <section key={s.id} className={styles.section} aria-label={s.title}>
-      <div className={styles.sectionHead}>
-        <h2 className={styles.sectionTitle}>{s.title}</h2>
-        {s.id === 'mentors' && <span className={styles.sectionSub}>Talk through your Muses · names stay hidden · 18+</span>}
-        {s.id === 'friends' && <span className={styles.sectionSub}>Yes/no answers only</span>}
-      </div>
-      <div className={s.id === 'first_move' ? styles.heroWrap : styles.grid}>
+    <VStack key={s.id} gap={3} as="section" aria-label={s.title}>
+      <SectionHead title={s.title} sub={s.id === 'mentors' ? 'Talk through your Muses · names stay hidden · 18+' : s.id === 'friends' ? 'Yes/no answers only' : undefined} />
+      <Grid columns={s.id === 'first_move' ? 1 : {minWidth: 220}} gap={3}>
         {s.cards.map(c => (
-          <Card key={c.id} card={c} hero={s.id === 'first_move'} viewer={viewer} onNotInterested={() => notInterested(c)} onStart={c.kind === 'start' ? () => (c.meta?.template === 'sentence' ? setStartMode('sentence') : startGame(String(c.meta?.template ?? 'turf'))) : undefined} busy={busy === c.meta?.template} />
+          <DiscoverCardView
+            key={c.id}
+            card={c}
+            hero={s.id === 'first_move'}
+            onNotInterested={() => notInterested(c)}
+            onStart={c.kind === 'start' ? () => (c.meta?.template === 'sentence' ? setStartMode('sentence') : startGame(String(c.meta?.template ?? 'turf'))) : undefined}
+            busy={busy === c.meta?.template}
+          />
         ))}
-      </div>
-    </section>
+      </Grid>
+    </VStack>
   );
   const firstMove = byId('first_move');
   const reels = byId('learn');
+  const chatPicker = (
+    <Selector
+      label="Play in"
+      options={chats.map(c => ({value: String(c.id), label: c.isGroup ? `Group: ${c.title}` : c.title}))}
+      value={chatId == null ? '' : String(chatId)}
+      onChange={v => setChatId(Number(v))}
+      placeholder={chats.length ? 'Pick a chat' : 'Loading chats…'}
+      isLoading={!chats.length}
+    />
+  );
 
   return (
-    <div className={styles.page}>
-      <h1 className={styles.pageTitle}>Activities</h1>
-      <div className={styles.goalWrap}>
-        <GoalSpotlight goal={goal} />
-      </div>
+    <VStack gap={6} paddingBlock={4}>
+      <Heading level={1}>Activities</Heading>
+
+      <VStack gap={3} as="section" aria-label="Your games">
+        <SectionHead title="Your games" />
+        {games.length === 0 ? (
+          <Card>
+            <EmptyState title="You're not in any games right now" description="Start one below or from a group chat." isCompact />
+          </Card>
+        ) : (
+          <Grid columns={{minWidth: 200}} gap={3}>
+            {games.map(g => (
+              <ClickableCard key={g.key} href={g.href} label={g.title}>
+                <VStack gap={2} hAlign="center">
+                  {g.boss ? <BossArt kind={g.boss.kind} imageUrl={g.boss.imageUrl} name={g.boss.name} size={72} /> : <Icon icon={MapPin} size="lg" color="accent" />}
+                  <VStack gap={0.5} hAlign="center">
+                    <Text weight="bold" justify="center">
+                      {g.title}
+                    </Text>
+                    <Text type="supporting" color="secondary">
+                      {g.subtitle}
+                    </Text>
+                  </VStack>
+                </VStack>
+              </ClickableCard>
+            ))}
+          </Grid>
+        )}
+      </VStack>
+
+      <GoalSpotlight goal={goal} />
       <MuseActions initial={museActions} viewerName={viewer.name} say={say} />
       {firstMove && renderSection(firstMove)}
+
       {reels && (
-        <section className={styles.section} aria-label="Suggested reels">
-          <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>Suggested reels</h2>
-            <Link href="/reels?tab=fitness#activities" className={styles.seeAll}>
-              See all
-            </Link>
-          </div>
-          <div className={styles.bento}>
+        <VStack gap={3} as="section" aria-label="Suggested reels">
+          <SectionHead title="Suggested reels" href="/reels" />
+          <nav className={b.bento} aria-label="Suggested reels">
             {reels.cards.map(c => (
-              <Link key={c.id} href={c.href ?? '/reels?tab=fitness#activities'} className={styles.reelTile}>
+              <Link key={c.id} href={c.href ?? '/reels'} className={b.reelTile}>
                 {c.imageUrl && <img src={c.imageUrl} alt="" loading="lazy" />}
-                <span className={styles.reelTag}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
+                <span className={b.reelTag}>
+                  <Icon icon={Play} size="xsm" color="inherit" />
                   For {String(c.meta?.label ?? 'Workouts')}
                 </span>
-                <span className={styles.reelCaption}>{c.title}</span>
+                <span className={b.reelCaption}>{c.title}</span>
               </Link>
             ))}
-          </div>
-        </section>
+          </nav>
+        </VStack>
       )}
+
       {listings.length > 0 && (
-        <section className={styles.section} aria-label="Suggested on Marketplace">
-          <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>Suggested on Marketplace</h2>
-            <Link href="/marketplace?category=Sporting%20Goods" className={styles.seeAll}>
-              See all
-            </Link>
-          </div>
-          <div className={styles.carouselWrap}>
-            <div ref={rail} className={styles.carousel} onScroll={onRailScroll}>
-              {listings.map(l => (
-                <div key={l.id} className={styles.slide}>
-                  <ListingCard listing={l} />
-                </div>
-              ))}
-            </div>
-            {!railEdge.start && (
-              <button type="button" className={`${styles.arrow} ${styles.arrowPrev}`} aria-label="Previous items" onClick={() => slide(-1)}>
-                <ChevronLeftIcon size={24} />
-              </button>
-            )}
-            {!railEdge.end && (
-              <button type="button" className={`${styles.arrow} ${styles.arrowNext}`} aria-label="More items" onClick={() => slide(1)}>
-                <ChevronRightIcon size={24} />
-              </button>
-            )}
-          </div>
-        </section>
+        <VStack gap={3} as="section" aria-label="Suggested on Marketplace">
+          <SectionHead title="Suggested on Marketplace" href="/marketplace?category=Sporting%20Goods" />
+          <Carousel gap={2} hasButtons hasEdgeFade aria-label="Suggested on Marketplace">
+            {listings.map(l => (
+              <ClickableCard key={l.id} href={`/marketplace/${l.id}`} label={l.title} padding={0} width={200}>
+                <VStack>
+                  <AspectRatio ratio={1}>
+                    <img src={l.imageUrl} alt="" loading="lazy" />
+                  </AspectRatio>
+                  <VStack gap={0.5} padding={2}>
+                    <Text weight="bold">${(l.priceCents / 100).toFixed(0)}</Text>
+                    <Text maxLines={1}>{l.title}</Text>
+                    <Text type="supporting" color="secondary" maxLines={1}>
+                      {l.location}
+                    </Text>
+                  </VStack>
+                </VStack>
+              </ClickableCard>
+            ))}
+          </Carousel>
+        </VStack>
       )}
-      <div className={`${styles.section} ${styles.board}`}>
-        <Leaderboard defaultTab="fitness" />
-      </div>
+
+      <ActivityLeaderboard />
       {sections.filter(s => s.id !== 'first_move' && s.id !== 'learn').map(renderSection)}
-      {toast && (
-        <div className={styles.toast} role="status">
-          {toast}
-        </div>
-      )}
-      <Dialog open={startMode === 'turf'} onClose={() => setStartMode(null)} title="Start Turf">
-        <div className={styles.introBody}>
-          Turf turns this week&apos;s runs and walks into a game: every street you cover becomes a cell you own. Friends only see the blocks you claim, never your route or your times.
-          <label style={{display: 'block', margin: '10px 0 2px', fontSize: 13, color: 'var(--fb-text-secondary)'}}>
-            Play in
-            <select className={styles.input} style={{display: 'block', width: '100%', marginTop: 4}} value={chatId ?? ''} onChange={e => setChatId(Number(e.target.value))} aria-label="Chat to play in">
-              {chats.length === 0 && <option value="">Loading chats…</option>}
-              {chats.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.isGroup ? `Group: ${c.title}` : c.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className={styles.actions}>
-            <button type="button" className={styles.primary} disabled={busy === 'turf'} onClick={() => startGame('turf')}>
-              {busy === 'turf' ? 'Starting…' : 'Create game & invite friends'}
-            </button>
-            <button type="button" className={styles.secondary} onClick={() => setStartMode(null)}>
-              Not now
-            </button>
-          </div>
-        </div>
+
+      <Dialog isOpen={startMode === 'turf'} onOpenChange={o => !o && setStartMode(null)} purpose="form" width={480}>
+        <Layout
+          header={<DialogHeader title="Start Turf" onOpenChange={() => setStartMode(null)} />}
+          content={
+            <LayoutContent>
+              <VStack gap={4}>
+                <Text>Turf turns this week&apos;s runs and walks into a game: every street you cover becomes a cell you own. Friends only see the blocks you claim, never your route or your times.</Text>
+                {chatPicker}
+              </VStack>
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter>
+              <HStack gap={2} hAlign="end">
+                <Button label="Not now" onClick={() => setStartMode(null)} />
+                <Button label="Create game & invite friends" variant="primary" isLoading={busy === 'turf'} onClick={() => void startGame('turf')} />
+              </HStack>
+            </LayoutFooter>
+          }
+        />
       </Dialog>
-      <Dialog open={startMode === 'sentence'} onClose={() => setStartMode(null)} title="Quest from a sentence">
-        <div className={styles.introBody}>
-          Describe the game in one line and Muse builds the rules, the boss and the weekly drop.
-          <label style={{display: 'block', margin: '10px 0 2px', fontSize: 13, color: 'var(--fb-text-secondary)'}}>
-            Play in
-            <select className={styles.input} style={{display: 'block', width: '100%', marginTop: 4}} value={chatId ?? ''} onChange={e => setChatId(Number(e.target.value))} aria-label="Chat to play in">
-              {chats.length === 0 && <option value="">Loading chats…</option>}
-              {chats.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.isGroup ? `Group: ${c.title}` : c.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className={styles.sentenceRow}>
-            <input className={styles.input} value={sentence} onChange={e => setSentence(e.target.value)} placeholder="Run 3 km three times this week with friends" aria-label="Game sentence" />
-            <button type="button" className={styles.primary} style={{flex: '0 0 auto'}} disabled={busy === 'sentence'} onClick={() => startGame('sentence')}>
-              {busy === 'sentence' ? 'Building…' : 'Build it'}
-            </button>
-          </div>
-        </div>
+      <Dialog isOpen={startMode === 'sentence'} onOpenChange={o => !o && setStartMode(null)} purpose="form" width={480}>
+        <Layout
+          header={<DialogHeader title="Quest from a sentence" subtitle="Describe the game in one line and Muse builds the rules, the boss and the weekly drop." onOpenChange={() => setStartMode(null)} />}
+          content={
+            <LayoutContent>
+              <VStack gap={4}>
+                {chatPicker}
+                <TextInput label="Game sentence" value={sentence} onChange={setSentence} placeholder="Run 3 km three times this week with friends" onEnter={() => void startGame('sentence')} />
+              </VStack>
+            </LayoutContent>
+          }
+          footer={
+            <LayoutFooter>
+              <HStack gap={2} hAlign="end">
+                <Button label="Cancel" onClick={() => setStartMode(null)} />
+                <Button label="Build it" variant="primary" isLoading={busy === 'sentence'} onClick={() => void startGame('sentence')} />
+              </HStack>
+            </LayoutFooter>
+          }
+        />
       </Dialog>
-      <Dialog
-        open={intro}
-        onClose={() => {
-          setIntro(false);
-          void fetch('/api/activities/prompts', json({surface: 'intro', action: 'snooze'}));
-        }}
-        title="Activities">
-        <div className={styles.introBody}>
-          <strong>Move more, with the people you already talk to.</strong>
-          <ul>
-            <li>Play Rally and Turf with friends — games built from real workouts.</li>
-            <li>Your Muse keeps the details private and only answers yes/no on your behalf.</li>
-            <li>You choose what friends, games and other people's Muses can see. Nothing is on by default.</li>
-          </ul>
-          <div className={styles.actions}>
-            <Link href="/activities/onboarding/tags" className={styles.primary} onClick={() => setIntro(false)}>
-              Set up Activities
-            </Link>
-            <button
-              type="button"
-              className={styles.secondary}
-              onClick={() => {
-                setIntro(false);
-                void fetch('/api/activities/prompts', json({surface: 'intro', action: 'snooze'}));
-              }}>
-              Not now
-            </button>
-          </div>
-        </div>
-      </Dialog>
-    </div>
+    </VStack>
   );
 }
 
-function Card({card, hero, viewer, onNotInterested, onStart, busy}: {card: DiscoverCard; hero: boolean; viewer: Viewer; onNotInterested: () => void; onStart?: () => void; busy: boolean}) {
-  void viewer;
+function DiscoverCardView({card, hero, onNotInterested, onStart, busy}: {card: DiscoverCard; hero: boolean; onNotInterested: () => void; onStart?: () => void; busy: boolean}) {
   const cta = card.cta ?? 'Open';
-  const inner = (
-    <>
-      {card.imageUrl ? (
-        <div className={styles.img}>
-          <img src={card.imageUrl} alt="" loading="lazy" />
-        </div>
-      ) : card.avatarUrl ? (
-        <div className={styles.avatarWrap}>
-          <Avatar src={card.avatarUrl} alt="" size={hero ? 72 : 56} />
-        </div>
-      ) : card.kind === 'mentor' ? (
-        <div className={styles.avatarWrap}>
-          <span className={styles.pill}>Muse to Muse · name hidden</span>
-        </div>
-      ) : null}
-      <div className={styles.body}>
-        {card.meta?.bossFight ? <span className={styles.pillRed}>Boss fight IRL · counts double</span> : null}
-        {card.meta?.rally ? <span className={styles.pill}>Weekly Rally</span> : null}
-        <div className={styles.title}>{card.title}</div>
-        {card.subtitle && <div className={styles.subtitle}>{card.subtitle}</div>}
-        <div className={styles.why}>
-          <span className={styles.whyDot} aria-hidden />
-          <span>{card.why}</span>
-        </div>
-        <div className={styles.actions}>
-          {onStart ? (
-            <button type="button" className={styles.primary} onClick={onStart} disabled={busy}>
-              {busy ? 'Starting…' : cta}
-            </button>
-          ) : (
-            <Link href={card.href ?? '/activities'} className={styles.primary}>
-              {cta}
-            </Link>
-          )}
-          {card.kind !== 'start' && card.kind !== 'invite' && (
-            <button type="button" className={styles.ghost} onClick={onNotInterested} title={card.tag ? `Removes the "${card.tag}" tag` : 'Hide'}>
-              Not interested
-            </button>
-          )}
-        </div>
-      </div>
-    </>
+  const media = card.imageUrl ? (
+    <AspectRatio ratio={16 / 9}>
+      <img src={card.imageUrl} alt="" loading="lazy" />
+    </AspectRatio>
+  ) : card.avatarUrl ? (
+    <Center paddingBlockStart={4}>
+      <Avatar src={card.avatarUrl} name={card.title} size={hero ? 72 : 60} />
+    </Center>
+  ) : null;
+  const body = (
+    <VStack gap={2} padding={4} width="100%">
+      {(card.meta?.bossFight || card.meta?.rally || card.kind === 'mentor') && (
+        <HStack gap={1.5} wrap="wrap">
+          {card.meta?.bossFight ? <Token label="Boss fight IRL · counts double" size="sm" color="red" /> : null}
+          {card.meta?.rally ? <Token label="Weekly Rally" size="sm" color="blue" /> : null}
+          {card.kind === 'mentor' && <Token label="Muse to Muse · name hidden" size="sm" color="purple" />}
+        </HStack>
+      )}
+      <Heading level={3}>{card.title}</Heading>
+      {card.subtitle && (
+        <Text type="supporting" color="secondary">
+          {card.subtitle}
+        </Text>
+      )}
+      <HStack gap={1.5} vAlign="center">
+        <Icon icon={Sparkles} size="xsm" color="accent" />
+        <StackItem size="fill">
+          <Text type="supporting" color="secondary">
+            {card.why}
+          </Text>
+        </StackItem>
+      </HStack>
+      <HStack gap={2} wrap="wrap">
+        {onStart ? <Button label={cta} variant="primary" size="sm" isLoading={busy} onClick={onStart} /> : <Button label={cta} variant="primary" size="sm" href={card.href ?? '/activities'} />}
+        {card.kind !== 'start' && card.kind !== 'invite' && <Button label="Not interested" variant="ghost" size="sm" tooltip={card.tag ? `Removes the "${card.tag}" tag` : 'Hide'} onClick={onNotInterested} />}
+      </HStack>
+    </VStack>
   );
-  return <article className={hero ? styles.hero : styles.card}>{inner}</article>;
+  return (
+    <Card padding={0}>
+      {hero && card.imageUrl ? (
+        <Grid columns={{minWidth: 240, max: 2}}>
+          {media}
+          {body}
+        </Grid>
+      ) : (
+        <VStack>
+          {media}
+          {body}
+        </VStack>
+      )}
+    </Card>
+  );
 }

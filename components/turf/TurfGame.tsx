@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import {AlertDialog} from '@astryxdesign/core/AlertDialog';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {ArrowLeftIcon} from '@/components/icons';
 import {NEUTRAL} from '@/lib/turf/colors';
@@ -28,6 +29,7 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
   const state = polled ?? initial;
   const now = useNow(15_000);
   const [busy, setBusy] = useState<string | null>(null);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [myOuting, setMyOuting] = useState(state.me.outing);
@@ -246,13 +248,20 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
             type="button"
             className={`${styles.btnDanger} ${styles.span}`}
             disabled={busy != null}
-            onClick={() => {
-              if (window.confirm('Leave this Turf game? Your cells turn neutral.')) void run('leave', () => turfApi.leave(gameId));
-            }}
+            onClick={() => setLeaveOpen(true)}
           >
             Leave game
           </button>
         )}
+        <AlertDialog
+          isOpen={leaveOpen}
+          onOpenChange={open => busy !== 'leave' && setLeaveOpen(open)}
+          title="Leave this Turf game?"
+          description="Your cells turn neutral and you stop claiming ground in this game."
+          actionLabel="Leave game"
+          onAction={() => void run('leave', () => turfApi.leave(gameId)).then(() => setLeaveOpen(false))}
+          isActionLoading={busy === 'leave'}
+        />
       </aside>
     </main>
   );

@@ -4,6 +4,7 @@ import {usePathname} from 'next/navigation';
 import {useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import {
+  RailActivitiesIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   RailAdsIcon,
@@ -30,10 +31,7 @@ import styles from './layout.module.css';
 const PRIMARY = [
   {label: 'Meta AI', href: '/meta-ai', Icon: RailMetaAIIcon},
   {label: 'Friends', href: '/friends', Icon: RailFriendsIcon},
-  {label: 'Activities', href: '/activities', Icon: RailGamingIcon},
-  {label: 'Goals', href: '/activities/goals', Icon: RailGamingIcon},
-  {label: 'Closeness', href: '/closeness', Icon: RailMemoriesIcon},
-  {label: 'Log a workout', href: '/activities/log', Icon: RailGamingIcon},
+  {label: 'Activities', href: '/activities', Icon: RailActivitiesIcon},
   {label: 'Health', href: '/health', Icon: RailClimateIcon},
   {label: 'Memories', href: '/memories', Icon: RailMemoriesIcon},
   {label: 'Saved', href: '/saved', Icon: RailSavedIcon},

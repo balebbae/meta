@@ -1,55 +1,52 @@
-import Link from 'next/link';
+import {Flag} from 'lucide-react';
+import {Button} from '@astryxdesign/core/Button';
+import {Card} from '@astryxdesign/core/Card';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Icon} from '@astryxdesign/core/Icon';
+import {ProgressBar} from '@astryxdesign/core/ProgressBar';
+import {Text} from '@astryxdesign/core/Text';
+import {VStack} from '@astryxdesign/core/VStack';
 import type {Goal} from '@/lib/activities/goals';
-import g from './goals.module.css';
-
-function FlagIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
-    </svg>
-  );
-}
 
 /** Top of Discover: your active goal's roadmap at a glance, or one line inviting you to set one. */
 export function GoalSpotlight({goal}: {goal: Goal | null}) {
   if (!goal) {
     return (
-      <section className={`${g.card} ${g.spot}`} aria-label="Set a goal" style={{marginBottom: 16}}>
-        <span className={g.goalIcon}>
-          <FlagIcon />
-        </span>
-        <div className={g.spotBody}>
-          <span className={g.h2}>Training for something?</span>
-          <span className={g.muted}>Tell your Muse a goal, like a HYROX or your first 5K. You get a week-by-week roadmap, a solo game and people on the same path.</span>
-        </div>
-        <Link href="/activities/goals" className={g.btnPrimary}>
-          Set a goal
-        </Link>
-      </section>
+      <Card variant="blue" aria-label="Set a goal">
+        <HStack gap={3} vAlign="center" wrap="wrap">
+          <Icon icon={Flag} size="lg" color="accent" />
+          <VStack gap={1} width="min(100%, 520px)">
+            <Heading level={3}>Training for something?</Heading>
+            <Text type="supporting" color="secondary">
+              Tell your Muse a goal, like a HYROX or your first 5K. You get a week-by-week roadmap, a solo game and people on the same path.
+            </Text>
+          </VStack>
+          <Button label="Set a goal" variant="primary" href="/activities/goals" />
+        </HStack>
+      </Card>
     );
   }
   const phase = goal.plan.phases.find(p => goal.week >= p.startWeek && goal.week <= p.endWeek) ?? goal.plan.phases[0];
   const next = goal.plan.milestones.find(m => !m.done);
   return (
-    <section className={`${g.card} ${g.spot}`} aria-label="Your goal" style={{marginBottom: 16}}>
-      <span className={g.goalIcon}>
-        <FlagIcon />
-      </span>
-      <div className={g.spotBody}>
-        <div className={g.row} style={{justifyContent: 'space-between'}}>
-          <span className={g.h2}>{goal.title}</span>
-          <span className={g.muted}>
-            Week {goal.week} of {goal.plan.weeks} · {phase.name}
-          </span>
-        </div>
-        <div className={g.bar} role="progressbar" aria-label={`${goal.title} milestones done`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={goal.progress.pct}>
-          <div className={g.barFill} style={{width: `${goal.progress.pct}%`}} />
-        </div>
-        <span className={g.muted}>{next ? `Next: ${next.title} (week ${next.week})` : 'Every milestone is done.'}</span>
-      </div>
-      <Link href={`/activities/goals/${goal.id}`} className={g.btnSoft}>
-        Open roadmap
-      </Link>
-    </section>
+    <Card aria-label="Your goal">
+      <HStack gap={3} vAlign="center" wrap="wrap">
+        <Icon icon={Flag} size="lg" color="accent" />
+        <VStack gap={2} width="min(100%, 520px)">
+          <HStack gap={2} justify="between" vAlign="center" wrap="wrap">
+            <Heading level={3}>{goal.title}</Heading>
+            <Text type="supporting" color="secondary">
+              Week {goal.week} of {goal.plan.weeks} · {phase.name}
+            </Text>
+          </HStack>
+          <ProgressBar label={`${goal.title} milestones done`} isLabelHidden value={goal.progress.pct} max={100} />
+          <Text type="supporting" color="secondary">
+            {next ? `Next: ${next.title} (week ${next.week})` : 'Every milestone is done.'}
+          </Text>
+        </VStack>
+        <Button label="Open roadmap" href={`/activities/goals/${goal.id}`} />
+      </HStack>
+    </Card>
   );
 }

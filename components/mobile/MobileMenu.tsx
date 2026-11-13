@@ -4,6 +4,7 @@ import {useRouter} from 'next/navigation';
 import {useEffect, useRef, useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import {
+  RailActivitiesIcon,
   BookmarkIcon,
   ChevronDownIcon,
   ChevronRightIcon,
@@ -35,9 +36,8 @@ import styles from './mobile.module.css';
 
 const SHORTCUTS = [
   {label: 'Friends', Icon: RailFriendsIcon, href: '/friends'},
-  {label: 'Activities', Icon: RailGamingIcon, href: '/activities'},
+  {label: 'Activities', Icon: RailActivitiesIcon, href: '/activities'},
   {label: 'Health', Icon: RailClimateIcon, href: '/health'},
-  {label: 'Log a workout', Icon: RailGamingIcon, href: '/activities/log'},
   {label: 'Memories', Icon: RailMemoriesIcon, href: '/memories'},
   {label: 'Groups', Icon: RailGroupsIcon, href: '/groups'},
   {label: 'Saved', Icon: RailSavedIcon, href: '/saved'},

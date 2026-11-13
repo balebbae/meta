@@ -1,10 +1,17 @@
 import type {Metadata} from 'next';
-import Link from 'next/link';
 import {redirect} from 'next/navigation';
+import {Flag} from 'lucide-react';
+import {Card} from '@astryxdesign/core/Card';
+import {Heading} from '@astryxdesign/core/Heading';
+import {Icon} from '@astryxdesign/core/Icon';
+import {List, ListItem} from '@astryxdesign/core/List';
+import {ProgressBar} from '@astryxdesign/core/ProgressBar';
+import {Text} from '@astryxdesign/core/Text';
+import {Token} from '@astryxdesign/core/Token';
+import {VStack} from '@astryxdesign/core/VStack';
 import {GoalComposer} from '@/components/activities/goals/GoalComposer';
 import {listGoals} from '@/lib/activities/goals';
 import {getSessionUser} from '@/lib/auth';
-import g from '@/components/activities/goals/goals.module.css';
 
 export const metadata: Metadata = {title: 'Goals | Facebook'};
 export const dynamic = 'force-dynamic';
@@ -14,44 +21,39 @@ export default async function GoalsPage() {
   if (!user) redirect('/auth');
   const goals = await listGoals(user.id);
   return (
-    <main className={`${g.page} ${g.narrow}`}>
-      <div>
-        <h1 className={g.h1}>Goals</h1>
-        <p className={g.muted} style={{marginTop: 4}}>
-          Pick something to train for. Your Muse plans the weeks, checks in, and turns each week into a game.
-        </p>
-      </div>
+    <VStack gap={4} paddingBlock={4} maxWidth={720}>
+      <VStack gap={1}>
+        <Heading level={1}>Goals</Heading>
+        <Text color="secondary">Pick something to train for. Your Muse plans the weeks, checks in, and turns each week into a game.</Text>
+      </VStack>
       <GoalComposer />
-      {goals.map(goal => {
-        const phase = goal.plan.phases.find(p => goal.week >= p.startWeek && goal.week <= p.endWeek) ?? goal.plan.phases[0];
-        return (
-          <Link key={goal.id} href={`/activities/goals/${goal.id}`} className={`${g.card} ${g.goalRow}`}>
-            <span className={g.goalIcon} aria-hidden="true">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
-              </svg>
-            </span>
-            <span className={g.grow} style={{display: 'flex', flexDirection: 'column', gap: 6}}>
-              <span className={g.row} style={{justifyContent: 'space-between'}}>
-                <span className={g.h2}>{goal.title}</span>
-                {goal.status === 'done' ? (
-                  <span className={g.pillGreen}>Reached</span>
-                ) : (
-                  <span className={g.muted}>
-                    Week {goal.week} of {goal.plan.weeks} · {phase.name}
-                  </span>
-                )}
-              </span>
-              <span className={g.bar}>
-                <span className={g.barFill} style={{width: `${goal.progress.pct}%`, display: 'block'}} />
-              </span>
-              <span className={g.muted}>
-                {goal.progress.done} of {goal.progress.total} milestones
-              </span>
-            </span>
-          </Link>
-        );
-      })}
-    </main>
+      {goals.length > 0 && (
+        <Card>
+          <List hasDividers>
+            {goals.map(goal => {
+              const phase = goal.plan.phases.find(p => goal.week >= p.startWeek && goal.week <= p.endWeek) ?? goal.plan.phases[0];
+              return (
+                <ListItem
+                  key={goal.id}
+                  href={`/activities/goals/${goal.id}`}
+                  align="start"
+                  startContent={<Icon icon={Flag} size="lg" color="accent" />}
+                  label={<Text weight="bold">{goal.title}</Text>}
+                  description={
+                    <VStack gap={1.5}>
+                      <ProgressBar label={`${goal.title} milestones done`} isLabelHidden value={goal.progress.pct} max={100} variant={goal.status === 'done' ? 'success' : 'accent'} />
+                      <Text type="supporting" color="secondary">
+                        {goal.progress.done} of {goal.progress.total} milestones
+                      </Text>
+                    </VStack>
+                  }
+                  endContent={goal.status === 'done' ? <Token label="Reached" size="sm" color="green" /> : <Text type="supporting" color="secondary">Week {goal.week} of {goal.plan.weeks} · {phase.name}</Text>}
+                />
+              );
+            })}
+          </List>
+        </Card>
+      )}
+    </VStack>
   );
 }

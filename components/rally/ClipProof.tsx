@@ -2,6 +2,15 @@
 import {useEffect, useRef, useState} from 'react';
 import {CLIP_EXERCISES, CONFIDENT, EXERCISE_LABEL, clipSignal, countReps, exerciseFor, type ClipExercise, type Landmark, type RepCount} from '@/lib/rally/repcount';
 import {analyzeClip, CLIP_MAX_S, openCamera, recordLive, warmUp, type ClipFrames} from './clip';
+import {Banner} from '@astryxdesign/core/Banner';
+import {Button} from '@astryxdesign/core/Button';
+import {Center} from '@astryxdesign/core/Center';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Selector} from '@astryxdesign/core/Selector';
+import {Text} from '@astryxdesign/core/Text';
+import {Token} from '@astryxdesign/core/Token';
+import {VStack} from '@astryxdesign/core/VStack';
 import styles from './rally.module.css';
 
 export type ClipPayload = {exercise: ClipExercise; fps: number; signal: (number | null)[]; frames: string[]};
@@ -158,105 +167,104 @@ export function ClipProof({exercises, target, onChange}: {exercises?: string[]; 
   const label = EXERCISE_LABEL[exercise];
   const cameraOpen = stage === 'camera' || stage === 'countdown' || stage === 'recording';
   return (
-    <div className={styles.clip}>
-      <div className={styles.proofRow}>
-        <select value={exercise} aria-label="Exercise in the clip" disabled={stage === 'recording' || stage === 'countdown'} onChange={e => {
-          const ex = e.target.value as ClipExercise;
-          setExercise(ex);
-          void score(ex);
-        }}>
-          {(Object.keys(CLIP_EXERCISES) as ClipExercise[]).map(k => (
-            <option key={k} value={k}>
-              {EXERCISE_LABEL[k]}
-            </option>
-          ))}
-        </select>
-        {stage === 'idle' && (
-          <button type="button" className="fb-btn-secondary" onClick={() => void openLive()}>
-            Record a clip (+25%, reps counted)
-          </button>
-        )}
-        {(stage === 'model' || stage === 'frames') && (
-          <button type="button" className="fb-btn-secondary" disabled>
-            {stage === 'model' ? 'Loading rep counter…' : `Counting reps… ${Math.round(progress * 100)}%`}
-          </button>
-        )}
+    <VStack gap={2}>
+      <HStack gap={2} vAlign="end" wrap="wrap">
+        <Selector
+          label="Exercise in the clip"
+          size="sm"
+          options={(Object.keys(CLIP_EXERCISES) as ClipExercise[]).map(k => ({value: k, label: EXERCISE_LABEL[k]}))}
+          value={exercise}
+          isDisabled={stage === 'recording' || stage === 'countdown'}
+          onChange={v => {
+            const ex = v as ClipExercise;
+            setExercise(ex);
+            void score(ex);
+          }}
+        />
+        {stage === 'idle' && <Button label="Record a clip (+25%, reps counted)" size="sm" onClick={() => void openLive()} />}
+        {(stage === 'model' || stage === 'frames') && <Button label={stage === 'model' ? 'Loading rep counter…' : `Counting reps… ${Math.round(progress * 100)}%`} size="sm" isLoading />}
         {stage === 'done' && (
           <>
-            <button type="button" className="fb-btn-secondary" onClick={() => void openLive()}>
-              Record again
-            </button>
-            <button type="button" className="fb-btn-secondary" onClick={cancel}>
-              Remove clip
-            </button>
+            <Button label="Record again" size="sm" onClick={() => void openLive()} />
+            <Button label="Remove clip" size="sm" variant="ghost" onClick={cancel} />
           </>
         )}
-      </div>
+      </HStack>
 
       {cameraOpen && (
-        <div className={styles.camera}>
+        <VStack className={styles.camera}>
           <video ref={videoRef} className={facing === 'user' ? styles.cameraMirror : styles.cameraVideo} muted playsInline autoPlay aria-label="Camera preview" />
-          {stage === 'countdown' && <div className={styles.cameraBig}>{countdown}</div>}
-          {stage === 'recording' && (
-            <div className={styles.cameraHud} role="status" aria-live="polite">
-              <span className={styles.cameraRec}>● {Math.floor(live.seconds)}s</span>
-              <span className={styles.cameraReps}>
-                {live.reps} {label}
-              </span>
-              {live.nobody && <span>Step back so your whole body is in frame</span>}
-            </div>
+          {stage === 'countdown' && (
+            <Center className={styles.cameraBig}>
+              <Heading level={1} color="inherit">
+                {countdown}
+              </Heading>
+            </Center>
           )}
-          {stage === 'camera' && <div className={styles.cameraHint}>Prop the camera up and step back so your whole body is in frame, side-on.</div>}
-          <div className={styles.cameraBar}>
+          {stage === 'recording' && (
+            <HStack gap={2} wrap="wrap" className={styles.cameraHud} role="status" aria-live="polite">
+              <Token label={`● ${Math.floor(live.seconds)}s`} size="sm" color="red" />
+              <Token label={`${live.reps} ${label}`} size="sm" />
+              {live.nobody && <Text color="inherit">Step back so your whole body is in frame</Text>}
+            </HStack>
+          )}
+          {stage === 'camera' && (
+            <Text color="inherit" className={styles.cameraHint}>
+              Prop the camera up and step back so your whole body is in frame, side-on.
+            </Text>
+          )}
+          <HStack gap={2} hAlign="center" wrap="wrap" className={styles.cameraBar}>
             {stage === 'camera' && (
               <>
-                <button type="button" className="fb-btn-primary" onClick={start}>
-                  Start ({COUNTDOWN_S}s countdown)
-                </button>
-                <button type="button" className="fb-btn-secondary" onClick={() => {
-                  const next = facing === 'user' ? 'environment' : 'user';
-                  setFacing(next);
-                  void openLive(next);
-                }}>
-                  Flip camera
-                </button>
+                <Button label={`Start (${COUNTDOWN_S}s countdown)`} variant="primary" onClick={start} />
+                <Button
+                  label="Flip camera"
+                  onClick={() => {
+                    const next = facing === 'user' ? 'environment' : 'user';
+                    setFacing(next);
+                    void openLive(next);
+                  }}
+                />
               </>
             )}
-            {stage === 'recording' && (
-              <button type="button" className="fb-btn-primary" onClick={() => void stop()}>
-                Stop
-              </button>
-            )}
-            <button type="button" className="fb-btn-secondary" onClick={cancel}>
-              Cancel
-            </button>
-          </div>
-        </div>
+            {stage === 'recording' && <Button label="Stop" variant="primary" onClick={() => void stop()} />}
+            <Button label="Cancel" onClick={cancel} />
+          </HStack>
+        </VStack>
       )}
 
       {count && stage === 'done' && (
-        <p className={count.reps && count.confidence >= CONFIDENT ? styles.clipOk : styles.clipWarn} role="status">
-          {count.reps === 0
-            ? `No full ${label} found. Film from the side with your whole body in frame.`
-            : count.confidence >= CONFIDENT
-              ? `Counted ${count.reps} ${label} · ${Math.round(count.confidence * 100)}% sure${target != null && count.reps >= target * 1.2 ? ' · critical hit!' : ''}`
-              : `Counted ${count.reps} ${label}, but the count is shaky, so it gets photo credit (+10%). Keep a steady pace, side-on, one person in frame.`}
-        </p>
+        <Banner
+          status={count.reps && count.confidence >= CONFIDENT ? 'success' : 'warning'}
+          title={
+            count.reps === 0
+              ? `No full ${label} found. Film from the side with your whole body in frame.`
+              : count.confidence >= CONFIDENT
+                ? `Counted ${count.reps} ${label} · ${Math.round(count.confidence * 100)}% sure${target != null && count.reps >= target * 1.2 ? ' · critical hit!' : ''}`
+                : `Counted ${count.reps} ${label}, but the count is shaky, so it gets photo credit (+10%). Keep a steady pace, side-on, one person in frame.`
+          }
+        />
       )}
-      {error && <p className={styles.error}>{error}</p>}
+      {error && <Banner status="error" title={error} />}
       {(stage === 'idle' || stage === 'done') && (
-        <p className={styles.sheetMeta}>
-          Push-ups, squats, lunges, sit-ups or jumping jacks, up to {CLIP_MAX_S} s. Nothing is saved as video: reps are counted on your device and only the count and 3 stills are sent.{' '}
-          <button type="button" className={styles.linkBtn} onClick={() => fileRef.current?.click()}>
-            Upload a video instead
-          </button>
-        </p>
+        <VStack gap={1} hAlign="start">
+          <Text type="supporting" color="secondary">
+            Push-ups, squats, lunges, sit-ups or jumping jacks, up to {CLIP_MAX_S} s. Nothing is saved as video: reps are counted on your device and only the count and 3 stills are sent.
+          </Text>
+          <Button label="Upload a video instead" size="sm" variant="ghost" onClick={() => fileRef.current?.click()} />
+        </VStack>
       )}
-      <input ref={fileRef} type="file" accept="video/*" hidden onChange={e => {
-        const f = e.target.files?.[0];
-        e.target.value = '';
-        if (f) void onFile(f);
-      }} />
-    </div>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="video/*"
+        hidden
+        onChange={e => {
+          const f = e.target.files?.[0];
+          e.target.value = '';
+          if (f) void onFile(f);
+        }}
+      />
+    </VStack>
   );
 }

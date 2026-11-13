@@ -1,5 +1,5 @@
 /**
- * GLB export with a re-import check. Exports the rig's current pose as static geometry: the soft-toy meshes,
+ * GLB export with a re-import check. Exports the rig's current pose as static geometry: the pixel-box meshes,
  * shared soft materials. Procedural animations are not exported (there are no
  * keyframe tracks; pivots move in code), so the GLB is a posed model, not an animated one.
  */

@@ -1,11 +1,11 @@
 # Beta Kingdom · `lib/kingdom`
 
-Kaiju's characters and world pieces plus the pure game logic. Every piece is a block build (Minecraft-like boxes and pyramids, flat shading, a 16×16 noise map) on the shared helpers in `factories/soft.ts`: heroes (`hero.ts`), kaijus (`creatures.ts`), ponies (`mounts.ts`), castles and props (`world.ts`) and merged game boards (`terrain.ts`).
+Kaiju's characters and world pieces plus the pure game logic. Every piece is a pixel build in the Minecraft manner: boxes on a 1/16 m grid, one texel of a 16×16 nearest-filtered pattern per pixel (planks, stone bricks, scales, weave, leaves), faces painted as flat pixel decals, cones as stepped pyramids. The shared helpers are in `factories/soft.ts` (`PX`, `box`, `decal`, `steps`, `eyes`, `smile`, `softMaterial`): heroes (`hero.ts`), kaijus (`creatures.ts`), ponies (`mounts.ts`), castles and props (`world.ts`) and merged game boards (`terrain.ts`). Builders write every size and position in px.
 Rendered by `components/kingdom` (React Three Fiber) at `/kingdom`.
 
 ## Units and conventions
 
-- 1 world unit = 1 metre. A hero is 1.8 m, a pony 1.34 m, a giant 2.36 m; terrain cells are `CELL = 0.96 m`.
+- 1 world unit = 1 metre = 16 px. A hero is 29 px (1.8 m), a pony 26 px, a giant 41 px; terrain cells are `CELL = 1 m`, one 16 px block.
 - Every asset's origin is at ground level under the centre of its footprint. Faces point to **+z**; +x is the character's left on screen.
 - Geometry and materials are shared caches (`soft.ts`); `disposeSoftResources()` frees them once, on app unmount. Terrain merges one mesh per surface kind.
 - A built asset is a `Rig` (`types.ts`): `group` (add it to a scene), named `pivots`, `height`, animation `state`, and `dispose()` for its geometry.
@@ -43,7 +43,7 @@ last step for scenes to turn into effects. Tests: `node --test "lib/kingdom/**/*
 
 ## Adding an asset
 
-1. Build it with `Vox` in a factory, origin at the feet, named pivots for anything that moves, then `meshPart(vox, pivot, name)`.
+1. Build it from `box(parent, material, w, h, d, x, y, z)` calls in px, origin at the feet, named pivots (`piv`) for anything that moves. Keep sizes whole pixels; a worn layer is 1 px larger than what it covers.
 2. Return `makeRig(group, species, pivots, height, states)`; add a branch in `rig.ts` only if the species is new.
 3. Add an `AssetDef` to `catalog.ts`; map a role in the theme if games should use it.
 

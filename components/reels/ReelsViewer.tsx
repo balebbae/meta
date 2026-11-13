@@ -191,7 +191,21 @@ function ReelItem({
   const [paused, setPaused] = useState(false);
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [comments, setComments] = useState<{id: number; authorName: string; content: string}[]>([]);
+  const [draft, setDraft] = useState('');
   const countedRef = useRef(false);
+
+  const loadComments = useCallback(async () => {
+    const res = await fetch(`/api/reels/${reel.id}/comments?kind=${variant}`);
+    if (!res.ok) return;
+    const data = (await res.json()) as {comments?: {id: number; authorName: string; content: string}[]};
+    setComments(data.comments ?? []);
+  }, [reel.id, variant]);
+
+  useEffect(() => {
+    if (isActive) void loadComments();
+  }, [isActive, loadComments]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -307,6 +321,37 @@ function ReelItem({
         </div>
 
       </div>
+      {commentsOpen && (
+        <div className={styles.comments}>
+          <div className={styles.commentList}>
+            {comments.length === 0 && <p className={styles.commentMeta}>No comments yet.</p>}
+            {comments.map(comment => (
+              <p key={comment.id}>
+                <strong>{comment.authorName}</strong> {comment.content}
+              </p>
+            ))}
+          </div>
+          <form
+            className={styles.commentForm}
+            onSubmit={async event => {
+              event.preventDefault();
+              const content = draft.trim();
+              if (!content) return;
+              setDraft('');
+              const res = await fetch(`/api/reels/${reel.id}/comments`, {
+                method: 'POST',
+                headers: {'content-type': 'application/json'},
+                body: JSON.stringify({content, kind: variant}),
+              });
+              if (!res.ok) onToast({text: 'Could not comment', error: true});
+              else void loadComments();
+            }}
+          >
+            <input aria-label="Write a comment" maxLength={500} placeholder="Write a comment…" value={draft} onChange={e => setDraft(e.target.value)} />
+            <button type="submit" className="fb-btn-primary">Post</button>
+          </form>
+        </div>
+      )}
       <div className={styles.rail}>
         <button type="button" className={styles.railBtn} onClick={() => setLiked(l => !l)} aria-pressed={liked}>
           <span className={`${styles.railIcon} ${liked ? styles.railIconOn : ''}`}>
@@ -314,11 +359,11 @@ function ReelItem({
           </span>
           {liked ? 'Liked' : 'Like'}
         </button>
-        <button type="button" className={styles.railBtn} onClick={() => onToast({text: 'Comments on Reels are coming soon'})}>
+        <button type="button" className={styles.railBtn} aria-label={comments.length ? `${comments.length} comments` : 'Comment'} onClick={() => setCommentsOpen(open => !open)} aria-expanded={commentsOpen}>
           <span className={styles.railIcon}>
             <CommentIcon size={24} />
           </span>
-          Comment
+          {comments.length || 'Comment'}
         </button>
         <button type="button" className={styles.railBtn} onClick={share}>
           <span className={styles.railIcon}>

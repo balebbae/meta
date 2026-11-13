@@ -3,6 +3,7 @@ import {ask} from '@/lib/activities/answers';
 import {aheadFit, levelValue, type AheadFit, type Level} from '@/lib/activities/ahead';
 import {TIER_RANK, tierOf} from '@/lib/activities/level';
 import {MODELS, museConfigured, museJson} from '@/lib/muse/client';
+import {bandValue, friendVisibleTags, MENTOR_K} from '@/lib/activities/privacy';
 
 /** A Discover card. Everything about other people here came from ask() answers or public rows (events/groups/reels). */
 export type DiscoverCard = {
@@ -109,8 +110,9 @@ export async function discoverWhy(userId: number, cards: WhyRequest[]): Promise<
 
 type Friend = {id: number; name: string; avatar_url: string};
 
+/** The user's own positive tags; dismissed suggestions (confirmed = false) are not interests. */
 export async function getUserTags(userId: number): Promise<string[]> {
-  const rows = await sql`select tag from user_tags where user_id = ${userId} order by kind, tag`;
+  const rows = await sql`select tag from user_tags where user_id = ${userId} and confirmed order by kind, tag`;
   return rows.map(r => r.tag as string);
 }
 
@@ -204,9 +206,9 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   sections.push({id: 'first_move', title: 'Your first move', cards: firstMove});
 
   // --- Friends doing Activities (privacy-safe booleans via ask()) ---
-  const friendTagRows = friendIds.length ? await sql`select user_id, tag from user_tags where user_id = any(${friendIds}::int[])` : [];
-  const friendTags = new Map<number, string[]>();
-  for (const r of friendTagRows) friendTags.set(r.user_id as number, [...(friendTags.get(r.user_id as number) ?? []), r.tag as string]);
+  const friendTagRows = friendIds.length ? await sql`select user_id, tag, visibility, confirmed from user_tags where user_id = any(${friendIds}::int[])` : [];
+  // only tags the friend shared with friends: only_me / muse_only / dismissed never surface in "You both tagged X"
+  const friendTags = new Map(friends.map(f => [f.id, friendVisibleTags(friendTagRows.filter(r => r.user_id === f.id) as {tag: string; visibility: string; confirmed: boolean}[])]));
   const friendCards: DiscoverCard[] = [];
   await Promise.all(friends.slice(0, 20).map(async f => {
     const [thisWeek, today] = await Promise.all([ask(f.id, 'friends', 'workouts_this_week', `discover:${userId}`), ask(f.id, 'friends', 'completed_move_today', `discover:${userId}`)]);
@@ -313,7 +315,10 @@ export async function matchMentors(seekerId: number, tags: string[]): Promise<Me
     const metric = ((o.metric as string) ?? '').trim();
     const goals = METRIC_GOALS[metric] ?? [];
     const matched = goals.filter(g => tags.includes(g));
-    const record = metric ? `${metric}: ${o.from_value ?? ''} → ${o.to_value ?? ''}` : null;
+    // banded so a card can't be matched back to one person's exact numbers
+    const from = bandValue(o.from_value as string);
+    const to = bandValue(o.to_value as string);
+    const record = metric ? (from && to ? `${metric}: ${from} → ${to}` : metric) : null;
     let fit: AheadFit | null = null;
     let theirs = '';
     // 4-week tier one step above mine = the clearest "few months ahead" signal; last-7-days km/days can be one odd week
@@ -341,5 +346,6 @@ export async function matchMentors(seekerId: number, tags: string[]): Promise<Me
       connect: (o.connect_status as string) ?? null,
     });
   }));
-  return out.sort((a, b) => b.score - a.score);
+  // k-anonymity: with fewer than k matches a card could single someone out; keep only ones the seeker already contacted
+  return (out.length >= MENTOR_K ? out : out.filter(m => m.requestId != null)).sort((a, b) => b.score - a.score);
 }

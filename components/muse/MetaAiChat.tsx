@@ -1,15 +1,31 @@
 'use client';
 
-import {useState} from 'react';
+import {useEffect, useState} from 'react';
 import styles from '@/components/pages/simple.module.css';
 
 type Line = {role: 'you' | 'ai'; text: string};
+const CHAT_KEY = 'fb.museChat';
 
 export function MetaAiChat() {
   const [lines, setLines] = useState<Line[]>([]);
+  const [ready, setReady] = useState(false);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(CHAT_KEY) ?? '[]') as Line[];
+      if (Array.isArray(saved)) setLines(saved.filter(line => line && (line.role === 'you' || line.role === 'ai') && typeof line.text === 'string').slice(-40));
+    } catch {
+      /* keep an empty chat */
+    }
+    setReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (ready) localStorage.setItem(CHAT_KEY, JSON.stringify(lines.slice(-40)));
+  }, [lines, ready]);
 
   const send = async () => {
     const message = text.trim();

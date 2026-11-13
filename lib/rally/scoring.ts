@@ -75,6 +75,13 @@ export function computeMove(input: MoveInput): MoveResult {
   return {damage: Math.max(1, Math.round(damage)), critical, base, damageScale: h.damageScale, dareBonus};
 }
 
+/** Fail closed: when the vision check could not run, the proof stays pending and the move deals no damage. */
+export const UNVERIFIED_PROOF = {approved: false, status: 'pending', museUsed: false} as const;
+
+export function damageAfterProof(damage: number, proofStatus: 'pending' | 'approved' | 'rejected' | null | undefined): number {
+  return proofStatus === 'pending' || proofStatus === 'rejected' ? 0 : damage;
+}
+
 export function applyDamage(hpLeft: number, damage: number): number {
   return Math.max(0, hpLeft - damage);
 }

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {adaptiveAdjust, applyDamage, baseDamage, classifyMoveEvent, computeMove, contributions, gearForEvents, relayState, streakState, unlockedTiers} from './scoring.ts';
+import {adaptiveAdjust, applyDamage, baseDamage, classifyMoveEvent, computeMove, contributions, damageAfterProof, gearForEvents, relayState, streakState, unlockedTiers, UNVERIFIED_PROOF} from './scoring.ts';
 
 const spec = {
   levels: [
@@ -116,6 +116,15 @@ test('reward tiers and MVP', () => {
   const c = contributions([{userId: 2, damage: 40}, {userId: 1, damage: 40}, {userId: 3, damage: 10}]);
   assert.equal(c.total, 90);
   assert.equal(c.mvp, 1);
+});
+
+test('fail closed: an unverified proof is not approved and deals no damage', () => {
+  assert.equal(UNVERIFIED_PROOF.approved, false);
+  assert.equal(UNVERIFIED_PROOF.status, 'pending');
+  assert.equal(damageAfterProof(42, 'pending'), 0);
+  assert.equal(damageAfterProof(42, 'rejected'), 0);
+  assert.equal(damageAfterProof(42, 'approved'), 42);
+  assert.equal(damageAfterProof(42, null), 42);
 });
 
 test('clip proof: counted reps drive the critical, clip bonus beats photo', () => {

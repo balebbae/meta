@@ -1,39 +1,39 @@
-import {cellToBoundary} from 'h3-js';
-import type {Arena, LatLng} from '@/lib/turf/engine';
+import {cellsToMultiPolygon} from 'h3-js';
+import type {Arena} from '@/lib/turf/engine';
 
 const M_PER_DEG = 111_320;
 
-/** Equirectangular projection around the arena centre, in metres (x east, y south, so it maps straight onto SVG). */
-export function project(arena: Arena, p: LatLng): [number, number] {
-  const k = Math.cos((arena.center.lat * Math.PI) / 180);
-  return [(p.lng - arena.center.lng) * M_PER_DEG * k, -(p.lat - arena.center.lat) * M_PER_DEG];
-}
-
-export function unproject(arena: Arena, x: number, y: number): LatLng {
-  const k = Math.cos((arena.center.lat * Math.PI) / 180);
-  return {lat: arena.center.lat - y / M_PER_DEG, lng: arena.center.lng + x / (M_PER_DEG * k)};
-}
-
-/** One SVG path for a set of H3 cells. */
-export function cellsPath(arena: Arena, cells: Iterable<string>): string {
-  let d = '';
+/** H3 cells as one GeoJSON MultiPolygon, [lng, lat] order. */
+export function cellsGeometry(cells: string[]): GeoJSON.MultiPolygon {
+  const coordinates: GeoJSON.Position[][][] = [];
   for (const cell of cells) {
-    let ring: [number, number][];
     try {
-      ring = cellToBoundary(cell) as [number, number][];
+      coordinates.push(...cellsToMultiPolygon([cell], true));
     } catch {
       continue;
     }
-    for (let i = 0; i < ring.length; i++) {
-      const [x, y] = project(arena, {lat: ring[i][0], lng: ring[i][1]});
-      d += `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`;
-    }
-    d += 'Z';
   }
-  return d;
+  return {type: 'MultiPolygon', coordinates};
 }
 
-export function viewBox(arena: Arena): string {
+/** The arena circle as a closed [lng, lat] ring. */
+export function arenaRing(arena: Arena, steps = 72): GeoJSON.Position[] {
+  const k = Math.cos((arena.center.lat * Math.PI) / 180);
+  const r = arena.radiusKm * 1000;
+  return Array.from({length: steps + 1}, (_, i) => {
+    const a = (i / steps) * 2 * Math.PI;
+    return [arena.center.lng + (r * Math.sin(a)) / (M_PER_DEG * k), arena.center.lat + (r * Math.cos(a)) / M_PER_DEG];
+  });
+}
+
+/** [[west, south], [east, north]] around the arena, with a small margin. */
+export function arenaBounds(arena: Arena): [[number, number], [number, number]] {
+  const k = Math.cos((arena.center.lat * Math.PI) / 180);
   const r = arena.radiusKm * 1000 * 1.04;
-  return `${-r} ${-r} ${2 * r} ${2 * r}`;
+  const dLat = r / M_PER_DEG;
+  const dLng = r / (M_PER_DEG * k);
+  return [
+    [arena.center.lng - dLng, arena.center.lat - dLat],
+    [arena.center.lng + dLng, arena.center.lat + dLat],
+  ];
 }

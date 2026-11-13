@@ -41,6 +41,10 @@ One-shots (`jump attack hit celebrate puff stomp squash`) return to `rig.rest` a
 Pure modules, no three import: `createX(seed)`, `startX(state)`, `stepX(state, input, dt)`. `state.events` lists what happened in the
 last step for scenes to turn into effects. Tests: `node --test "lib/kingdom/**/*.test.ts"` (also `pnpm test:kingdom`).
 
+## Looks
+
+`factories/looks.ts` re-presents any rig without touching geometry or animation: `applyLook(rig.group, 'soft' | 'wire' | 'dots')`. `wire` is Facebook-blue edge lines over a faint wireframe; `dots` samples the surface into a point cloud coloured like the Muse orb (ember low-left, ivory, pale blue top-right; dark features stay navy). Use the soft look for the product avatar and the other two for mini-game sequences and Muse moments.
+
 ## Adding an asset
 
 1. Build it with `Vox` in a factory, origin at the feet, named pivots for anything that moves, then `meshPart(vox, pivot, name)`.

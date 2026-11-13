@@ -9,7 +9,15 @@ import type {Landmark} from '@/lib/rally/repcount';
 export type AngleFrame = (number | null)[];
 /** 13 points as [x0, y0, x1, y1, ...] in 0..1 image coordinates; null when nobody is in frame. */
 export type PointFrame = number[] | null;
-export type Reference = {fps: number; frames: AngleFrame[]; points: PointFrame[]};
+/** v: how the angles were measured (REF_V = 3D). References from older rules are read again. */
+export type Reference = {fps: number; frames: AngleFrame[]; points: PointFrame[]; v?: number};
+/**
+ * A landmark plus MediaPipe's world coordinates (metres, hip-centred, 3D). Angles from these are the same whether
+ * the person faces the camera or stands side-on, and don't depend on the video's aspect ratio.
+ */
+export type PoseLandmark = Landmark & {wx?: number; wy?: number; wz?: number};
+/** Reference version: 3 = joint angles from 3D world landmarks (2D screen angles broke on viewpoint and aspect). */
+export const REF_V = 3;
 /** at = seconds into the clip, for the still of the Reel. */
 export type Target = {angles: AngleFrame; points: PointFrame; at: number};
 
@@ -37,7 +45,15 @@ export const mirrorTitle = (mode: MirrorMode) => (mode === 'yoga' ? 'Mirror Yoga
 export const MATCH_AT = 75;
 const MIN_COMMON = 4;
 
-function angle(a: Landmark, b: Landmark, c: Landmark): number {
+function angle(a: PoseLandmark, b: PoseLandmark, c: PoseLandmark): number {
+  if (a.wx != null && b.wx != null && c.wx != null) {
+    // 3D angle at b: viewpoint- and aspect-free
+    const u = [a.wx - b.wx, (a.wy ?? 0) - (b.wy ?? 0), (a.wz ?? 0) - (b.wz ?? 0)];
+    const w = [c.wx - b.wx, (c.wy ?? 0) - (b.wy ?? 0), (c.wz ?? 0) - (b.wz ?? 0)];
+    const len = Math.hypot(u[0], u[1], u[2]) * Math.hypot(w[0], w[1], w[2]);
+    if (len > 0) return Math.round((Math.acos(Math.max(-1, Math.min(1, (u[0] * w[0] + u[1] * w[1] + u[2] * w[2]) / len))) * 180) / Math.PI);
+  }
+  // 2D fallback (no world landmarks): screen angle
   const v1 = Math.atan2(a.y - b.y, a.x - b.x);
   const v2 = Math.atan2(c.y - b.y, c.x - b.x);
   let d = Math.abs(((v1 - v2) * 180) / Math.PI);
@@ -50,7 +66,7 @@ const SEEN_AT = 0.3;
 const seen = (lm: Landmark[], i: number) => (lm[i].visibility ?? 1) >= SEEN_AT;
 
 /** One pose -> 8 angles; a joint is null when any of its 3 points is hidden. No pose -> all null. */
-export function angleFrame(lm: Landmark[] | null): AngleFrame {
+export function angleFrame(lm: PoseLandmark[] | null): AngleFrame {
   if (!lm || lm.length < 29) return JOINTS.map(() => null);
   return JOINTS.map(([a, b, c]) => (seen(lm, a) && seen(lm, b) && seen(lm, c) ? angle(lm[a], lm[b], lm[c]) : null));
 }
@@ -62,7 +78,7 @@ export function pointFrame(lm: Landmark[] | null): PointFrame {
   return POINT_IDS.flatMap(i => [Math.round(lm[i].x * 1000) / 1000, Math.round(lm[i].y * 1000) / 1000]);
 }
 
-export const toReference = (frames: (Landmark[] | null)[], fps: number): Reference => ({fps, frames: frames.map(angleFrame), points: frames.map(pointFrame)});
+export const toReference = (frames: (PoseLandmark[] | null)[], fps: number): Reference => ({fps, frames: frames.map(angleFrame), points: frames.map(pointFrame), v: REF_V});
 
 const validAngles = (f: unknown): f is AngleFrame => Array.isArray(f) && f.length === JOINTS.length && f.every(v => v === null || (typeof v === 'number' && v >= 0 && v <= 180));
 const validPoints = (p: unknown): p is PointFrame => p === null || (Array.isArray(p) && p.length === POINT_IDS.length * 2 && p.every(v => typeof v === 'number' && v >= -1 && v <= 2));

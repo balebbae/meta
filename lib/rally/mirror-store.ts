@@ -12,7 +12,7 @@ import {sql} from '@/lib/db';
 import type {MirrorCardPayload} from '@/lib/activities/types';
 import {addSystemMessage, sendMessage} from '@/lib/messaging-queries';
 import {MODELS, museConfigured, museJson} from '@/lib/muse/client';
-import {gradeRoutine, mirrorTitle, targetFor, type AngleFrame, type MirrorMode, type Reference, type Target} from '@/lib/rally/mirror';
+import {gradeRoutine, mirrorTitle, REF_V, targetFor, type AngleFrame, type MirrorMode, type Reference, type Target} from '@/lib/rally/mirror';
 import type {ReelInfo} from '@/lib/rally/reel-router';
 import {warmClip} from '@/lib/rally/reel-video';
 
@@ -163,7 +163,8 @@ export async function getMirrorState(matchId: number, viewerId: number): Promise
   const raw = (m.reference as (Reference & {unreadable?: boolean; v?: number}) | null) ?? null;
   // only verdicts from the current rules count; older ones are read again
   const unreadable = Boolean(raw?.unreadable) && raw?.v === UNREADABLE_V;
-  const ref = unreadable ? null : raw;
+  // references measured with older (2D) angles are read again with the current rules
+  const ref = unreadable || raw?.v !== REF_V ? null : raw;
   const steps = (m.steps as MirrorStep[] | null) ?? null;
   return {
     id: matchId,
@@ -189,7 +190,7 @@ export async function getMirrorState(matchId: number, viewerId: number): Promise
 
 /** The Reel was read and nobody is in it: remember, so no phone re-reads it and the Reel isn't offered again. */
 export async function markUnreadable(matchId: number) {
-  await sql`update mirror_matches set reference = ${JSON.stringify({unreadable: true, v: UNREADABLE_V})}::jsonb where id = ${matchId} and (reference is null or reference->'points' is null)`;
+  await sql`update mirror_matches set reference = ${JSON.stringify({unreadable: true, v: UNREADABLE_V})}::jsonb where id = ${matchId} and (reference is null or reference->'points' is null or coalesce((reference->>'v')::int, 0) < ${REF_V})`;
 }
 
 /** Bumped when the "is someone visible" rules change, so Reels rejected under old rules get another read. */
@@ -202,7 +203,7 @@ export async function matchSteps(matchId: number): Promise<MirrorStep[]> {
 
 /** First complete reference wins (older ones without overlay points get replaced), so nobody swaps the routine mid-game. */
 export async function saveReference(matchId: number, ref: Reference): Promise<boolean> {
-  const rows = await sql`update mirror_matches set reference = ${JSON.stringify(ref)}::jsonb where id = ${matchId} and (reference is null or reference->'points' is null) returning id`;
+  const rows = await sql`update mirror_matches set reference = ${JSON.stringify({...ref, v: REF_V})}::jsonb where id = ${matchId} and (reference is null or reference->'points' is null or coalesce((reference->>'v')::int, 0) < ${REF_V}) returning id`;
   return rows.length > 0;
 }
 
@@ -230,7 +231,9 @@ export async function submitAttempt(matchId: number, user: {id: number; name: st
   if (!m) return {error: 'Not found', status: 404};
   if (m.status !== 'open' || new Date(m.ends_at as string).getTime() < Date.now()) return {error: 'This match is over', status: 409};
   const steps = (m.steps as MirrorStep[] | null) ?? [];
-  const targets = targetsOf((m.reference as Reference | null) ?? null, steps);
+  const ref = (m.reference as Reference | null) ?? null;
+  // never grade 3D poses against an old 2D reference
+  const targets = targetsOf(ref?.v === REF_V ? ref : null, steps);
   if (!targets) return {error: 'Still reading the Reel. Try again in a moment.', status: 409};
   if (poses.length !== targets.length) return {error: 'One pose per step', status: 400};
   const r = gradeRoutine(targets, poses);

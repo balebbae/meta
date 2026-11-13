@@ -17,7 +17,7 @@ import {angleFrame, jointHits, MATCH_AT, mirrorTitle, pointFrame, poseScore, toR
 import type {MirrorState} from '@/lib/rally/mirror-store';
 import type {Landmark} from '@/lib/rally/repcount';
 import {IconCamera} from '@tabler/icons-react';
-import {analyzeVideoUrl, cameraAccess, cameraHelp, localVideo, openCamera, stillsFromUrl, trackLive, warmUp, type CameraAccess} from './clip';
+import {analyzeVideoUrl, cameraAccess, cameraHelp, localVideo, openCamera, stillsFromUrl, trackLive, warmLive, type CameraAccess} from './clip';
 import {burstOverlay, resetOverlay, setOverlay, startOverlay} from './overlay';
 import styles from './rally.module.css';
 import m from './mirror.module.css';
@@ -143,7 +143,7 @@ export function MirrorSheet({matchId, open, onClose}: {matchId: number; open: bo
         setStills(s);
         // the pose model is heavy to start (it stalls the page for a few seconds), so it loads only once the
         // pictures are up, while the player reads them, and Start opens the camera without the wait
-        window.setTimeout(() => void warmUp().catch(() => {}), 300);
+        window.setTimeout(() => void warmLive().catch(() => {}), 300);
       })
       .catch(() => {});
     return () => {

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {angleFrame, gradeRoutine, jointHits, MATCH_AT, playable, pointFrame, poseScore, targetFor, validPoses, validReference, type AngleFrame, type Reference} from './mirror.ts';
+import {angleFrame, gradeRoutine, jointHits, MATCH_AT, playable, pointFrame, poseScore, targetFor, validPoses, validReference, type AngleFrame, type PoseLandmark, type Reference} from './mirror.ts';
 import {reelGameByText} from './reel-kind.ts';
 import {clampSwim, crossed, laneBuddyBonus, routeFor} from './swim.ts';
 
@@ -102,4 +102,17 @@ test('jointHits marks the joints that are already right, mirrored too', () => {
   // a mirrored copy of tree counts joint by joint, the same way poseScore does
   assert.deepEqual(jointHits(tree, swapLR(tree)), Array(8).fill(true));
   assert.deepEqual(jointHits(fold, [null, ...fold.slice(1)]), [null, true, true, true, true, true, true, true]);
+});
+
+test('angleFrame uses 3D world landmarks when present, so side-on and facing poses compare', () => {
+  const lm: PoseLandmark[] = Array.from({length: 33}, () => ({x: 0.5, y: 0.5, visibility: 1, wx: 0, wy: 0, wz: 0}));
+  // on screen the left arm looks straight (shoulder, elbow, wrist in a line)...
+  lm[11] = {x: 0.4, y: 0.3, visibility: 1, wx: 0, wy: 0, wz: 0};
+  lm[13] = {x: 0.4, y: 0.5, visibility: 1, wx: 0, wy: 0.3, wz: 0};
+  // ...but the forearm points at the camera: a 90 degree elbow in 3D
+  lm[15] = {x: 0.4, y: 0.6, visibility: 1, wx: 0, wy: 0.3, wz: -0.3};
+  assert.equal(angleFrame(lm)[0], 90);
+  // without world coordinates it falls back to the screen angle
+  const flat = lm.map(({x, y, visibility}) => ({x, y, visibility}));
+  assert.equal(angleFrame(flat)[0], 180);
 });

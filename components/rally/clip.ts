@@ -3,13 +3,14 @@
  * only the per-frame joint signal and a few stills are sent (lib/rally/repcount.ts recounts on the server).
  */
 import type {Landmark} from '@/lib/rally/repcount';
+import type {PoseLandmark} from '@/lib/rally/mirror';
 
 const VISION = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0';
 const MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
 export const CLIP_FPS = 12;
 export const CLIP_MAX_S = 90;
 
-type PoseResult = {landmarks: {x: number; y: number; visibility?: number}[][]};
+type PoseResult = {landmarks: {x: number; y: number; visibility?: number}[][]; worldLandmarks?: {x: number; y: number; z: number}[][]};
 type Detector = {detectForVideo(frame: HTMLVideoElement, timestampMs: number): PoseResult};
 
 // Loaded from the CDN at runtime (not bundled, no npm dependency): nothing is downloaded until someone records a clip.
@@ -41,10 +42,24 @@ function getReader(): Promise<Detector> {
   return reader;
 }
 
-async function makeDetector(model: string, extra: Record<string, number>): Promise<Detector> {
+/**
+ * Mirror's live camera: lite (fast) but with the same lower confidence floors as the Reel reader, so a player the
+ * Reel would count isn't dropped by the camera (dim rooms, standing further back). Separate from getDetector so
+ * Rally's rep counter keeps its defaults.
+ */
+const LIVE_OPTS = {minPoseDetectionConfidence: 0.3, minPosePresenceConfidence: 0.3, minTrackingConfidence: 0.3};
+let live: Promise<Detector> | null = null;
+function getLive(): Promise<Detector> {
+  live ??= makeDetector(MODEL, LIVE_OPTS);
+  live.catch(() => (live = null));
+  return live;
+}
+
+async function makeDetector(model: string, extra: Record<string, number>, only?: 'CPU'): Promise<Detector> {
   const mp = await importUrl(`${VISION}/vision_bundle.mjs`);
   const files = await mp.FilesetResolver.forVisionTasks(`${VISION}/wasm`);
   const make = (delegate: 'GPU' | 'CPU') => mp.PoseLandmarker.createFromOptions(files, {baseOptions: {modelAssetPath: model, delegate}, runningMode: 'VIDEO', numPoses: 1, ...extra});
+  if (only) return make(only);
   try {
     return await make('GPU');
   } catch {
@@ -77,10 +92,13 @@ function grab(v: HTMLVideoElement): string {
   return c.toDataURL('image/jpeg', 0.7);
 }
 
-const pose = (det: Detector, v: HTMLVideoElement): Landmark[] | null => {
+/** Screen landmarks (for drawing) plus 3D world landmarks (for viewpoint-free joint angles). */
+const pose = (det: Detector, v: HTMLVideoElement): PoseLandmark[] | null => {
   lastTs = Math.max(lastTs + 1, Math.round(performance.now()));
-  const p = det.detectForVideo(v, lastTs).landmarks[0];
-  return p ? p.map(q => ({x: q.x, y: q.y, visibility: q.visibility})) : null;
+  const r = det.detectForVideo(v, lastTs);
+  const p = r.landmarks[0];
+  const w = r.worldLandmarks?.[0];
+  return p ? p.map((q, i) => (w?.[i] ? {x: q.x, y: q.y, visibility: q.visibility, wx: w[i].x, wy: w[i].y, wz: w[i].z} : {x: q.x, y: q.y, visibility: q.visibility})) : null;
 };
 
 export type CameraAccess = 'granted' | 'denied' | 'prompt' | 'unknown';
@@ -128,6 +146,8 @@ export async function openCamera(facing: 'user' | 'environment'): Promise<MediaS
 
 /** Preloads the pose model so recording starts instantly (call when the camera opens). */
 export const warmUp = () => getDetector().then(() => undefined);
+/** Preloads Mirror's live-camera model while the player looks at the poses. */
+export const warmLive = () => getLive().then(() => undefined);
 
 /**
  * Live recording: pose on the camera feed at ~CLIP_FPS, a still every second, nothing stored as video.
@@ -304,9 +324,28 @@ export async function stillsFromUrl(url: string, times: number[]): Promise<{urls
 
 /** Live pose on the camera feed at ~CLIP_FPS, nothing stored. Returns stop(). */
 export async function trackLive(v: HTMLVideoElement, onPose: (lm: Landmark[] | null) => void): Promise<() => void> {
-  const det = await getDetector();
+  let det = await getLive();
+  let fails = 0;
+  let rebuilding = false;
   const timer = window.setInterval(() => {
-    if (v.readyState >= 2) onPose(pose(det, v));
+    if (v.readyState < 2 || v.videoWidth === 0 || rebuilding) return;
+    try {
+      onPose(pose(det, v));
+      fails = 0;
+    } catch (e) {
+      // A throwing model used to fail silently every frame (nobody ever "seen"). Log it, and after a few in a row
+      // rebuild the model on the CPU, which works on phones whose GPU path doesn't.
+      if (fails++ === 0) console.warn('[mirror] pose tracking failed', e);
+      if (fails >= 3) {
+        rebuilding = true;
+        live = makeDetector(MODEL, LIVE_OPTS, 'CPU');
+        live
+          .then(d => (det = d))
+          .catch(() => {})
+          .finally(() => ((rebuilding = false), (fails = 0)));
+      }
+      onPose(null);
+    }
   }, 1000 / CLIP_FPS);
   return () => window.clearInterval(timer);
 }

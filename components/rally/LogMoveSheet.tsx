@@ -19,7 +19,7 @@ import {ClipProof, type ClipPayload} from './ClipProof';
 type Dare = {id: string; text: string; bonus: number; needsProof: boolean};
 
 /** Manual log for a move or a dare. Only what the player types leaves this sheet; the server scores it and posts the public card. */
-export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises, target, onDone}: {questId: number; open: boolean; onClose: () => void; dare?: Dare | null; levelName?: string; exercises?: string[]; target?: number | null; onDone?: (r: OkMove) => void}) {
+export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises, target, stretchNote, onDone}: {questId: number; open: boolean; onClose: () => void; dare?: Dare | null; levelName?: string; exercises?: string[]; target?: number | null; /** Set when this quest is a stretch for the player and they have no move on it yet: ask before the first one. */ stretchNote?: string | null; onDone?: (r: OkMove) => void}) {
   const [note, setNote] = useState('');
   const [amount, setAmount] = useState<number | null>(null);
   const [image, setImage] = useState<string | null>(null);
@@ -27,6 +27,8 @@ export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OkMove | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const mustConfirm = Boolean(stretchNote) && !dare && !confirmed && !result;
 
   const close = () => {
     setNote('');
@@ -35,6 +37,7 @@ export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises
     setClip(null);
     setError(null);
     setResult(null);
+    setConfirmed(false);
     onClose();
   };
   const submit = async () => {
@@ -61,7 +64,12 @@ export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises
         header={<DialogHeader title={dare ? 'Do a dare' : 'Log a move'} onOpenChange={() => close()} />}
         content={
           <LayoutContent>
-            {result ? (
+            {mustConfirm ? (
+              <VStack gap={3}>
+                <Banner status="warning" title="This quest is a stretch for you right now" description={stretchNote ?? undefined} />
+                <Text color="secondary">You can still play. Go at your own pace and stop if anything feels wrong. Only you see this.</Text>
+              </VStack>
+            ) : result ? (
               <VStack gap={2}>
                 <Heading level={2}>
                   {result.critical ? 'CRITICAL ' : ''}−{result.damage} HP
@@ -110,7 +118,12 @@ export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises
         footer={
           <LayoutFooter>
             <HStack gap={2} hAlign="end">
-              {result ? (
+              {mustConfirm ? (
+                <>
+                  <Button label="Not today" variant="secondary" onClick={close} />
+                  <Button label="I'll take it easy, continue" variant="primary" onClick={() => setConfirmed(true)} />
+                </>
+              ) : result ? (
                 <Button label="Done" variant="primary" onClick={close} />
               ) : (
                 <>

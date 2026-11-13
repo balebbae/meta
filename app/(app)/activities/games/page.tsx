@@ -4,6 +4,7 @@ import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
 import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {Text} from '@astryxdesign/core/Text';
 import {Token} from '@astryxdesign/core/Token';
@@ -39,7 +40,12 @@ export default async function RallyIndex() {
                 startContent={<BossArt kind={q.bossKind} name={q.spec.boss?.name ?? q.title} size={56} down={q.status === 'completed'} />}
                 label={<Text weight="bold">{q.title}</Text>}
                 description={q.status === 'completed' ? 'Boss defeated' : `${q.bossHpLeft} / ${q.bossHp} HP left`}
-                endContent={<Token label={q.status === 'completed' ? 'completed' : q.template ?? 'rally'} size="sm" color={q.status === 'completed' ? 'green' : 'blue'} />}
+                endContent={
+                  <HStack gap={1.5} vAlign="center">
+                    {q.fit && q.status !== 'completed' && <Token label={q.fit === 'good' ? 'Good match' : 'A stretch'} size="sm" color={q.fit === 'good' ? 'green' : 'orange'} />}
+                    <Token label={q.status === 'completed' ? 'completed' : q.template ?? 'rally'} size="sm" color={q.status === 'completed' ? 'green' : 'blue'} />
+                  </HStack>
+                }
               />
             ))}
           </List>

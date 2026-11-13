@@ -28,6 +28,7 @@ import {
   type BossEvent,
 } from '@/lib/rally/scoring';
 import {bossKindFor, generateGameSpec, thisMonday, type Member, type SpecSource} from '@/lib/rally/spec';
+import type {Readiness} from '@/lib/rally/fairness';
 import {planHandicaps} from '@/lib/rally/handicap';
 
 export type QuestRow = {
@@ -108,9 +109,10 @@ export async function listQuestsForConversation(conversationId: number): Promise
   return rows.map(mapQuest);
 }
 
-export async function listQuestsForUser(userId: number): Promise<QuestRow[]> {
-  const rows = await sql`select q.* from quests q join quest_progress p on p.quest_id = q.id where p.user_id = ${userId} and q.template is not null order by q.created_at desc limit 20`;
-  return rows.map(mapQuest);
+/** `fit` is the viewer's own good-match / stretch light for each quest. */
+export async function listQuestsForUser(userId: number): Promise<(QuestRow & {fit: Readiness['fit'] | null})[]> {
+  const rows = await sql`select q.*, p.progress->'readiness'->>'fit' as fit from quests q join quest_progress p on p.quest_id = q.id where p.user_id = ${userId} and q.template is not null order by q.created_at desc limit 20`;
+  return rows.map(r => ({...mapQuest(r), fit: (r.fit as Readiness['fit'] | null) ?? null}));
 }
 
 export async function isQuestMember(questId: number, userId: number): Promise<boolean> {
@@ -160,7 +162,7 @@ export async function createQuest(opts: {source: SpecSource; conversationId: num
   const quest = mapQuest(row);
   for (const m of members) {
     // handicapWhy is private to that player: getQuestState only returns it to them.
-    const progress = JSON.stringify({handicapWhy: plan.reasons[m.id] ?? null});
+    const progress = JSON.stringify({handicapWhy: plan.reasons[m.id] ?? null, readiness: plan.readiness[m.id] ?? null});
     await sql`insert into quest_progress (quest_id, user_id, status, progress) values (${quest.id}, ${m.id}, 'active', ${progress}::jsonb) on conflict (quest_id, user_id) do nothing`;
   }
   const payload: QuestCardPayload = {questId: quest.id, title: spec.title, template: spec.template, bossName: spec.boss?.name, bossHp: hp, ...(quest.reelId ? {reelId: quest.reelId} : {})};
@@ -409,6 +411,8 @@ export type QuestState = {
   fairness: {label: string; summary: string} | null;
   /** The viewer's own handicap and private reason; never other players'. */
   myHandicap: {targetScale: number; damageScale: number; why: string | null} | null;
+  /** The viewer's own good-match / stretch light; never other players'. Null for older quests or nothing shared. */
+  myReadiness: Readiness | null;
 };
 
 export async function getQuestState(questId: number, viewerId: number): Promise<QuestState | null> {
@@ -419,7 +423,7 @@ export async function getQuestState(questId: number, viewerId: number): Promise<
     listMoves(questId),
     sql`select g.user_id, g.slug, g.label, g.description from avatar_gear g join quest_progress p on p.user_id = g.user_id where p.quest_id = ${questId}`,
     sql`select id, user_id, tier, label, sponsor, code, status from reward_claims where quest_id = ${questId} order by id`,
-    sql`select q.muse_meta->'fairness' as fairness, p.progress->>'handicapWhy' as why from quests q left join quest_progress p on p.quest_id = q.id and p.user_id = ${viewerId} where q.id = ${questId}`,
+    sql`select q.muse_meta->'fairness' as fairness, p.progress->>'handicapWhy' as why, p.progress->'readiness' as readiness from quests q left join quest_progress p on p.quest_id = q.id and p.user_id = ${viewerId} where q.id = ${questId}`,
   ]);
   const fairnessRaw = (mine?.fairness ?? null) as {label?: string; summary?: string} | null;
   const myScale = quest.spec.handicaps.find(x => x.userId === viewerId);
@@ -462,6 +466,7 @@ export async function getQuestState(questId: number, viewerId: number): Promise<
     museUsed: quest.museUsed,
     fairness: fairnessRaw?.label ? {label: fairnessRaw.label, summary: fairnessRaw.summary ?? ''} : null,
     myHandicap: myScale ? {targetScale: myScale.targetScale, damageScale: myScale.damageScale, why: (mine?.why as string | null) ?? null} : null,
+    myReadiness: (mine?.readiness as Readiness | null) ?? null,
   };
 }
 

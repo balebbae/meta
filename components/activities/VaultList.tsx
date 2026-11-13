@@ -2,27 +2,25 @@
 import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 import {AlertDialog} from '@astryxdesign/core/AlertDialog';
-import {Button} from '@astryxdesign/core/Button';
-import {EmptyState} from '@astryxdesign/core/EmptyState';
-import {HStack} from '@astryxdesign/core/HStack';
-import {List, ListItem} from '@astryxdesign/core/List';
-import {Text} from '@astryxdesign/core/Text';
-import {Token} from '@astryxdesign/core/Token';
-import {VStack} from '@astryxdesign/core/VStack';
 import type {VaultEvent} from '@/lib/activities/vault';
 import {sourceLabel} from '@/lib/activities/source-label';
+import h from './home/home.module.css';
+import p from './panels/panels.module.css';
 
 export {sourceLabel};
 
+const TRUST: Record<string, [string, string]> = {verified: ['Verified', p.green], device: ['Device', p.blue], photo: ['Photo', p.purple], self_reported: ['Self', '']};
+
 function fmt(e: VaultEvent): string {
-  const bits = [e.distanceKm ? `${e.distanceKm} km` : null, e.durationMin ? `${Math.round(e.durationMin)} min` : null, e.steps ? `${e.steps.toLocaleString()} steps` : null, e.avgHr ? `${e.avgHr} bpm avg` : null].filter(Boolean);
+  const bits = [e.distanceKm ? `${e.distanceKm} km` : null, e.durationMin ? `${Math.round(e.durationMin)} min` : null, e.steps ? `${e.steps.toLocaleString()} steps` : null, e.avgHr ? `${e.avgHr} bpm` : null].filter(Boolean);
   return bits.join(' · ');
 }
 
-/** Owner-only vault list with per-source delete (Muse page). */
-export function VaultList({events, deletable = true}: {events: VaultEvent[]; deletable?: boolean}) {
+/** Owner-only vault list (Logs panel): source filter pills, one row per entry, per-source delete. onChanged refetches the caller's list. */
+export function VaultList({events, deletable = true, onChanged}: {events: VaultEvent[]; deletable?: boolean; onChanged?: () => void}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [all, setAll] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [filter, setFilter] = useState<string>('all');
   const sources = [...new Set(events.map(e => e.source))];
@@ -35,52 +33,59 @@ export function VaultList({events, deletable = true}: {events: VaultEvent[]; del
     setConfirming(false);
     setFilter('all');
     router.refresh();
+    onChanged?.();
   }
 
-  if (!events.length) return <EmptyState title="Your vault is empty" description="Connect a source or log a workout and it shows up here, for your eyes only." isCompact />;
+  if (!events.length) return <p className={p.note}>No workouts yet.</p>;
+  const chip = (id: string, label: string, n: number) => (
+    <button key={id} type="button" className={`${h.pill} ${h.pillSm} ${filter === id ? h.pillBlue : h.pillOutline}`} aria-pressed={filter === id} onClick={() => setFilter(id)}>
+      {label} {n}
+    </button>
+  );
   return (
-    <VStack gap={3}>
-      <HStack gap={1.5} wrap="wrap" aria-label="Filter by source">
-        <Token label={`All (${events.length})`} size="sm" color={filter === 'all' ? 'blue' : 'default'} onClick={() => setFilter('all')} />
-        {sources.map(s => (
-          <Token key={s} label={`${sourceLabel(s)} (${events.filter(e => e.source === s).length})`} size="sm" color={filter === s ? 'blue' : 'default'} onClick={() => setFilter(s)} />
-        ))}
-      </HStack>
-      {deletable && filter !== 'all' && (
-        <HStack>
-          <Button label={`Delete all ${sourceLabel(filter)} data from my vault`} variant="destructive" size="sm" onClick={() => setConfirming(true)} />
-        </HStack>
+    <div className={p.stack}>
+      <div className={p.pills} role="group" aria-label="Filter by source">
+        {chip('all', 'All', events.length)}
+        {sources.map(s => chip(s, sourceLabel(s), events.filter(e => e.source === s).length))}
+      </div>
+      <ul className={p.list}>
+        {(all ? shown : shown.slice(0, 60)).map(e => {
+          const trust = TRUST[e.trust] ?? [e.trust, ''];
+          return (
+            <li key={e.id} className={p.row}>
+              <span className={p.rowText}>
+                <strong>
+                  {e.kind.charAt(0).toUpperCase() + e.kind.slice(1)} <span className={p.metric}>{fmt(e)}</span>
+                </strong>
+                <small>
+                  {new Date(e.startedAt).toLocaleString(undefined, {weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'})} · {sourceLabel(e.source)}
+                  {e.duplicateOf ? ' · merged' : ''}
+                </small>
+              </span>
+              <span className={`${p.badge} ${trust[1]}`}>{trust[0]}</span>
+            </li>
+          );
+        })}
+      </ul>
+      {shown.length > 60 && !all && (
+        <button type="button" className={p.textBtn} onClick={() => setAll(true)}>
+          Show all {shown.length}
+        </button>
       )}
-      <List hasDividers density="compact">
-        {shown.slice(0, 60).map(e => (
-          <ListItem
-            key={e.id}
-            label={
-              <Text weight="bold">
-                {e.kind.charAt(0).toUpperCase() + e.kind.slice(1)}{' '}
-                <Text type="supporting" color="secondary">
-                  {fmt(e)}
-                </Text>
-              </Text>
-            }
-            description={`${new Date(e.startedAt).toLocaleString(undefined, {weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit'})} · ${sourceLabel(e.source)} · ${e.trust.replace('_', ' ')}${e.displayScope === 'owner_only' ? ' · only you' : ''}${e.duplicateOf ? ` · merged into ${sourceLabel(events.find(x => x.id === e.duplicateOf)?.source ?? 'another')} entry` : ''}`}
-          />
-        ))}
-      </List>
-      {shown.length > 60 && (
-        <Text type="supporting" color="secondary">
-          Showing the latest 60 of {shown.length}.
-        </Text>
+      {deletable && filter !== 'all' && (
+        <button type="button" className={`${p.textBtn} ${p.danger}`} onClick={() => setConfirming(true)}>
+          Delete all {sourceLabel(filter)} data
+        </button>
       )}
       <AlertDialog
         isOpen={confirming}
         onOpenChange={open => !open && !busy && setConfirming(false)}
         title={`Delete everything ${sourceLabel(filter)} put in your vault?`}
-        description="Games and friends lose nothing they already saw; your Muse forgets it."
+        description="Your Muse forgets it. Games and friends keep only what they already saw."
         actionLabel="Delete data"
         onAction={() => void wipe()}
         isActionLoading={busy}
       />
-    </VStack>
+    </div>
   );
 }

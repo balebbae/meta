@@ -99,6 +99,10 @@
   --fb-act-ember-soft: #fff1e6;
   --fb-act-ember-ink: #ffffff;
   --fb-act-ring-track: #e9eef6;
+  /* solid status badges (white text, >= 4.5:1) */
+  --fb-act-green: #1f883d;
+  --fb-act-red: #d1242f;
+  --fb-act-purple: #8250df;
   --fb-act-shadow: 0 1px 2px rgba(10, 20, 40, 0.05);
   --fb-act-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --fb-act-radius: 20px;
@@ -160,6 +164,9 @@ html {
   --fb-act-ember-soft: #2b190c;
   --fb-act-ember-ink: #1a0d04;
   --fb-act-ring-track: #192646;
+  --fb-act-green: #238636;
+  --fb-act-red: #da3633;
+  --fb-act-purple: #8957e5;
   --fb-act-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 

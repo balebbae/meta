@@ -1,15 +1,14 @@
 'use client';
 import {useCallback, useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
+import {usePanelNav} from './panels/nav';
 // Tabler icons, aliased to the names this file already uses
 import {IconBrain as Brain, IconFlag as Flag, IconLock as Lock, IconMap2 as Map, IconTarget as Target, type TablerIcon} from '@tabler/icons-react';
-import {Button} from '@astryxdesign/core/Button';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {Icon} from '@astryxdesign/core/Icon';
 import {Layout, LayoutContent, LayoutFooter} from '@astryxdesign/core/Layout';
-import {List, ListItem} from '@astryxdesign/core/List';
-import {Text} from '@astryxdesign/core/Text';
-import {VStack} from '@astryxdesign/core/VStack';
+import {HStack} from '@astryxdesign/core/HStack';
+import h from './home/home.module.css';
 
 export type IntroInvite = {gameId: number; inviterName: string; gameTitle: string; mode?: string};
 
@@ -20,6 +19,7 @@ export type IntroInvite = {gameId: number; inviterName: string; gameTitle: strin
  */
 export function IntroModal({open, invite, onClose}: {open: boolean; invite?: IntroInvite | null; onClose?: () => void}) {
   const router = useRouter();
+  const {open: openPanel} = usePanelNav();
   const [visible, setVisible] = useState(open);
   const [busy, setBusy] = useState<'start' | 'snooze' | null>(null);
   useEffect(() => setVisible(open), [open]);
@@ -42,51 +42,47 @@ export function IntroModal({open, invite, onClose}: {open: boolean; invite?: Int
     await fetch('/api/activities/onboarding', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({action: 'start'})}).catch(() => {});
     setBusy(null);
     close();
-    router.push(invite ? `/activities/onboarding/tags?invite=${invite.gameId}` : '/activities/onboarding/tags');
-  }, [close, invite, router]);
+    openPanel({panel: 'onboarding', step: 'tags', invite: invite?.gameId});
+  }, [close, invite, openPanel]);
 
-  const bullets: {icon: TablerIcon; title: string; body: string}[] = invite
+  // one short line each; the details live in the steps themselves
+  const rows: {icon: TablerIcon; text: string}[] = invite
     ? [
-        {icon: Flag, title: invite.gameTitle, body: `${invite.inviterName} picked you. Accepting takes two quick steps: what you're into, and what your Muse may share.`},
-        {icon: Lock, title: 'Your data stays yours', body: 'The game only ever sees what you allow. Routes and heart rate never leave your vault unless you say so.'},
-        {icon: Brain, title: 'Your Muse keeps score', body: 'It answers the game’s questions at the precision you choose, and logs every question for you to read.'},
+        {icon: Flag, text: 'Pick what you’re into'},
+        {icon: Lock, text: 'Choose what the game can see'},
       ]
     : [
-        {icon: Target, title: 'Rally', body: 'Boss fights, relays and streaks with friends in Messenger. Your Muse scales the targets to each person so nobody is the weak link.'},
-        {icon: Map, title: 'Turf', body: 'Claim ground by walking or running real streets. Teams, arenas, trash talk. Phone in pocket.'},
-        {icon: Brain, title: 'Your Muse', body: 'A private agent that knows your workouts, keeps the raw data in your vault, and only tells others what you allow.'},
+        {icon: Target, text: 'Rally: boss fights with friends'},
+        {icon: Map, text: 'Turf: claim streets on real runs'},
+        {icon: Brain, text: 'Muse: your private coach'},
       ];
 
   return (
-    <Dialog isOpen={visible} onOpenChange={o => !o && busy == null && void snooze()} width={520}>
+    <Dialog isOpen={visible} onOpenChange={o => !o && busy == null && void snooze()} width={400}>
       <Layout
-        header={
-          <DialogHeader
-            title={invite ? `${invite.inviterName} invited you to ${invite.gameTitle}` : 'Activities'}
-            subtitle={invite ? 'Join the game in about a minute.' : 'The place where your friends make you move.'}
-            onOpenChange={() => void snooze()}
-          />
-        }
+        header={<DialogHeader title={invite ? `${invite.inviterName} invited you to ${invite.gameTitle}` : 'Activities'} subtitle={invite ? 'Two quick steps to join.' : 'Move more with friends.'} onOpenChange={() => void snooze()} />}
         content={
-          <LayoutContent>
-            <VStack gap={3}>
-              <List>
-                {bullets.map(b => (
-                  <ListItem key={b.title} align="start" startContent={<Icon icon={b.icon} size="md" color="accent" />} label={<Text weight="bold">{b.title}</Text>} description={b.body} />
-                ))}
-              </List>
-              <Text type="supporting" color="secondary">
-                No wearable needed: use a photo of your treadmill or just tell your Muse what you did. You can change any sharing choice later under Activities → Privacy.
-              </Text>
-            </VStack>
+          <LayoutContent padding={6}>
+            <ul className={h.introRows}>
+              {rows.map(r => (
+                <li key={r.text}>
+                  <Icon icon={r.icon} size="md" color="accent" />
+                  {r.text}
+                </li>
+              ))}
+            </ul>
           </LayoutContent>
         }
         footer={
-          <LayoutFooter>
-            <VStack gap={2}>
-              <Button label={invite ? 'Accept and set up' : 'Get started'} variant="primary" width="100%" isLoading={busy === 'start'} isDisabled={busy === 'snooze'} onClick={() => void start()} />
-              <Button label="Not now" width="100%" isLoading={busy === 'snooze'} isDisabled={busy === 'start'} onClick={() => void snooze()} />
-            </VStack>
+          <LayoutFooter padding={6}>
+            <HStack gap={2} hAlign="end">
+              <button type="button" className={`${h.pill} ${h.pillOutline}`} disabled={busy != null} onClick={() => void snooze()}>
+                {busy === 'snooze' ? '…' : 'Not now'}
+              </button>
+              <button type="button" className={`${h.pill} ${h.pillBlue}`} disabled={busy != null} onClick={() => void start()}>
+                {busy === 'start' ? '…' : invite ? 'Accept' : 'Get started'}
+              </button>
+            </HStack>
           </LayoutFooter>
         }
       />

@@ -7,6 +7,7 @@ import {MODELS, museConfigured, museJson} from '@/lib/muse/client';
 import {bandValue, friendVisibleTags, MENTOR_K} from '@/lib/activities/privacy';
 import {classifyActivity} from '@/lib/activities/classify';
 import {isFitnessText, tagsForText} from '@/lib/activities/keywords';
+import {panelHref} from '@/lib/activities/panel-href';
 
 /** A Discover card. Everything about other people here came from ask() answers or public rows (events/groups/reels). */
 export type DiscoverCard = {
@@ -250,7 +251,7 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   const mentorMatches = await matchMentors(userId, tags);
   const mentorCards: DiscoverCard[] = [];
   for (const m of mentorMatches.slice(0, 6)) {
-    mentorCards.push(build({id: `mentor-${m.mentorId}`, kind: 'mentor', title: m.title, subtitle: m.subtitle, href: `/activities/ahead?offer=${m.mentorId}`, cta: 'Ask their Muse', tag: m.goalTag ?? undefined, score: m.score, meta: {mentorId: m.mentorId, requestId: m.requestId, status: m.status}}, m.why));
+    mentorCards.push(build({id: `mentor-${m.mentorId}`, kind: 'mentor', title: m.title, subtitle: m.subtitle, href: panelHref({panel: 'mentors', offer: m.mentorId}), cta: 'Ask their Muse', tag: m.goalTag ?? undefined, score: m.score, meta: {mentorId: m.mentorId, requestId: m.requestId, status: m.status}}, m.why));
   }
   if (mentorCards.length) sections.push({id: 'mentors', title: 'Mentors', cards: mentorCards});
 

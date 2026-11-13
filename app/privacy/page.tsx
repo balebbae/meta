@@ -1,5 +1,6 @@
 import type {Metadata} from 'next';
 import Link from 'next/link';
+import {panelHref} from '@/lib/activities/panel-href';
 
 export const metadata: Metadata = {title: 'Privacy Policy | Facebook'};
 
@@ -43,7 +44,7 @@ export default function PrivacyPolicyPage() {
         <li>Connected and logged activity data is stored in a private <strong>vault</strong> that only you (and your personal Muse assistant acting for you) can read in full.</li>
         <li>
           Other people never see raw values. Friends, game participants and mentors only receive the yes/no or rounded answers that your privacy settings allow
-          (<Link href="/activities/privacy" style={{color: 'var(--fb-blue)'}}>Activities → Privacy</Link>). Heart rate, recovery and sleep are Muse-only by default and are never shared.
+          (<Link href={panelHref({panel: 'settings', tab: 'privacy'})} style={{color: 'var(--fb-blue)'}}>Activities → Settings → Privacy</Link>). Heart rate, recovery and sleep are Muse-only by default and are never shared.
         </li>
         <li>Every answer given on your behalf is written to an audit log you can review.</li>
         <li>Activity data is used to run Rally quests, Turf games, Discover suggestions and mentor exchanges that you start or join. It is not sold, used for advertising, or shared with third parties.</li>
@@ -53,7 +54,7 @@ export default function PrivacyPolicyPage() {
       <h2 style={h2}>WHOOP and other connected providers</h2>
       <p>
         When you connect WHOOP we store an access token and refresh token so we can fetch your data and receive webhook updates. We request only the scopes shown on WHOOP&apos;s consent screen. You can disconnect at any time from{' '}
-        <Link href="/activities/privacy" style={{color: 'var(--fb-blue)'}}>Activities → Privacy → Sources</Link>; disconnecting revokes our token and stops all further syncing. You can also revoke access from your WHOOP account settings.
+        <Link href={panelHref({panel: 'settings', tab: 'sources'})} style={{color: 'var(--fb-blue)'}}>Activities → Settings → Sources</Link>; disconnecting revokes our token and stops all further syncing. You can also revoke access from your WHOOP account settings.
       </p>
 
       <h2 style={h2}>Deleting your data</h2>

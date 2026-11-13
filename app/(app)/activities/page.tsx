@@ -9,6 +9,7 @@ import {DiscoverPage, type MyGame} from '@/components/activities/DiscoverPage';
 import {listGoals} from '@/lib/activities/goals';
 import {OnboardingGate} from '@/components/activities/OnboardingGate';
 import {CoachMode} from '@/components/activities/CoachMode';
+import {ActivitiesPanels} from '@/components/activities/panels/ActivitiesPanels';
 import {setCoachMode} from '@/lib/activities/coach';
 import {fitnessLevel} from '@/lib/activities/level';
 import {listVaultEvents} from '@/lib/activities/vault';
@@ -46,6 +47,8 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
       .filter(q => q.status === 'active')
       .map(q => ({key: `q${q.id}`, href: `/activities/games/${q.id}`, title: q.title, subtitle: q.bossHp ? `${q.bossHpLeft} / ${q.bossHp} HP` : `Rally · ${q.template}`, boss: {kind: q.bossKind, name: q.spec.boss?.name ?? q.title}})),
     ...turf.map(g => ({key: `t${g.id}`, href: `/games/${g.id}`, title: g.label, subtitle: g.status === 'live' ? 'Turf · live' : 'Turf · starting soon', boss: null})),
+    // finished quests stay reachable here now that /activities/games redirects to this section
+    ...quests.filter(q => q.status === 'completed').map(q => ({key: `q${q.id}`, href: `/activities/games/${q.id}`, title: q.title, subtitle: 'Boss defeated', boss: {kind: q.bossKind, name: q.spec.boss?.name ?? q.title}})),
   ];
   // The intro modal (§8) is owned by OnboardingGate; DiscoverPage's built-in intro stays off.
   return (
@@ -54,6 +57,7 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
       <CoachMode initialOn={coachOn}>
         <DiscoverPage viewer={{id: user.id, name: user.name, avatarUrl: user.avatarUrl}} data={data} museActions={museActions} listings={listings} start={params.start ?? null} eventId={params.event ? Number(params.event) : null} goal={goals.find(x => x.status === 'active') ?? null} games={games} level={level} progress={progress} nearby={nearby} />
       </CoachMode>
+      <ActivitiesPanels viewerName={user.name} />
     </>
   );
 }

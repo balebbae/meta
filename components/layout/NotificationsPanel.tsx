@@ -10,6 +10,7 @@ import {Skeleton} from '@/components/ui/Skeleton';
 import {profileApi} from '@/components/profile/api';
 import {MobileNotificationRow} from './MobileNotificationRow';
 import styles from './layout.module.css';
+import {panelHref} from '@/lib/activities/panel-href';
 
 export function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (n: number) => void}) {
   const [items, setItems] = useState<Notification[] | null>(null);
@@ -74,7 +75,7 @@ export function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (
   };
   const row = (n: Notification) => (
     <Fragment key={n.id}>
-    <Link key={n.id} href={n.type === 'ahead' ? '/activities/ahead' : n.postId ? `/?post=${n.postId}` : n.actor ? `/profile/${n.actor.id}` : '/'} className={styles.notif} onClick={() => !n.isRead && markRead([n.id])}>
+    <Link key={n.id} href={n.type === 'ahead' ? panelHref({panel: 'mentors'}) : n.postId ? `/?post=${n.postId}` : n.actor ? `/profile/${n.actor.id}` : '/'} className={styles.notif} onClick={() => !n.isRead && markRead([n.id])}>
       <span className={styles.notifAvatar}>
         <Avatar src={n.actor?.avatarUrl ?? '/favicon.svg'} alt="" size={56} />
         <span className={styles.notifType} style={{background: n.type === 'reaction' ? 'var(--fb-blue)' : n.type === 'comment' ? '#31a24c' : n.type === 'friend_request' ? 'var(--fb-blue)' : '#65676b'}}>
@@ -97,7 +98,7 @@ export function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (
       </span>
       {!n.isRead && <span className={styles.notifDot} />}
     </Link>
-    <MobileNotificationRow item={n} href={n.type === 'ahead' ? '/activities/ahead' : n.postId ? `/?post=${n.postId}` : n.actor ? `/profile/${n.actor.id}` : '/'} markRead={() => { if (!n.isRead) void markRead([n.id]); }} respond={accept => void respond(n, accept)} busy={responding !== null} />
+    <MobileNotificationRow item={n} href={n.type === 'ahead' ? panelHref({panel: 'mentors'}) : n.postId ? `/?post=${n.postId}` : n.actor ? `/profile/${n.actor.id}` : '/'} markRead={() => { if (!n.isRead) void markRead([n.id]); }} respond={accept => void respond(n, accept)} busy={responding !== null} />
     </Fragment>
   );
   return (

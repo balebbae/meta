@@ -5,6 +5,7 @@ import {GOOGLE_HEALTH, OURA, exchangeStubCode} from '@/lib/activities/connectors
 import * as strava from '@/lib/activities/connectors/strava';
 import * as whoop from '@/lib/activities/connectors/whoop';
 import {appOrigin} from '@/lib/activities/origin';
+import {panelHref} from '@/lib/activities/panel-href';
 import type {ConnectorId} from '@/lib/activities/types';
 
 const OAUTH: ConnectorId[] = ['whoop', 'strava', 'oura', 'google_health'];
@@ -13,7 +14,8 @@ const OAUTH: ConnectorId[] = ['whoop', 'strava', 'oura', 'google_health'];
 export async function GET(req: Request, ctx: {params: Promise<{source: string}>}) {
   const {source} = await ctx.params;
   const origin = appOrigin(req);
-  const back = (q: string) => NextResponse.redirect(`${origin}/activities/connect/${source}?${q}`);
+  // back to that source inside the Settings panel on /activities
+  const back = (q: string) => NextResponse.redirect(`${origin}${panelHref({panel: 'settings', tab: 'sources', source})}&${q}`);
   if (!OAUTH.includes(source as ConnectorId)) return back('error=unknown');
   const user = await getSessionUser();
   if (!user) return NextResponse.redirect(`${origin}/auth?next=${encodeURIComponent(`/activities/connect/${source}`)}`);

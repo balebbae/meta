@@ -1,7 +1,7 @@
 'use client';
 
-import {useRouter} from 'next/navigation';
 import {useState} from 'react';
+import {usePanelNav} from './panels/nav';
 import type {MentorConsent, MentorRequestView} from '@/lib/activities/mentor';
 import type {MentorMatch} from '@/lib/activities/discover';
 // Tabler icons, aliased to the names this file already uses
@@ -38,9 +38,10 @@ function statusLabel(r: MentorRequestView): string {
   return r.plan ? 'advice ready' : 'asking…';
 }
 
-/** /activities/ahead: people a few months ahead, conversations through your Muse, and opting in to help. */
+/** Mentors panel: people a few months ahead, conversations through your Muse, and opting in to help. */
 export function MentorPage({offer: initialOffer, matches, requests, adult, highlight}: {offer: Offer | null; matches: MentorMatch[]; requests: MentorRequestView[]; adult: boolean; highlight: number | null}) {
-  const router = useRouter();
+  const {open} = usePanelNav();
+  const thread = (id: number | undefined) => open({panel: 'mentors', request: id});
   const [offer, setOffer] = useState<Offer | null>(initialOffer);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -77,7 +78,7 @@ export function MentorPage({offer: initialOffer, matches, requests, adult, highl
     const d = (await res.json().catch(() => ({}))) as {id?: number; error?: string};
     setBusy(null);
     if (!res.ok) return setError(d.error ?? 'Could not reach their Muse');
-    router.push(`/activities/ahead/${d.id}`);
+    thread(d.id);
   };
 
   const incoming = requests.filter(r => r.role === 'mentor');
@@ -87,10 +88,8 @@ export function MentorPage({offer: initialOffer, matches, requests, adult, highl
   const showForm = editing || !offer;
 
   return (
-    <VStack gap={4} paddingBlock={4}>
+    <VStack gap={4}>
       <VStack gap={1} hAlign="start">
-        <Button label="Activities" variant="ghost" size="sm" icon={<Icon icon="chevronLeft" />} href="/activities" />
-        <Heading level={1}>Mentors</Heading>
         <Text color="secondary">
           People who are where you want to be in about 3 months. Ask their Muse what to do, or connect and keep talking. You only ever talk through your Muses, and names stay hidden unless you both choose to share. 18+ only.
         </Text>
@@ -107,7 +106,7 @@ export function MentorPage({offer: initialOffer, matches, requests, adult, highl
               {incoming.map(r => (
                 <ListItem
                   key={r.id}
-                  href={`/activities/ahead/${r.id}`}
+                  onClick={() => thread(r.id)}
                   startContent={person}
                   label={r.seeker?.name ?? 'Someone a few months behind you'}
                   description={r.connect === 'requested' ? 'Wants to keep talking through your Muses' : r.connect === 'connected' ? 'Connected through your Muses' : 'Your Muse answered their questions'}
@@ -142,7 +141,7 @@ export function MentorPage({offer: initialOffer, matches, requests, adult, highl
                     description={`${m.subtitle} · ${m.why}`}
                     endContent={
                       m.requestId && m.status !== 'revoked' ? (
-                        <Button label={existing ? statusLabel(existing) : 'Open'} size="sm" href={`/activities/ahead/${m.requestId}`} />
+                        <Button label={existing ? statusLabel(existing) : 'Open'} size="sm" onClick={() => thread(m.requestId ?? undefined)} />
                       ) : (
                         <HStack gap={1.5} wrap="wrap">
                           <Button label="Ask their Muse" variant="primary" size="sm" isLoading={busy === `ask-${m.mentorId}`} isDisabled={!adult || (!!busy && busy !== `ask-${m.mentorId}`)} onClick={() => void start(m.mentorId, false)} />
@@ -164,7 +163,7 @@ export function MentorPage({offer: initialOffer, matches, requests, adult, highl
             <Heading level={2}>Your conversations</Heading>
             <List hasDividers>
               {outgoing.map(r => (
-                <ListItem key={r.id} href={`/activities/ahead/${r.id}`} startContent={person} label={r.mentor?.name ?? 'Someone a few months ahead'} description={r.plan ? r.plan.title : 'Their Muse is answering'} endContent={statusToken(r)} />
+                <ListItem key={r.id} onClick={() => thread(r.id)} startContent={person} label={r.mentor?.name ?? 'Someone a few months ahead'} description={r.plan ? r.plan.title : 'Their Muse is answering'} endContent={statusToken(r)} />
               ))}
             </List>
           </VStack>

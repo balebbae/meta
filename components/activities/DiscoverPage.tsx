@@ -4,7 +4,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {useRouter} from 'next/navigation';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {IconChevronRight, IconEyeOff, IconMap2, IconMask, IconPlayerPlay, IconSwords, IconTrophy, IconWand} from '@tabler/icons-react';
+import {IconChevronRight, IconEyeOff, IconListDetails, IconMap2, IconMask, IconPlayerPlay, IconSettings, IconSwords, IconTrophy, IconWand} from '@tabler/icons-react';
 import {InfoTip} from '@astryxdesign/core/InfoTip';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {Button} from '@astryxdesign/core/Button';
@@ -25,6 +25,7 @@ import type {ListingBrief} from '@/lib/rally/queries';
 import type {FitnessLevel} from '@/lib/activities/level';
 import {ActivityLeaderboard} from './ActivityLeaderboard';
 import {CoachButton} from './CoachMode';
+import {usePanelNav} from './panels/nav';
 import {MuseActions} from './MuseActions';
 import {Communities} from './home/Communities';
 import {EventsNearby} from './home/EventsNearby';
@@ -66,6 +67,7 @@ export function SectionHead({title, sub, href}: {title: string; sub?: string; hr
 
 export function DiscoverPage({viewer, data, museActions, listings, start, eventId, goal = null, games = [], level = null, progress = null, nearby = null}: Props) {
   const router = useRouter();
+  const panels = usePanelNav();
   const showToast = useToast();
   const [sections, setSections] = useState<DiscoverSection[]>(data.sections);
   const [startMode, setStartMode] = useState<string | null>(start);
@@ -163,7 +165,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
   const byId = (id: DiscoverSection['id']) => sections.find(s => s.id === id);
   let order = 0;
   const section = (key: string, title: string, body: React.ReactNode, sub?: string, href?: string) => (
-    <section key={key} className={`${h.section} ${key === 'reels' ? h.sectionTight : ''}`} style={{'--i': order++} as React.CSSProperties} aria-label={title}>
+    <section key={key} id={key} className={`${h.section} ${key === 'reels' ? h.sectionTight : ''}`} style={{'--i': order++} as React.CSSProperties} aria-label={title}>
       <SectionHead title={title} sub={sub} href={href} />
       {body}
     </section>
@@ -205,8 +207,16 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
     <div className={h.page}>
       <div className={h.titleRow}>
         <h1 className={h.h1}>Welcome back, {viewer.name.split(' ')[0]}</h1>
-        {/* the Coach mode button lives on the goal card; without that card it stays reachable here */}
-        {!progress && <CoachButton className={`${h.pill} ${h.pillSm} ${h.pillBlue}`} />}
+        <div className={h.titleTools}>
+          {/* the Coach mode button lives on the goal card; without that card it stays reachable here */}
+          {!progress && <CoachButton className={`${h.pill} ${h.pillSm} ${h.pillBlue}`} />}
+          <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillIcon} ${h.pillOutline}`} onClick={() => panels.open({panel: 'logs'})} aria-label="Your logs" title="Your logs">
+            <IconListDetails size={16} aria-hidden />
+          </button>
+          <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillIcon} ${h.pillOutline}`} onClick={() => panels.open({panel: 'settings'})} aria-label="Activities settings" title="Sources, privacy and Muse">
+            <IconSettings size={16} aria-hidden />
+          </button>
+        </div>
       </div>
 
       {progress && (

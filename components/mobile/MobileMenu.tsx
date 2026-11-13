@@ -34,6 +34,7 @@ import type {User} from '@/lib/types';
 import {PeopleSearchButton} from './MobileHeader';
 import styles from './mobile.module.css';
 import menu from './menu.module.css';
+import {panelHref} from '@/lib/activities/panel-href';
 
 const SHORTCUTS = [
   {label: 'Friends', Icon: RailFriendsIcon, href: '/friends'},
@@ -226,7 +227,7 @@ function MenuContent({user, busy, logout, toggleTheme}: {user: User; busy: boole
       <h2><MuseMarkIcon size={22} />Muse</h2>
       <button aria-label="Dismiss Muse promo" className={menu.dismiss} onClick={dismissPromo}><CloseIcon size={16} /></button>
       <p>Meet Muse, your personal AI agent.</p>
-      <Link href="/activities/muse">Try Muse</Link>
+      <Link href={panelHref({panel: 'settings', tab: 'muse'})}>Try Muse</Link>
     </aside>}
     <nav className={menu.shortcuts} aria-label="Shortcuts">
       {SHORTCUTS.slice(0, expanded ? SHORTCUTS.length : 5).map(({label, href}, i) => {

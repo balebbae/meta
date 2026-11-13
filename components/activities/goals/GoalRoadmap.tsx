@@ -4,7 +4,6 @@ import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 import {Avatar} from '@astryxdesign/core/Avatar';
 import {Banner} from '@astryxdesign/core/Banner';
-import {BreadcrumbItem, Breadcrumbs} from '@astryxdesign/core/Breadcrumbs';
 import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
 import {CheckboxInput} from '@astryxdesign/core/CheckboxInput';
@@ -75,11 +74,7 @@ export function GoalRoadmap({goal: initial, matches}: {goal: Goal; matches: Goal
   const play = (conversationId?: number) => run(conversationId ? `chat-${conversationId}` : 'solo', () => fetch(`/api/goals/${goal.id}/game`, json('POST', conversationId ? {conversationId} : {})), d => router.push(String(d.url)));
 
   return (
-    <VStack gap={4} paddingBlock={4}>
-      <Breadcrumbs variant="supporting">
-        <BreadcrumbItem href="/activities/goals">Goals</BreadcrumbItem>
-        <BreadcrumbItem>{goal.title}</BreadcrumbItem>
-      </Breadcrumbs>
+    <VStack gap={4}>
 
       <Card aria-label="Goal">
         <VStack gap={4}>

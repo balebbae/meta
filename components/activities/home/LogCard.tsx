@@ -1,17 +1,16 @@
 'use client';
 
-import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {useEffect, useState} from 'react';
+import {useState} from 'react';
 import {IconCamera, IconCheck, IconX} from '@tabler/icons-react';
 import type {ConnectorCard} from '@/lib/activities/connectors';
 import type {Platform} from '@/lib/activities/types';
-import {AVAIL_LABEL, SOURCE_ICON, useConnect, type PublicConnection} from '../ConnectorHub';
+import type {PublicConnection} from '../ConnectorHub';
 import {describe, EMPTY, formToLog, KINDS, type Form, type LoggedEvent} from '../LogWorkoutSheet';
+import {useJson, usePanelNav} from '../panels/nav';
+import {SourceList} from '../panels/SourceList';
 import h from './home.module.css';
 
-// sources /api/connect/[source]/sync can pull from; the rest push (webhooks, Shortcut, export upload)
-const SYNCABLE = new Set(['strava', 'whoop']);
 const SHOWN = 6;
 const KIND_PILLS = KINDS.filter(k => k.id !== 'steps');
 
@@ -22,16 +21,9 @@ export function LogCard({onClose}: {onClose: () => void}) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [saved, setSaved] = useState<LoggedEvent | null>(null);
-  const [sources, setSources] = useState<{platform: Platform; cards: ConnectorCard[]; connections: PublicConnection[]} | null>(null);
-  const [allSources, setAllSources] = useState(false);
-  const {busy: srcBusy, note, connect, sync} = useConnect();
-
-  useEffect(() => {
-    fetch('/api/activities/connections')
-      .then(r => (r.ok ? r.json() : null))
-      .then(setSources)
-      .catch(() => setSources(null));
-  }, []);
+  // same cached request as Settings → Sources
+  const {data: sources, reload: reloadSources} = useJson<{platform: Platform; cards: ConnectorCard[]; connections: PublicConnection[]}>('/api/activities/connections');
+  const {open} = usePanelNav();
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -46,18 +38,11 @@ export function LogCard({onClose}: {onClose: () => void}) {
     router.refresh();
   }
 
-  const conn = new Map(sources?.connections.map(c => [c.source, c]));
-  // Strava first, then what works here, then the rest (manual + photo are this card and its footer link)
-  const cards = (sources?.cards ?? [])
-    .filter(c => c.id !== 'manual' && c.id !== 'proof_photo')
-    .sort((a, b) => Number(b.id === 'strava') - Number(a.id === 'strava') || Number(a.availability !== 'ready') - Number(b.availability !== 'ready'));
-  const shown = allSources ? cards : cards.slice(0, SHOWN);
-
   return (
     <section className={h.logCard} aria-label="Log a workout">
       <div className={h.logHead}>
         <h3 className={h.logTitle}>Log a workout</h3>
-        <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillIcon}`} onClick={onClose} aria-label="Close" title="Close">
+        <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillIcon} ${h.pillGhost}`} onClick={onClose} aria-label="Close" title="Close">
           <IconX size={16} aria-hidden />
         </button>
       </div>
@@ -65,7 +50,7 @@ export function LogCard({onClose}: {onClose: () => void}) {
       <form onSubmit={save}>
         <div className={h.logKinds} role="group" aria-label="Workout type">
           {KIND_PILLS.map(k => (
-            <button key={k.id} type="button" className={`${h.pill} ${h.pillSm} ${form.kind === k.id ? h.pillBlue : ''}`} aria-pressed={form.kind === k.id} onClick={() => setForm({...form, kind: k.id})}>
+            <button key={k.id} type="button" className={`${h.pill} ${h.pillSm} ${form.kind === k.id ? h.pillBlue : h.pillGhost}`} aria-pressed={form.kind === k.id} onClick={() => setForm({...form, kind: k.id})}>
               {k.label}
             </button>
           ))}
@@ -97,50 +82,12 @@ export function LogCard({onClose}: {onClose: () => void}) {
         )}
       </form>
 
-      <h4 className={h.logSub}>Or bring it in</h4>
-      {!sources ? (
-        <p className={h.logNote}>Loading sources…</p>
-      ) : (
-        <ul className={h.logSources}>
-          {shown.map(card => {
-            const Icon = SOURCE_ICON[card.id];
-            const connected = conn.get(card.id)?.status === 'connected';
-            const ready = card.availability === 'ready';
-            const manage = `/activities/connect/${card.id}`;
-            return (
-              <li key={card.id} className={h.logSource}>
-                <Icon size={22} aria-hidden />
-                <span className={h.logSourceText}>
-                  <strong>{card.label}</strong>
-                  <small>{note[card.id] ?? (connected ? 'Connected' : ready || card.mode === 'shortcut' ? card.tagline : AVAIL_LABEL[card.availability])}</small>
-                </span>
-                {connected && SYNCABLE.has(card.id) ? (
-                  <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillBlue}`} disabled={srcBusy != null} onClick={() => void sync(card)}>
-                    {srcBusy === card.id ? 'Syncing…' : 'Sync'}
-                  </button>
-                ) : connected || (!ready && card.mode !== 'shortcut') ? (
-                  <Link className={`${h.pill} ${h.pillSm}`} href={manage}>
-                    {connected ? 'Manage' : 'How'}
-                  </Link>
-                ) : (
-                  <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillBlue}`} disabled={srcBusy != null} onClick={() => void connect(card)}>
-                    {srcBusy === card.id ? 'Connecting…' : card.mode === 'demo' ? 'Try demo' : card.mode === 'shortcut' ? 'Set up' : card.mode === 'builtin' ? 'Open' : 'Connect'}
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      <h4 className={h.logSub}>Or import</h4>
+      {sources ? <SourceList cards={sources.cards} connections={sources.connections} limit={SHOWN} onChanged={reloadSources} /> : <p className={h.logNote}>Loading…</p>}
       <div className={h.logFoot}>
-        <Link className={h.logLink} href="/activities/log?tab=photo">
-          <IconCamera size={16} aria-hidden /> Photo proof or voice
-        </Link>
-        {cards.length > SHOWN && (
-          <button type="button" className={h.logLink} onClick={() => setAllSources(v => !v)} aria-expanded={allSources}>
-            {allSources ? 'Fewer sources' : `${cards.length - SHOWN} more sources`}
-          </button>
-        )}
+        <button type="button" className={h.logLink} onClick={() => open({panel: 'logs', tab: 'photo'})}>
+          <IconCamera size={16} aria-hidden /> Photo or voice
+        </button>
       </div>
     </section>
   );

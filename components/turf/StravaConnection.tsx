@@ -4,6 +4,7 @@ import {useEffect, useState, type ReactNode} from 'react';
 import {StravaIcon} from '@/components/icons';
 import {stravaConnected} from '@/lib/activities/strava-status';
 import styles from './strava.module.css';
+import {panelHref} from '@/lib/activities/panel-href';
 
 export function StravaConnection({children}: {children?: ReactNode}) {
   const [connected, setConnected] = useState<boolean | null>(null);
@@ -22,10 +23,10 @@ export function StravaConnection({children}: {children?: ReactNode}) {
 
   return (
     <div className={styles.connection}>
-      {error ? <Link href="/activities/connect/strava" className={styles.manage}>Unable to check Strava · Manage connection</Link>
+      {error ? <Link href={panelHref({panel: 'settings', tab: 'sources', source: 'strava'})} className={styles.manage}>Unable to check Strava · Manage connection</Link>
         : connected == null ? <span className={styles.status} role="status">Checking Strava…</span>
         : connected ? <span className={styles.status} role="status"><StravaIcon size={20} /> Strava connected</span>
-        : <Link href="/activities/connect/strava" className={styles.connect}>
+        : <Link href={panelHref({panel: 'settings', tab: 'sources', source: 'strava'})} className={styles.connect}>
           <StravaIcon size={20} /> Connect Strava
         </Link>}
       {connected && !error && children}

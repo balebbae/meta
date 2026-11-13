@@ -2,6 +2,7 @@
 
 import {useRouter} from 'next/navigation';
 import {useState} from 'react';
+import {usePanelNav} from '../panels/nav';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
@@ -15,6 +16,7 @@ const EXAMPLES = ['Compete in a HYROX in March', 'Run my first 5K', 'Half marath
 
 export function GoalComposer() {
   const router = useRouter();
+  const {open} = usePanelNav();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,10 @@ export function GoalComposer() {
       const res = await fetch('/api/goals', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({text})});
       const d = (await res.json().catch(() => ({}))) as {goal?: {id: number}; error?: string};
       if (!res.ok || !d.goal) throw new Error(d.error ?? 'Could not build the roadmap. Try again.');
-      router.push(`/activities/goals/${d.goal.id}`);
+      setBusy(false);
+      setText('');
+      open({panel: 'goals', goal: d.goal.id});
+      router.refresh(); // the hero ring picks up the new goal
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not build the roadmap.');
       setBusy(false);

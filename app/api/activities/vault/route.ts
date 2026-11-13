@@ -2,12 +2,12 @@ import {NextResponse} from 'next/server';
 import {badRequest, withUser} from '@/lib/api';
 import {deleteVaultSource, listVaultEvents} from '@/lib/activities/vault';
 
-/** Owner-only view of the vault (Muse page). Never called for another user. */
+/** Owner-only view of the vault (Logs panel). Never called for another user. ?all=1 includes merged duplicates. */
 export async function GET(req: Request) {
   return withUser(async user => {
     const url = new URL(req.url);
     const limit = Math.min(500, Math.max(1, Number(url.searchParams.get('limit')) || 200));
-    return NextResponse.json({events: await listVaultEvents(user.id, {limit})});
+    return NextResponse.json({events: await listVaultEvents(user.id, {limit, includeDuplicates: url.searchParams.get('all') === '1'})});
   });
 }
 

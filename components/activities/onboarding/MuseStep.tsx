@@ -5,7 +5,6 @@ import {Card} from '@astryxdesign/core/Card';
 import {Heading} from '@astryxdesign/core/Heading';
 import {HStack} from '@astryxdesign/core/HStack';
 import {Icon} from '@astryxdesign/core/Icon';
-import {Link} from '@astryxdesign/core/Link';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {Text} from '@astryxdesign/core/Text';
 import {VStack} from '@astryxdesign/core/VStack';
@@ -48,7 +47,7 @@ export function MuseStep({summary, invite, name}: {summary: MuseSummary; invite:
             <ListItem startContent={<Icon icon={Ban} size="sm" color="secondary" />} label={summary.nobody} />
           </List>
           <Text type="supporting" color="secondary">
-            Every question anyone asks me is logged for you. Read it any time under <Link href="/activities/privacy">Activities → Privacy</Link>, or see everything I know on <Link href="/activities/muse">your Muse page</Link>.
+            Every question anyone asks me is logged for you. Read it any time in Activities settings (the gear at the top of Activities) under Privacy, and everything I know under Muse.
           </Text>
         </VStack>
       </Card>

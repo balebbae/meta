@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import {useState} from 'react';
 import {Tooltip} from '@astryxdesign/core/Tooltip';
 import {IconCalendarCheck, IconFlag, IconFlame, IconHeartbeat, IconMoon, IconPlus, IconRoute, IconRoute2, IconSparkles, IconWalk, IconX} from '@tabler/icons-react';
@@ -13,6 +12,7 @@ import h from './home.module.css';
 import {LogCard} from './LogCard';
 import {useCountUp} from './useActTheme';
 import {CoachButton} from '../CoachMode';
+import {usePanelNav} from '../panels/nav';
 
 // Fitness level from the last 4 weeks (lib/activities/level.ts), named on a plain difficulty scale
 const TIER = {new: {name: 'Beginner', n: 1}, building: {name: 'Intermediate', n: 2}, regular: {name: 'Advanced', n: 3}, strong: {name: 'Expert', n: 4}} as const;
@@ -26,6 +26,7 @@ export function ProgressHero({progress, goal, level}: {progress: HomeProgress; g
   const workouts = useCountUp(progress.workouts);
   const hr = useCountUp(progress.avgHr);
   const [logOpen, setLogOpen] = useState(false);
+  const {open} = usePanelNav();
   // the stat tiles: add or remove one here (and its number in homeProgress)
   const stats = [
     {Icon: IconWalk, label: 'Steps today', value: steps?.toLocaleString(), unit: `/ ${(progress.stepGoal / 1000).toFixed(0)}k`, hot: progress.movedToday},
@@ -67,13 +68,13 @@ export function ProgressHero({progress, goal, level}: {progress: HomeProgress; g
           Coach
         </CoachButton>
         {goal ? (
-          <Link className={`${h.pill} ${h.pillIcon} ${h.pillBlue}`} href={`/activities/goals/${goal.id}`} aria-label="Open roadmap" title="Open roadmap">
+          <button type="button" className={`${h.pill} ${h.pillIcon} ${h.pillBlue}`} onClick={() => open({panel: 'goals', goal: goal.id})} aria-label="Open roadmap" title="Open roadmap">
             <IconRoute size={20} aria-hidden />
-          </Link>
+          </button>
         ) : (
-          <Link className={`${h.pill} ${h.pillIcon} ${h.pillBlue}`} href="/activities/goals" aria-label="Set a goal" title="Set a goal">
+          <button type="button" className={`${h.pill} ${h.pillIcon} ${h.pillBlue}`} onClick={() => open({panel: 'goals'})} aria-label="Set a goal" title="Set a goal">
             <IconFlag size={20} aria-hidden />
-          </Link>
+          </button>
         )}
         <button type="button" className={`${h.pill} ${h.pillIcon} ${h.pillBlue}`} onClick={() => setLogOpen(o => !o)} aria-expanded={logOpen} aria-label="Log a workout" title="Log a workout">
           {logOpen ? <IconX size={20} aria-hidden /> : <IconPlus size={20} aria-hidden />}

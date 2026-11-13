@@ -35,7 +35,7 @@ export type LoggedEvent = {id: number; kind: EventKind; distanceKm?: number; dur
 
 /**
  * Reusable "Log a workout" sheet (§5.2): manual (form or one sentence), photo proof, voice.
- * The nav opens it from /activities/log. onLogged fires with the saved vault event.
+ * The Logs panel (?panel=logs) opens it. onLogged fires with the saved vault event.
  */
 export function LogWorkoutSheet({open, onClose, initialTab = 'manual', onLogged, title = 'Log a workout'}: {open: boolean; onClose: () => void; initialTab?: LogTab; onLogged?: (e: LoggedEvent) => void; title?: string}) {
   const [tab, setTab] = useState<LogTab>(initialTab);

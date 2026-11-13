@@ -13,6 +13,7 @@ import type {publicConnection} from '@/lib/activities/connections';
 import type {ConnectorId, Platform} from '@/lib/activities/types';
 import {ConnectorIcon} from '@/components/icons';
 import {startConnector} from '@/lib/activities/connector-start';
+import {usePanelNav} from './panels/nav';
 
 export type PublicConnection = ReturnType<typeof publicConnection>;
 
@@ -25,6 +26,7 @@ export const AVAIL_LABEL = {ready: null, not_configured: 'Unavailable — not co
 /** Connect / sync a source the same way everywhere: OAuth redirect, instant (demo), or its setup page. */
 export function useConnect(onConnected?: (id: ConnectorId) => void) {
   const router = useRouter();
+  const {open} = usePanelNav();
   const [busy, setBusy] = useState<ConnectorId | null>(null);
   const [note, setNote] = useState<Partial<Record<ConnectorId, string>>>({});
 
@@ -42,11 +44,11 @@ export function useConnect(onConnected?: (id: ConnectorId) => void) {
 
   async function connect(card: ConnectorCard) {
     if (card.id === 'manual' || card.id === 'proof_photo') {
-      router.push('/activities/log' + (card.id === 'proof_photo' ? '?tab=photo' : ''));
+      open({panel: 'logs', tab: card.id === 'proof_photo' ? 'photo' : 'manual'});
       return;
     }
     if (card.mode === 'shortcut') {
-      router.push(`/activities/connect/${card.id}`);
+      open({panel: 'settings', tab: 'sources', source: card.id});
       return;
     }
     setBusy(card.id);
@@ -60,7 +62,7 @@ export function useConnect(onConnected?: (id: ConnectorId) => void) {
         setNote(n => ({...n, [card.id]: card.id === 'mock' ? 'Connected. A week of runs, walks, strength, steps and sleep is in your vault.' : 'Connected.'}));
         onConnected?.(card.id);
         router.refresh();
-      } else if (result.type === 'instructions') router.push(`/activities/connect/${card.id}`);
+      } else if (result.type === 'instructions') open({panel: 'settings', tab: 'sources', source: card.id});
       else setNote(n => ({...n, [card.id]: result.reason}));
     } catch (error) {
       setNote(n => ({...n, [card.id]: error instanceof Error ? error.message : 'Could not connect. Please try again.'}));
@@ -69,12 +71,12 @@ export function useConnect(onConnected?: (id: ConnectorId) => void) {
     }
   }
 
-  return {busy, note, connect, sync};
+  return {busy, note, connect, sync, manage: (card: ConnectorCard) => open({panel: 'settings', tab: 'sources', source: card.id})};
 }
 
 /** Connector hub (§4 step 3 / §5): every source visible, platform-ordered, unavailable ones explain the other route. */
 export function ConnectorHub({platform, cards, connections, onConnected, compact}: {platform: Platform; cards: ConnectorCard[]; connections: PublicConnection[]; onConnected?: (id: ConnectorId) => void; compact?: boolean}) {
-  const {busy, note, connect} = useConnect(onConnected);
+  const {busy, note, connect, manage} = useConnect(onConnected);
   const byId = new Map(connections.map(c => [c.source, c]));
 
   return (
@@ -100,9 +102,9 @@ export function ConnectorHub({platform, cards, connections, onConnected, compact
             description={note[card.id] ?? (unavailable && !connected ? `${AVAIL_LABEL[card.availability]}. ${card.otherRoute ?? ''}` : card.tagline)}
             endContent={
               connected ? (
-                <Button label="Manage" size="sm" href={`/activities/connect/${card.id}`} />
+                <Button label="Manage" size="sm" onClick={() => manage(card)} />
               ) : unavailable && card.mode !== 'shortcut' ? (
-                <Button label={compact ? 'Info' : 'Why?'} size="sm" variant="ghost" href={`/activities/connect/${card.id}`} tooltip={`About ${card.label}`} />
+                <Button label={compact ? 'Info' : 'Why?'} size="sm" variant="ghost" onClick={() => manage(card)} tooltip={`About ${card.label}`} />
               ) : (
                 <Button
                   label={card.mode === 'demo' ? 'Try demo' : card.mode === 'builtin' ? 'Open' : card.mode === 'shortcut' ? 'Set up' : 'Connect'}

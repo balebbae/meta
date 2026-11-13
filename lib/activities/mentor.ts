@@ -7,6 +7,7 @@ import {scrubContact} from '@/lib/activities/ahead';
 import {friendVisibleTags} from '@/lib/activities/privacy';
 import {findLeaks, leakCounts, type Leak} from '@/lib/activities/relay-guard';
 import {sendPushToUser} from '@/lib/push';
+import {panelHref} from '@/lib/activities/panel-href';
 
 export type MentorConsent = {workouts?: boolean; steps?: boolean; heart?: boolean; sleep?: boolean; offerText?: string; reviewBeforeSend?: boolean; anonymous?: boolean};
 export type Turn = {role: 'seeker' | 'mentor'; text: string; at: string};
@@ -116,7 +117,7 @@ export async function getRequest(id: number, viewerId: number): Promise<MentorRe
 /** Tell the other side something happened, without naming who (actor_id stays null so the panel can't link a profile). */
 async function notifyOther(id: number, toUserId: number, message: string) {
   await sql`insert into notifications (user_id, actor_id, type, message) values (${toUserId}, null, 'ahead', ${message})`.catch(() => {});
-  await sendPushToUser(toUserId, {title: 'Activities · Mentors', body: message, url: `/activities/ahead/${id}`, tag: `ahead-${id}`}).catch(() => {});
+  await sendPushToUser(toUserId, {title: 'Activities · Mentors', body: message, url: panelHref({panel: 'mentors', request: id}), tag: `ahead-${id}`}).catch(() => {});
 }
 
 export type ConnectAction = 'request' | 'accept' | 'decline' | 'reveal' | 'hide';

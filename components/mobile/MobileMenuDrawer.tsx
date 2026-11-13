@@ -28,13 +28,28 @@ export function MobileMenuDrawer({user}: {user: User}) {
       }
     }
     function resize() { if (window.innerWidth > 700 && dialogRef.current?.open) history.back(); }
+    // Swipe right from the left edge opens the menu (the drawer's own swipe left closes it).
+    let edge: {x: number; y: number} | null = null;
+    function edgeStart(e: TouchEvent) {
+      const t = e.touches[0];
+      edge = e.touches.length === 1 && t.clientX <= 24 && !document.querySelector('dialog[open]') ? {x: t.clientX, y: t.clientY} : null;
+    }
+    function edgeEnd(e: TouchEvent) {
+      const t = e.changedTouches[0];
+      if (edge && t.clientX - edge.x > 60 && Math.abs(t.clientY - edge.y) < 50) show();
+      edge = null;
+    }
     window.addEventListener(MOBILE_MENU_EVENT, show);
     window.addEventListener('popstate', back);
     window.addEventListener('resize', resize);
+    document.addEventListener('touchstart', edgeStart, {passive: true});
+    document.addEventListener('touchend', edgeEnd, {passive: true});
     return () => {
       window.removeEventListener(MOBILE_MENU_EVENT, show);
       window.removeEventListener('popstate', back);
       window.removeEventListener('resize', resize);
+      document.removeEventListener('touchstart', edgeStart);
+      document.removeEventListener('touchend', edgeEnd);
     };
   }, [router]);
   useEffect(() => {

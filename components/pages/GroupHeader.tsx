@@ -7,6 +7,7 @@ import type {Group, GroupMember} from '@/lib/secondary-queries';
 import {formatCount} from '@/lib/secondary-data';
 import {CheckIcon, GlobeIcon, LockIcon, MoreIcon, PlusIcon, ShareIcon} from './icons';
 import {GroupRallyChip} from '@/components/activities/GroupRallyChip';
+import {ChevronRightIcon} from '@/components/icons';
 import styles from './groups.module.css';
 
 const TABS = [
@@ -47,10 +48,10 @@ export function GroupHeader({group, members, tab}: {group: Group; members: Group
         </div>
         <div className={styles.heroBody}>
           <div>
-            <h1 className={styles.groupName}>{group.name}</h1>
+            <h1 className={styles.groupName}>{group.name}<Link href={`/groups/${group.id}?tab=about`} className={styles.mobileGroupLabel} aria-label="About this group"><ChevronRightIcon size={20} /></Link></h1>
             <div className={styles.groupMeta}>
               {group.privacy === 'private' ? <LockIcon size={14} /> : <GlobeIcon size={14} />}
-              <span>{group.privacy === 'private' ? 'Private group' : 'Public group'}</span>
+              <span className={styles.desktopGroupLabel}>{group.privacy === 'private' ? 'Private group' : 'Public group'}</span><span className={styles.mobileGroupLabel}>{group.privacy === 'private' ? 'Private' : 'Public'}</span>
               <span>·</span>
               <Link href={`/groups/${group.id}?tab=members`}>{formatCount(count)} members</Link>
               <GroupRallyChip groupId={group.id} />
@@ -90,7 +91,7 @@ export function GroupHeader({group, members, tab}: {group: Group; members: Group
         <nav className={styles.tabs} aria-label="Group sections">
           {TABS.map(t => (
             <Link key={t.key} href={`/groups/${group.id}?tab=${t.key}`} className={t.key === tab ? styles.tabActive : styles.tab}>
-              {t.label}
+              {t.key === 'discussion' ? <><span className={styles.desktopGroupLabel}>{t.label}</span><span className={styles.mobileGroupLabel}>Featured</span></> : t.label}
             </Link>
           ))}
         </nav>

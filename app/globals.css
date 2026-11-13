@@ -91,7 +91,9 @@ html {
 @media (max-width: 700px) {
   body:has([data-home-feed]),
   body:has([data-mobile-friends]),
-  body:has([data-mobile-notifications]) {
+  body:has([data-mobile-notifications]),
+  body:has([data-mobile-marketplace]),
+  body:has([data-mobile-groups]) {
     height: auto;
     min-height: 100%;
   }

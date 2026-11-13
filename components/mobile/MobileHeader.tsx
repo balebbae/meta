@@ -153,16 +153,17 @@ export function MobileHeader() {
     }
   }
   if (SELF_TITLED.some(p => pathname === p || pathname.startsWith(p + '/'))) return null;
-  const title = PAGE_TITLES[pathname];
-  const groups = pathname === '/groups';
+  const groupDetail = pathname.startsWith('/groups/');
+  const title = PAGE_TITLES[pathname] ?? (groupDetail ? 'Groups' : undefined);
+  const groups = pathname === '/groups' || groupDetail;
   if (title) return (
     <header className={`${styles.mobileOnly} ${styles.header} ${styles.pageHeader} ${groups ? styles.groupsHeader : ''}`} data-mobile-title={title} aria-label={title}>
-      <Link href="/menu" className={styles.hamburger} aria-label={groups ? 'Back to menu' : 'Menu'} onClick={e => { e.preventDefault(); window.dispatchEvent(new Event(MOBILE_MENU_EVENT)); }}>
+      <Link href={groupDetail ? '/groups' : '/menu'} className={styles.hamburger} aria-label={groupDetail ? 'Back to groups' : groups ? 'Back to menu' : 'Menu'} onClick={e => { if (groupDetail) return; e.preventDefault(); window.dispatchEvent(new Event(MOBILE_MENU_EVENT)); }}>
         {groups ? <ChevronLeftIcon size={24} /> : <HamburgerIcon />}
       </Link>
       <h1 className={styles.pageTitle}>{title}</h1>
       <div className={styles.headerIcons}>
-        {groups && <button className={styles.headerBtn} aria-label="Create group" onClick={() => setCreateGroup(true)}><CreatePlusIcon size={25} /></button>}
+        {groups && !groupDetail && <button className={styles.headerBtn} aria-label="Create group" onClick={() => setCreateGroup(true)}><CreatePlusIcon size={25} /></button>}
         {(pathname === '/notifications' || pathname === '/marketplace') && <Link href="/messages" className={styles.headerBtn} aria-label={unread ? `Messenger, ${unread} unread` : 'Messenger'}>
           <MessengerIcon size={24} />
           {unread > 0 && <span className={styles.badge}>{unread > 9 ? '9+' : unread}</span>}

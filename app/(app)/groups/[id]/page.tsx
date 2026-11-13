@@ -57,7 +57,7 @@ export default async function GroupPage({params, searchParams}: {params: Promise
   );
 
   return (
-    <div data-layout="wide" className={styles.groupPage}>
+    <div data-layout="wide" className={styles.groupPage} data-mobile-groups>
       <GroupHeader group={group} members={members} tab={tab} />
       <div className={styles.groupBody}>
         <div className={styles.groupMain}>

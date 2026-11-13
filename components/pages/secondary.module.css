@@ -273,6 +273,17 @@
 
 /* Phone: the desktop side panel collapses to its title + search (the iOS app has no left nav) */
 @media (max-width: 700px) {
+  .wide:has([data-mobile-marketplace]) > .panel,
+  .wide:has([data-mobile-groups]) > .panel {
+    display: none;
+  }
+  .wide:has([data-mobile-marketplace]) > .content,
+  .wide:has([data-mobile-groups]) > .content,
+  .wide:has([data-mobile-groups]) > .contentCenter {
+    padding: 0 0 calc(110px + env(safe-area-inset-bottom));
+    background: var(--fb-card);
+    display: block;
+  }
   :global(body:has([data-mobile-title])) .panelHeader {
     display: none;
   }

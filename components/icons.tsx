@@ -170,6 +170,10 @@ export function FeedPhotoIcon(props: IconProps) {
   return <Svg {...props}><rect x="4" y="2" width="16" height="20" rx="3" /><circle cx="9" cy="7" r="2" fill="var(--fb-card)" /><path d="m6 18 4-6 3 3 3-5 2 8z" fill="var(--fb-card)" /></Svg>;
 }
 
+export function MobilePinIcon(props: IconProps) {
+  return <Svg {...props} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="m14 3 7 7-4 2-2 5-4-4-7 7 6-8-4-4 5-2z" /></Svg>;
+}
+
 export function FeedActionIcon({name, ...props}: IconProps & {name: 'like' | 'comment' | 'share'}) {
   const paths = {
     like: 'M8 10l4-8c3 0 3 3 2 7h6a2 2 0 0 1 2 2l-2 9a2 2 0 0 1-2 2H8zM2 10h6v12H2z',

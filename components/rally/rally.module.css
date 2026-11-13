@@ -294,3 +294,31 @@
   0% { transform: scale(0.92); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
+
+/* Clip proof (ClipProof) */
+.clip {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.clip select {
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--fb-divider);
+  border-radius: 6px;
+  background: var(--fb-input-bg);
+  color: var(--fb-text);
+  font: inherit;
+}
+.clipOk,
+.clipWarn {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.clipOk {
+  color: var(--fb-green);
+}
+.clipWarn {
+  color: var(--fb-text-secondary);
+}

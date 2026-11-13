@@ -13,6 +13,7 @@ import {generateBadgeArt} from '@/lib/muse/image';
 import {sendPushToUser} from '@/lib/push';
 import {narrate, recapText} from '@/lib/rally/narration';
 import {verifyProofImage} from '@/lib/rally/proof';
+import {CONFIDENT, EXERCISE_LABEL, countReps, type ClipExercise} from '@/lib/rally/repcount';
 import {
   adaptiveAdjust,
   applyDamage,
@@ -183,8 +184,10 @@ export function levelDayFor(quest: Pick<QuestRow, 'startsAt' | 'spec'>, now = ne
   return Math.min(quest.spec.levels.length, Math.max(1, day));
 }
 
-export type MoveSource = 'manual' | 'photo' | 'voice' | 'vault';
-export type LogMoveInput = {source: MoveSource; vaultEventId?: number | null; note?: string | null; image?: string | null; amount?: number | null; dareId?: string | null};
+export type MoveSource = 'manual' | 'photo' | 'voice' | 'vault' | 'clip';
+/** Clip proof: the per-frame joint signal the phone extracted (the video itself never leaves the phone) + 1-3 stills. */
+export type ClipInput = {exercise: ClipExercise; fps: number; signal: (number | null)[]; frames: string[]};
+export type LogMoveInput = {source: MoveSource; vaultEventId?: number | null; note?: string | null; image?: string | null; amount?: number | null; dareId?: string | null; clip?: ClipInput | null};
 export type LogMoveResult =
   | {ok: true; move: MoveRow; event: BossEvent; damage: number; critical: boolean; hpLeft: number; narration: string; museUsed: boolean; proof?: {status: string; verdict: string}; completed: boolean}
   | {ok: false; error: string; status: number};
@@ -212,7 +215,22 @@ export async function logMove(questId: number, user: {id: number; name: string},
   if (input.source === 'vault' && !sourceTrust) return {ok: false, error: 'No shareable workout found for today. Log it manually or adjust your sharing settings.', status: 400};
 
   let proof: {status: 'pending' | 'approved' | 'rejected'; verdict: string; museUsed: boolean} | undefined;
-  if (input.image) {
+  let clip: {reps: number} | null = null;
+  let clipLine = '';
+  if (input.clip && !dare) {
+    // the server's recount is what scores; the phone's number was only a preview
+    const c = countReps(input.clip.signal, input.clip.fps, input.clip.exercise);
+    const label = EXERCISE_LABEL[input.clip.exercise];
+    if (c.reps === 0) return {ok: false, error: `No full ${label} counted in that clip. Film from the side with your whole body in frame.`, status: 422};
+    const r = await verifyProofImage({image: input.clip.frames[0], frames: input.clip.frames, task: `${label}, about ${c.reps} reps`});
+    if (r.status === 'rejected') return {ok: false, error: `Clip not accepted: ${r.verdict}`, status: 422};
+    const confident = c.confidence >= CONFIDENT;
+    if (confident) clip = {reps: c.reps};
+    clipLine = `${c.reps} ${label} counted on camera${confident ? '' : ' (shaky count, photo credit)'}`;
+    proof = {status: r.status, verdict: `${clipLine}. ${r.verdict}`.slice(0, 200), museUsed: r.museUsed};
+    input = {...input, image: input.clip.frames[0]};
+    if (!sourceTrust) sourceTrust = 'photo';
+  } else if (input.image) {
     const task = dare ? dare.text : quest.spec.levels[levelDayFor(quest) - 1]?.exercises.map(e => e.name).join(', ') || 'a workout';
     const r = await verifyProofImage({image: input.image, task});
     proof = {status: r.status, verdict: r.verdict, museUsed: r.museUsed};
@@ -222,7 +240,7 @@ export async function logMove(questId: number, user: {id: number; name: string},
 
   const levelDay = levelDayFor(quest);
   const moves = await listMoves(questId);
-  const result = computeMove({spec: quest.spec, userId: user.id, levelDay, sourceTrust, amount: input.amount ?? null, dareId: dare?.id ?? null});
+  const result = computeMove({spec: quest.spec, userId: user.id, levelDay, sourceTrust, amount: input.amount ?? null, dareId: dare?.id ?? null, clip});
   const hpBefore = quest.bossHpLeft;
   const hpAfter = quest.template === 'boss' ? applyDamage(hpBefore, result.damage) : hpBefore;
   const myMovesBefore = moves.filter(m => m.userId === user.id && m.kind === 'move').length;
@@ -238,7 +256,9 @@ export async function logMove(questId: number, user: {id: number; name: string},
   await sql`update quest_progress set progress = coalesce(progress, '{}'::jsonb) || ${JSON.stringify({lastMoveAt: move.createdAt, level: levelDay})}::jsonb, updated_at = now() where quest_id = ${questId} and user_id = ${user.id}`;
 
   const bossName = quest.spec.boss?.name ?? quest.title;
-  const {text, museUsed} = await narrate({event, actor: user.name, damage: result.damage, hpLeft: hpAfter, hpMax: quest.bossHp, bossName, dareText: dare?.text});
+  const narration = await narrate({event, actor: user.name, damage: result.damage, hpLeft: hpAfter, hpMax: quest.bossHp, bossName, dareText: dare?.text});
+  const museUsed = narration.museUsed;
+  const text = clipLine ? `${narration.text} (${clipLine})` : narration.text;
   if (quest.conversationId) {
     const payload: RallyGamePayload = {questId, event: dare && event === 'move' ? 'dare' : event, userId: user.id, text, damage: result.damage, hpLeft: hpAfter};
     await sendMessage(quest.conversationId, user, text, null, {kind: 'rally_game', payload});

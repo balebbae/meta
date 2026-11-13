@@ -42,7 +42,9 @@ export async function PUT(req: NextRequest, {params}: Ctx) {
         })
         .then(async mods => {
           if (!mods) return;
-          const [{scoreInteraction}, {insertXpEvent}, {generateNudge}] = mods;
+          const [{scoreInteraction}, {insertXpEvent, xpBlocked}, {generateNudge}] = mods;
+          // un-react + re-react must not re-award XP; also capped per day (lib/xp-guard.ts)
+          if (await xpBlocked({userId: user.id, friendId: post.author_id as number, sourceType: 'reaction', sourceId: id})) return;
           const [author] = await sql`select name from users where id = ${post.author_id as number}`;
           const scored = await scoreInteraction({
             actorName: user.name,

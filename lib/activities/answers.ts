@@ -1,7 +1,8 @@
 import {sql} from '@/lib/db';
 import {getPolicies} from '@/lib/activities/policies';
 import {listVaultEvents, type VaultEvent} from '@/lib/activities/vault';
-import {QUESTION_CATEGORY, TRUST_RANK, type Answer, type Audience, type QuestionType, type ShareLevel, type Trust} from '@/lib/activities/types';
+import {answerTrust} from '@/lib/activities/integrity';
+import {QUESTION_CATEGORY, type Answer, type Audience, type QuestionType, type ShareLevel} from '@/lib/activities/types';
 
 /**
  * Answers API (§7.3): structural redaction. The owner's vault is filtered to the fields this audience
@@ -22,12 +23,6 @@ function startOfWeek(): Date {
   const day = (d.getDay() + 6) % 7; // Monday = 0
   d.setDate(d.getDate() - day);
   return d;
-}
-
-function bestTrust(events: VaultEvent[]): Trust | null {
-  let best: Trust | null = null;
-  for (const e of events) if (!best || TRUST_RANK[e.trust] > TRUST_RANK[best]) best = e.trust;
-  return best;
 }
 
 function roundKm(km: number): string {
@@ -122,7 +117,7 @@ export async function ask(ownerId: number, audience: Audience, question: Questio
     answer = {question, value: null, level, sourceTrust: null, withheld: true};
   } else {
     const events = visibleEvents(await listVaultEvents(ownerId, {since: new Date(Date.now() - 2 * WEEK_MS).toISOString(), limit: 300}), audience);
-    answer = {question, value: compute(question, events, level), level, sourceTrust: bestTrust(events), withheld: false};
+    answer = {question, value: compute(question, events, level), level, sourceTrust: answerTrust(question, events, startOfToday().getTime()), withheld: false};
   }
   await sql`insert into answers_log (owner_id, asker, audience, question, answer, level)
     values (${ownerId}, ${asker}, ${audience}, ${question}, ${JSON.stringify(answer)}, ${level})`.catch(() => {});

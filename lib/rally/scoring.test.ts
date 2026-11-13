@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {adaptiveAdjust, applyDamage, baseDamage, classifyMoveEvent, computeMove, contributions, gearForEvents, relayState, streakState, unlockedTiers} from './scoring.ts';
+import {adaptiveAdjust, applyDamage, baseDamage, classifyMoveEvent, computeMove, contributions, damageAfterProof, gearForEvents, MAX_MOVES_PER_DAY, movesToday, relayState, streakState, unlockedTiers, UNVERIFIED_PROOF} from './scoring.ts';
 
 const spec = {
   levels: [
@@ -116,4 +116,28 @@ test('reward tiers and MVP', () => {
   const c = contributions([{userId: 2, damage: 40}, {userId: 1, damage: 40}, {userId: 3, damage: 10}]);
   assert.equal(c.total, 90);
   assert.equal(c.mvp, 1);
+});
+
+test('daily move cap counts only my regular moves since midnight', () => {
+  const day = Date.UTC(2026, 10, 12);
+  const at = (h: number) => new Date(day + h * 3_600_000).toISOString();
+  const moves = [
+    {userId: 1, kind: 'move', createdAt: at(-2)}, // yesterday
+    {userId: 1, kind: 'move', createdAt: at(8)},
+    {userId: 1, kind: 'dare', createdAt: at(9)},
+    {userId: 2, kind: 'move', createdAt: at(9)},
+    {userId: 1, kind: 'move', createdAt: at(10)},
+  ];
+  assert.equal(MAX_MOVES_PER_DAY, 3);
+  assert.equal(movesToday(moves, 1, day), 2);
+  assert.equal(movesToday([...moves, {userId: 1, kind: 'move', createdAt: at(11)}], 1, day), MAX_MOVES_PER_DAY);
+});
+
+test('fail closed: an unverified proof is not approved and deals no damage', () => {
+  assert.equal(UNVERIFIED_PROOF.approved, false);
+  assert.equal(UNVERIFIED_PROOF.status, 'pending');
+  assert.equal(damageAfterProof(42, 'pending'), 0);
+  assert.equal(damageAfterProof(42, 'rejected'), 0);
+  assert.equal(damageAfterProof(42, 'approved'), 42);
+  assert.equal(damageAfterProof(42, null), 42);
 });

@@ -3,6 +3,7 @@
  * cells and owners. GPS points live in turf_outings.raw and are only ever read back for their owner's
  * own pipeline run; no query here returns them.
  */
+import {randomInt} from 'node:crypto';
 import {neon, type NeonQueryFunction} from '@neondatabase/serverless';
 import {sql} from '@/lib/db';
 import {getProfile, hasOnboarded} from '@/lib/activities/onboarding';
@@ -10,7 +11,7 @@ import type {RallyInvitePayload, SystemPayload, TurfRecapPayload} from '@/lib/ac
 import {isMember, sendMessage} from '@/lib/messaging-queries';
 import {sendPushToUser} from '@/lib/push';
 import {colorAt} from './colors';
-import {applyClaim, detectCut, detectLoop, fillLoop, pointsToCells, score, type Arena, type GpsPoint, type LatLng, type TrailCell, type TurfGame, type Zone} from './engine';
+import {applyClaim, detectCut, detectLoop, fillLoop, obfuscateZone, outingTrimM, pointsToCells, score, type Arena, type GpsPoint, type LatLng, type TrailCell, type TurfGame, type Zone} from './engine';
 import {scriptInfo, scriptPoints, type ReplayScript} from './fixtures';
 import {finalText, narrateRecap, type FinalStanding} from './recap';
 import {emptyResult, type GameStatus, type InviteStatus, type MyOuting, type OutingResult, type OutingStatus, type TurfPlayer, type TurfSettings, type TurfState} from './types';
@@ -323,8 +324,7 @@ async function requirePlayer(game: Game, userId: number): Promise<void> {
 }
 
 async function privacyZones(userId: number): Promise<Zone[]> {
-  const rows = await sql`select lat, lng, radius_m from turf_privacy_zones where user_id = ${userId}`;
-  return rows.map(r => ({lat: Number(r.lat), lng: Number(r.lng), radiusM: Number(r.radius_m)}));
+  return (await listZones(userId)).map(({lat, lng, radiusM}) => ({lat, lng, radiusM}));
 }
 
 export async function startOuting(game: Game, user: Actor, source: 'live' | 'gpx' | 'replay' = 'live'): Promise<MyOuting> {
@@ -362,7 +362,7 @@ export async function addPoints(game: Game, user: Actor, outingId: number, point
     .filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng) && Number.isFinite(p.t) && Math.abs(p.lat) <= 90 && Math.abs(p.lng) <= 180);
   const raw = [...outing.raw, ...clean].sort((a, b) => a.t - b.t).slice(-MAX_POINTS);
   const arena = arenaOf(game);
-  const trail = pointsToCells(raw, arena, {zones: await privacyZones(user.id), keepHidden: true});
+  const trail = pointsToCells(raw, arena, {zones: await privacyZones(user.id), trimM: outingTrimM(outing.id), keepHidden: true});
 
   const [cellRows, otherRows, playerRows] = await Promise.all([
     sql`select cell, owner_id from turf_cells where game_id = ${game.id} and owner_id is not null`,
@@ -556,7 +556,15 @@ export async function buildState(game: Game, viewerId: number): Promise<TurfStat
 
 export type PrivacyZone = {id: number; label: string; lat: number; lng: number; radiusM: number};
 
+const unit = () => randomInt(2 ** 47) / 2 ** 47;
+
 export async function listZones(userId: number): Promise<PrivacyZone[]> {
+  // rows from before obfuscation: offset + enlarge them once, on first read (the guard stops a double offset)
+  const legacy = await sql`select id, lat, lng, radius_m from turf_privacy_zones where user_id = ${userId} and not obfuscated`;
+  for (const r of legacy) {
+    const z = obfuscateZone({lat: Number(r.lat), lng: Number(r.lng), radiusM: Number(r.radius_m)}, unit(), unit());
+    await sql`update turf_privacy_zones set lat = ${z.lat}, lng = ${z.lng}, radius_m = ${z.radiusM}, obfuscated = true where id = ${r.id} and not obfuscated`;
+  }
   const rows = await sql`select id, label, lat, lng, radius_m from turf_privacy_zones where user_id = ${userId} order by id`;
   return rows.map(r => ({id: Number(r.id), label: String(r.label), lat: Number(r.lat), lng: Number(r.lng), radiusM: Number(r.radius_m)}));
 }
@@ -568,7 +576,9 @@ export async function addZone(userId: number, z: {label?: string; lat: number; l
   const radius = Math.min(1000, Math.max(50, Math.round(Number(z.radiusM ?? 200)) || 200));
   const existing = await sql`select count(*)::int as n from turf_privacy_zones where user_id = ${userId}`;
   if (Number(existing[0].n) >= 10) throw new TurfError('You can have up to 10 privacy zones');
-  await sql`insert into turf_privacy_zones (user_id, label, lat, lng, radius_m) values (${userId}, ${String(z.label ?? 'Home').trim().slice(0, 30) || 'Home'}, ${lat}, ${lng}, ${radius})`;
+  // the true point is never stored: only the offset, enlarged circle that still covers it (see obfuscateZone)
+  const o = obfuscateZone({lat, lng, radiusM: radius}, unit(), unit());
+  await sql`insert into turf_privacy_zones (user_id, label, lat, lng, radius_m, obfuscated) values (${userId}, ${String(z.label ?? 'Home').trim().slice(0, 30) || 'Home'}, ${o.lat}, ${o.lng}, ${o.radiusM}, true)`;
   return listZones(userId);
 }
 

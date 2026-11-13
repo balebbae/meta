@@ -7,3 +7,7 @@ reports/
 __pycache__/
 .pytest_cache/
 .ruff_cache/
+models/
+logs/
+.venv-vllm/
+unsloth_compiled_cache/

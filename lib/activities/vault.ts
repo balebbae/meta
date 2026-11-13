@@ -1,4 +1,6 @@
 import {sql} from '@/lib/db';
+import {applyIntegrity} from '@/lib/activities/integrity';
+import {isReused} from '@/lib/activities/phash';
 import {TRUST_RANK, type RawEvent, type Trust} from '@/lib/activities/types';
 
 export type VaultEvent = RawEvent & {id: number; duplicateOf: number | null; createdAt: string};
@@ -34,7 +36,8 @@ function overlapRatio(aStart: number, aEnd: number, bStart: number, bEnd: number
  * are merged: the highest-trust one stays primary, the others are linked via duplicate_of (§5.1).
  * Returns the primary event id (the inserted one, or the existing higher-trust one).
  */
-export async function insertVaultEvent(e: RawEvent): Promise<{id: number; duplicateOf: number | null}> {
+export async function insertVaultEvent(input: RawEvent): Promise<{id: number; duplicateOf: number | null; trust: Trust; flags: string[]}> {
+  const {flags, ...e} = applyIntegrity(input);
   const [row] = await sql`
     insert into vault_events (user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope, raw)
     values (${e.userId}, ${e.source}, ${e.externalId}, ${e.kind}, ${e.startedAt}, ${e.endedAt ?? null}, ${e.distanceKm ?? null}, ${e.durationMin ?? null},
@@ -44,7 +47,7 @@ export async function insertVaultEvent(e: RawEvent): Promise<{id: number; duplic
       steps = excluded.steps, avg_hr = excluded.avg_hr, trust = excluded.trust, raw = excluded.raw
     returning id`;
   const id = Number(row.id);
-  if (e.kind === 'steps' || e.kind === 'sleep' || e.kind === 'recovery') return {id, duplicateOf: null};
+  if (e.kind === 'steps' || e.kind === 'sleep' || e.kind === 'recovery') return {id, duplicateOf: null, trust: e.trust, flags};
 
   const start = new Date(e.startedAt).getTime();
   const end = e.endedAt ? new Date(e.endedAt).getTime() : start + (e.durationMin ?? 30) * 60_000;
@@ -59,11 +62,11 @@ export async function insertVaultEvent(e: RawEvent): Promise<{id: number; duplic
     const existingWins = TRUST_RANK[c.trust as Trust] >= TRUST_RANK[e.trust];
     if (existingWins) {
       await sql`update vault_events set duplicate_of = ${Number(c.id)} where id = ${id}`;
-      return {id: Number(c.id), duplicateOf: Number(c.id)};
+      return {id: Number(c.id), duplicateOf: Number(c.id), trust: e.trust, flags};
     }
     await sql`update vault_events set duplicate_of = ${id} where id = ${Number(c.id)} or duplicate_of = ${Number(c.id)}`;
   }
-  return {id, duplicateOf: null};
+  return {id, duplicateOf: null, trust: e.trust, flags};
 }
 
 /** Primary (non-duplicate) events, newest first. Owner-facing only; other audiences go through answers.ts. */
@@ -79,4 +82,14 @@ export async function listVaultEvents(userId: number, opts: {since?: string; lim
 export async function deleteVaultSource(userId: number, source: string): Promise<number> {
   const rows = await sql`delete from vault_events where user_id = ${userId} and source = ${source} returning id`;
   return rows.length;
+}
+
+/** Photo Proof reuse check (plan 5b): true when this user already submitted a near-identical photo. */
+export async function proofPhotoReused(userId: number, hash: string): Promise<boolean> {
+  const rows = await sql`select hash from proof_photo_hashes where user_id = ${userId} order by id desc limit 1000`;
+  return isReused(hash, rows.map(r => String(r.hash)));
+}
+
+export async function saveProofHash(userId: number, hash: string, vaultEventId: number): Promise<void> {
+  await sql`insert into proof_photo_hashes (user_id, hash, vault_event_id) values (${userId}, ${hash}, ${vaultEventId})`;
 }

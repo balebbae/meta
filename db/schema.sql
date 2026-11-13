@@ -565,6 +565,8 @@ create table if not exists turf_privacy_zones (
   created_at timestamptz not null default now()
 );
 create index if not exists turf_privacy_zones_user_idx on turf_privacy_zones (user_id);
+-- lat/lng/radius_m hold the offset, enlarged circle (lib/turf/engine.ts obfuscateZone); false rows are converted on first read
+alter table turf_privacy_zones add column if not exists obfuscated boolean not null default false;
 
 -- Group activities: a Rally quest posted into groups as a sign-up post; capacity caps quest_progress rows
 alter table quests add column if not exists capacity integer check (capacity between 2 and 100);
@@ -639,3 +641,13 @@ create table if not exists health_sync_tokens (
   user_id integer not null references users(id) on delete cascade,
   expires_at timestamptz not null
 );
+
+-- Integrity (plan 5b): 64-bit dHash of each Photo Proof image, per user, to flag reused photos.
+create table if not exists proof_photo_hashes (
+  id bigserial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  hash text not null check (hash ~ '^[0-9a-f]{16}$'),
+  vault_event_id bigint references vault_events(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index if not exists proof_photo_hashes_user_idx on proof_photo_hashes (user_id, created_at desc);

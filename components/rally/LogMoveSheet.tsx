@@ -2,6 +2,7 @@
 import {useRef, useState} from 'react';
 import {Dialog} from '@/components/ui/Dialog';
 import {fileToDataUrl, rallyApi, type OkMove} from './api';
+import {ClipProof, type ClipPayload} from './ClipProof';
 import styles from './rally.module.css';
 
 type Dare = {id: string; text: string; bonus: number; needsProof: boolean};
@@ -14,6 +15,7 @@ export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises
   const [note, setNote] = useState('');
   const [amount, setAmount] = useState('');
   const [image, setImage] = useState<string | null>(null);
+  const [clip, setClip] = useState<ClipPayload | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OkMove | null>(null);
@@ -23,6 +25,7 @@ export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises
     setNote('');
     setAmount('');
     setImage(null);
+    setClip(null);
     setError(null);
     setResult(null);
   };
@@ -34,7 +37,7 @@ export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises
     setBusy(true);
     setError(null);
     try {
-      const r = dare ? await rallyApi.dare(questId, dare.id, {image, note}) : await rallyApi.move(questId, {source: image ? 'photo' : 'manual', note, image, amount: amount ? Number(amount) : null});
+      const r = dare ? await rallyApi.dare(questId, dare.id, {image, note}) : await rallyApi.move(questId, clip ? {source: 'clip', note, clip, amount: amount ? Number(amount) : null} : {source: image ? 'photo' : 'manual', note, image, amount: amount ? Number(amount) : null});
       setResult(r);
       onDone?.(r);
     } catch (e) {
@@ -80,7 +83,8 @@ export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises
             <span>Note for the squad (optional)</span>
             <input type="text" maxLength={120} value={note} onChange={e => setNote(e.target.value)} placeholder="Done before coffee" />
           </label>
-          <div className={styles.proofRow}>
+          {!dare && !image && <ClipProof exercises={exercises} target={target} onChange={setClip} />}
+          {!clip && <div className={styles.proofRow}>
             {image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={image} alt="Proof preview" className={styles.proofImg} />
@@ -95,7 +99,7 @@ export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises
               </button>
             )}
             <input ref={fileRef} type="file" accept="image/*" capture="environment" hidden onChange={e => void (e.target.files?.[0] && fileToDataUrl(e.target.files[0]).then(setImage).catch(() => setError('Could not read that image')))} />
-          </div>
+          </div>}
           {error && <p className={styles.error}>{error}</p>}
           <button type="button" className="fb-btn-primary" disabled={busy || (dare?.needsProof && !image)} onClick={() => void submit()}>
             {busy ? 'Scoring…' : dare ? 'Complete dare' : 'Hit the boss'}

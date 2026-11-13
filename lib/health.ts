@@ -25,7 +25,7 @@ export async function insertHealthSamples(
   source: HealthSource,
   samples: {metric: string; value: number; unit: string; recordedAt: string}[],
 ) {
-  const clean = samples.map(cleanHealthSample).filter(s => s != null).slice(0, 200);
+  const clean = samples.map(cleanHealthSample).filter(s => s != null).slice(0, 500);
   if (!clean.length) return 0;
   await sql`delete from health_samples where user_id = ${userId} and source = ${source}`;
   for (const s of clean) {
@@ -41,7 +41,7 @@ export async function latestHealth(userId: number) {
     select distinct on (source, metric) source, metric, value, unit, recorded_at
     from health_samples
     where user_id = ${userId}
-      and recorded_at > now() - interval '14 days'
+      and recorded_at > now() - interval '400 days'
     order by source, metric, recorded_at desc`;
   return rows.map(r => ({
     source: r.source as string,

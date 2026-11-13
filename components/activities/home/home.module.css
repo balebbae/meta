@@ -19,7 +19,7 @@
   color: var(--fb-act-ink);
   font-family: var(--fb-font);
 }
-.page a {
+:where(.page a) {
   color: inherit;
   text-decoration: none;
 }
@@ -29,10 +29,12 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+  /* the page gap is 28px; the greeting sits closer to the first card */
+  margin-bottom: -16px;
 }
 .h1 {
   margin: 0;
-  font-size: 28px;
+  font-size: 20px;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -41,6 +43,10 @@
   gap: 12px;
   animation: rise 0.5s var(--fb-act-ease) both;
   animation-delay: calc(var(--i, 0) * 45ms);
+}
+/* Suggested reels sits closer to the goal card above it (page gap is 28px) */
+.sectionTight {
+  margin-top: -12px;
 }
 .head {
   display: flex;
@@ -60,13 +66,11 @@
   color: var(--fb-act-muted);
 }
 .more {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--fb-act-blue) !important;
-  white-space: nowrap;
-}
-.more:hover {
-  text-decoration: underline;
+  display: inline-flex;
+  /* an icon has no text baseline: line it up with the title's line box instead */
+  align-self: flex-start;
+  margin-top: 1px;
+  color: var(--fb-act-ink) !important;
 }
 
 /* ---- buttons: pills ---- */
@@ -105,19 +109,8 @@
   cursor: default;
 }
 .pillQuiet {
-  border-color: var(--fb-act-line);
-  background: var(--fb-act-surface);
-}
-.pillQuiet:hover {
-  background: var(--fb-act-surface-2);
-  filter: none;
-}
-.pillEmber {
-  color: var(--fb-act-ember-ink);
-  background: var(--fb-act-ember);
-}
-.pillEmber:hover {
-  filter: brightness(1.05);
+  color: #fff;
+  background: var(--fb-act-blue);
 }
 .pillBlue {
   color: #fff;
@@ -132,12 +125,32 @@
   font-size: 13px;
 }
 .pillGhost {
-  background: transparent;
-  color: var(--fb-act-muted);
+  color: #fff;
+  background: var(--fb-act-gray-solid);
 }
-.pillGhost:hover {
-  background: var(--fb-act-surface-2);
-  filter: none;
+
+/* icon-only pill: square hit area, the label lives in aria-label + title */
+.pillIcon {
+  width: 36px;
+  padding: 0;
+}
+.pillSm.pillIcon {
+  width: 30px;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+/* title + the Astryx info tip (the card's "why" line, hidden until asked for) */
+.titleLine {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
 }
 
 /* ---- hero: today's progress ---- */
@@ -146,27 +159,34 @@
   isolation: isolate;
   overflow: hidden;
   border-radius: var(--fb-act-radius);
-  padding: 24px;
+  padding: 16px 24px 20px;
   background: var(--fb-act-surface);
   border: 1px solid var(--fb-act-line);
   box-shadow: var(--fb-act-shadow);
-}
-/* the one moving thing on the page: contour lines (Contours.tsx, WebGL) behind the ring, fading out under the text */
-.heroShader {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  -webkit-mask-image: linear-gradient(to right, transparent 28%, black 80%);
-  mask-image: linear-gradient(to right, transparent 28%, black 80%);
 }
 .heroGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 24px;
-  align-items: center;
+  /* text starts at the top instead of centring against the taller ring */
+  align-items: start;
+}
+/* the goal card's icon actions, pinned to its top-right corner */
+.heroTools {
+  position: absolute;
+  top: 16px;
+  right: 24px;
+  z-index: 1;
+  display: flex;
+  gap: 8px;
+}
+/* the button row is ~11px wider than the ring column; keep long headlines from running under it */
+.heroGrid > :first-child {
+  padding-right: 16px;
+}
+/* the ring sits below the icons */
+.heroGrid > :last-child {
+  margin-top: 44px;
 }
 .eyebrow {
   margin: 0;
@@ -175,14 +195,31 @@
   color: var(--fb-act-muted);
 }
 .headline {
-  margin: 6px 0 4px;
-  font-size: 26px;
+  margin: 0;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1.15;
   letter-spacing: -0.02em;
   text-wrap: balance;
 }
+/* goal title with the plain "Week 1/6" beside it */
+.headRow {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin: 14px 0 4px;
+}
+.weekText {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fb-act-ink);
+  white-space: nowrap;
+}
 .lede {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   margin: 0;
   font-size: 14px;
   color: var(--fb-act-muted);
@@ -201,8 +238,7 @@
   min-width: 0;
 }
 .statLabel {
-  display: block;
-  font-size: 12px;
+  display: flex;
   color: var(--fb-act-muted);
 }
 .statValue {
@@ -227,40 +263,179 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin-top: 18px;
 }
-.ring {
-  position: relative;
-  width: 152px;
-  height: 152px;
-  border-radius: 50%;
-}
-.ring svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  transform: rotate(-90deg);
-}
-.ringTrack {
-  fill: none;
+/* DonutChart sizes itself; this only re-tints its track (first circle) for Activities */
+.ring circle:first-of-type {
   stroke: var(--fb-act-ring-track);
-  stroke-width: 10;
 }
-.ringBar {
-  fill: none;
-  stroke: var(--fb-act-ember);
-  stroke-width: 10;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 1.2s var(--fb-act-ease);
+
+/* ---- inline "Log a workout" card (the hero's + button) ---- */
+.logCard {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid var(--fb-act-line);
+  background: var(--fb-act-surface);
+  animation: logIn 0.22s var(--fb-act-ease);
 }
-.ringCenter {
-  position: absolute;
-  inset: 0;
+@keyframes logIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.logHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.logTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.logKinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.logFields {
   display: grid;
-  place-content: center;
-  text-align: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 12px;
 }
-.ringPct {
+.logField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fb-act-muted);
+}
+.logField input {
+  height: 36px;
+  min-width: 0;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--fb-act-line);
+  background: var(--fb-act-surface-2);
+  color: var(--fb-act-ink);
+  font: 500 15px var(--fb-font);
+  font-variant-numeric: tabular-nums;
+}
+.logField input:focus-visible {
+  outline: 2px solid var(--fb-act-blue);
+  outline-offset: 1px;
+}
+.logError,
+.logDone,
+.logNote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--fb-act-muted);
+}
+.logError {
+  color: var(--fb-red);
+}
+.logDone {
+  font-weight: 500;
+  color: var(--fb-act-ink);
+}
+.logSub {
+  margin: 18px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fb-act-muted);
+}
+.logSources {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.logSource {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--fb-act-surface-2);
+}
+.logSource > svg,
+.logSource > .pill {
+  flex: none;
+}
+/* base pills are surface-2, the tile's own colour: lift them onto the surface */
+.logSource > .pill:not(.pillBlue) {
+  background: var(--fb-act-surface);
+  border-color: var(--fb-act-line);
+}
+.logSourceText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+.logSourceText strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.logSourceText small {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--fb-act-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.logFoot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+.logLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: 600 13px var(--fb-font);
+  color: var(--fb-act-blue);
+  text-decoration: none;
+  cursor: pointer;
+}
+.logLink:hover {
+  text-decoration: underline;
+}
+@media (max-width: 560px) {
+  .logFields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .logFields > button {
+    grid-column: 1 / -1;
+  }
+  .logSources {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .logCard {
+    animation: none;
+  }
+}.ringPct {
   font-size: 30px;
   font-weight: 700;
   letter-spacing: -0.03em;
@@ -283,15 +458,21 @@
   }
   .heroGrid > :last-child {
     justify-self: center;
+    margin-top: 0;
   }
-  .ring {
-    width: 128px;
-    height: 128px;
+  .heroTools {
+    right: 18px;
+  }
+  /* the first text row keeps clear of the buttons (Coach pill + 2 icons ≈ 188px) */
+  .heroGrid > :first-child > :first-child {
+    min-height: 36px;
+    padding-right: 196px;
   }
   .headline {
-    font-size: 22px;
+    font-size: 19px;
   }
   .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
   }
   .stat {
@@ -349,25 +530,18 @@
 .taskText strong {
   font-weight: 600;
 }
-.taskWhy {
-  margin: 2px 0 0;
-  font-size: 13px;
-  color: var(--fb-act-muted);
-}
 .chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
   line-height: 1.5;
-  background: var(--fb-act-blue-soft);
-  color: var(--fb-act-blue-deep);
+  background: var(--fb-act-gray-solid);
+  color: #fff;
   vertical-align: 1px;
-}
-.chipEmber {
-  background: var(--fb-act-ember-soft);
-  color: var(--fb-act-ember-deep);
 }
 .taskBtns {
   display: flex;
@@ -537,24 +711,20 @@ button.card:active {
   font-size: 13px;
   color: var(--fb-act-muted);
 }
-.why {
-  margin: 0;
-  display: flex;
-  gap: 6px;
-  align-items: flex-start;
-  font-size: 13px;
-  color: var(--fb-act-muted);
-}
-.why svg {
-  flex: none;
-  margin-top: 2px;
-  color: var(--fb-act-ember);
-}
 .cardBtns {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
   margin-top: 6px;
+}
+.chipLevel {
+  /* the fitness level is a quiet label, not a call to action */
+  padding: 1px 7px;
+  font-size: 11px;
+  font-weight: 500;
+  background: transparent;
+  color: var(--fb-act-muted);
+  border: 1px solid var(--fb-act-line);
 }
 .chips {
   display: flex;
@@ -696,7 +866,6 @@ button.card:active {
   .pin {
     animation: none;
   }
-  .ringBar,
   .card,
   .pill {
     transition: none;

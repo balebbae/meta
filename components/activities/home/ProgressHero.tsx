@@ -1,92 +1,126 @@
 'use client';
 
 import Link from 'next/link';
+import {useState} from 'react';
+import {Tooltip} from '@astryxdesign/core/Tooltip';
+import {IconCalendarCheck, IconFlag, IconFlame, IconHeartbeat, IconMoon, IconPlus, IconRoute, IconRoute2, IconSparkles, IconWalk, IconX} from '@tabler/icons-react';
+import {useReducedMotion} from 'framer-motion';
+import {DonutChart} from '@/components/ui/donut-chart';
 import type {Goal} from '@/lib/activities/goals';
 import type {HomeProgress} from '@/lib/activities/home';
 import type {FitnessLevel} from '@/lib/activities/level';
-import {Contours} from './Contours';
 import h from './home.module.css';
+import {LogCard} from './LogCard';
 import {useCountUp} from './useActTheme';
+import {CoachButton} from '../CoachMode';
 
-const TIER_LABEL = {new: 'Just starting', building: 'Building', regular: 'Regular', strong: 'Strong'} as const;
-const R = 64;
-const C = 2 * Math.PI * R;
+// Fitness level from the last 4 weeks (lib/activities/level.ts), named on a plain difficulty scale
+const TIER = {new: {name: 'Beginner', n: 1}, building: {name: 'Intermediate', n: 2}, regular: {name: 'Advanced', n: 3}, strong: {name: 'Expert', n: 4}} as const;
 
-function greeting() {
-  const hr = new Date().getHours();
-  return hr < 5 ? 'Still up' : hr < 12 ? 'Good morning' : hr < 18 ? 'Good afternoon' : 'Good evening';
-}
-
-/** Top of Activities: the goal ring over the contour shader, today's three numbers and one ember action. Owner-only data. */
-export function ProgressHero({name, progress, goal, level}: {name: string; progress: HomeProgress; goal: Goal | null; level: FitnessLevel | null}) {
+/** Top of Activities: the goal ring, next milestone, the stat tiles and icon actions. Owner-only data. */
+export function ProgressHero({progress, goal, level}: {progress: HomeProgress; goal: Goal | null; level: FitnessLevel | null}) {
   const steps = useCountUp(progress.stepsToday);
   const active = useCountUp(progress.activeDays);
   const sleep10 = useCountUp(progress.sleepHours == null ? null : Math.round(progress.sleepHours * 10));
+  const km10 = useCountUp(progress.distanceKm == null ? null : Math.round(progress.distanceKm * 10));
+  const workouts = useCountUp(progress.workouts);
+  const hr = useCountUp(progress.avgHr);
+  const [logOpen, setLogOpen] = useState(false);
+  // the stat tiles: add or remove one here (and its number in homeProgress)
+  const stats = [
+    {Icon: IconWalk, label: 'Steps today', value: steps?.toLocaleString(), unit: `/ ${(progress.stepGoal / 1000).toFixed(0)}k`, hot: progress.movedToday},
+    {Icon: IconCalendarCheck, label: 'Active days this week', value: active, unit: `/ ${progress.activeTarget}`},
+    {Icon: IconMoon, label: 'Sleep last night', value: sleep10 == null ? null : (sleep10 / 10).toFixed(1), unit: 'h'},
+    {Icon: IconRoute2, label: 'Distance this week', value: km10 == null ? null : (km10 / 10).toFixed(1), unit: 'km'},
+    {Icon: IconFlame, label: 'Workouts this week', value: workouts, unit: ''},
+    {Icon: IconHeartbeat, label: 'Average heart rate this week', value: hr, unit: 'bpm'},
+  ];
   // ring: goal roadmap when there is one, otherwise this week's active days against the band they picked
   const pct = goal ? goal.progress.pct : progress.activeDays != null ? Math.min(100, Math.round((progress.activeDays / progress.activeTarget) * 100)) : progress.stepsToday != null ? Math.min(100, Math.round((progress.stepsToday / progress.stepGoal) * 100)) : 0;
   const shown = useCountUp(pct, 1100) ?? 0;
-  const phase = goal ? (goal.plan.phases.find(p => goal.week >= p.startWeek && goal.week <= p.endWeek) ?? goal.plan.phases[0]) : null;
+  const reduceMotion = useReducedMotion();
   const next = goal?.plan.milestones.find(m => !m.done);
-  const first = name.split(' ')[0];
   const ring = (
-    <div className={h.ring} role="img" aria-label={`${pct}% ${goal ? 'of your goal' : 'of this week'}`}>
-      <svg viewBox="0 0 152 152">
-        <circle className={h.ringTrack} cx="76" cy="76" r={R} />
-        <circle className={h.ringBar} cx="76" cy="76" r={R} strokeDasharray={C} strokeDashoffset={C * (1 - shown / 100)} />
-      </svg>
-      <div className={h.ringCenter}>
-        <span className={h.ringPct}>{shown}%</span>
-        <span className={h.ringCap}>{goal ? 'to goal' : 'this week'}</span>
-      </div>
-    </div>
+    <DonutChart
+      className={h.ring}
+      role="img"
+      aria-label={`${pct}% ${goal ? 'of your goal' : 'of this week'}`}
+      data={[{value: pct, color: 'var(--fb-act-ember)', label: 'progress'}]}
+      totalValue={100}
+      size={152}
+      strokeWidth={10}
+      animationDuration={reduceMotion ? 0 : 1.1}
+      highlightOnHover={false}
+      centerContent={
+        <>
+          <span className={h.ringPct}>{shown}%</span>
+          <span className={h.ringCap}>{goal ? 'to goal' : 'this week'}</span>
+        </>
+      }
+    />
   );
   return (
     <section className={h.hero} aria-label="Your progress">
-      <Contours className={h.heroShader} />
+      <div className={h.heroTools}>
+        <CoachButton className={`${h.pill} ${h.pillBlue}`}>
+          <IconSparkles size={18} aria-hidden />
+          Coach
+        </CoachButton>
+        {goal ? (
+          <Link className={`${h.pill} ${h.pillIcon} ${h.pillBlue}`} href={`/activities/goals/${goal.id}`} aria-label="Open roadmap" title="Open roadmap">
+            <IconRoute size={20} aria-hidden />
+          </Link>
+        ) : (
+          <Link className={`${h.pill} ${h.pillIcon} ${h.pillBlue}`} href="/activities/goals" aria-label="Set a goal" title="Set a goal">
+            <IconFlag size={20} aria-hidden />
+          </Link>
+        )}
+        <button type="button" className={`${h.pill} ${h.pillIcon} ${h.pillBlue}`} onClick={() => setLogOpen(o => !o)} aria-expanded={logOpen} aria-label="Log a workout" title="Log a workout">
+          {logOpen ? <IconX size={20} aria-hidden /> : <IconPlus size={20} aria-hidden />}
+        </button>
+      </div>
       <div className={h.heroGrid}>
         <div>
-          <p className={h.eyebrow}>
-            {greeting()}, {first}
-            {level ? ` · ${TIER_LABEL[level.tier]}` : ''}
-          </p>
-          <h2 className={h.headline}>{goal ? goal.title : progress.movedToday ? 'You already moved today.' : 'Make today count.'}</h2>
-          <p className={h.lede}>{goal ? `Week ${goal.week} of ${goal.plan.weeks}${phase ? ` · ${phase.name}` : ''}${next ? ` · next: ${next.title}` : ''}` : level?.easyWeek ? 'Your Muse is keeping this week easy.' : 'Steps, sleep and active days from your synced devices. Only you see them.'}</p>
-          <div className={h.stats}>
-            <div className={`${h.stat} ${progress.movedToday ? h.statHot : ''}`}>
-              <span className={h.statLabel}>Steps today</span>
-              <span className={h.statValue}>
-                {steps == null ? '—' : steps.toLocaleString()} <em>/ {(progress.stepGoal / 1000).toFixed(0)}k</em>
-              </span>
-            </div>
-            <div className={h.stat}>
-              <span className={h.statLabel}>Active days</span>
-              <span className={h.statValue}>
-                {active ?? '—'} <em>of {progress.activeTarget} this week</em>
-              </span>
-            </div>
-            <div className={h.stat}>
-              <span className={h.statLabel}>Sleep</span>
-              <span className={h.statValue}>
-                {sleep10 == null ? '—' : (sleep10 / 10).toFixed(1)} <em>h last night</em>
-              </span>
-            </div>
+          <div className={h.chips}>
+            {level && (
+              <Tooltip content={`Level ${TIER[level.tier].n} of 4, from your last 4 weeks of workouts. Only you see this.`}>
+                <span className={`${h.chip} ${h.chipLevel}`} tabIndex={0}>
+                  {TIER[level.tier].name}
+                </span>
+              </Tooltip>
+            )}
+            {!goal && level?.easyWeek && <span className={h.chip}>Easy week</span>}
           </div>
-          <div className={h.actions}>
-            <Link className={`${h.pill} ${h.pillEmber}`} href="/activities/log">
-              Log a move
-            </Link>
-            {goal ? (
-              <Link className={`${h.pill} ${h.pillQuiet}`} href={`/activities/goals/${goal.id}`}>
-                Open roadmap
-              </Link>
-            ) : (
-              <Link className={`${h.pill} ${h.pillQuiet}`} href="/activities/goals">
-                Set a goal
-              </Link>
+          <div className={h.headRow}>
+            <h2 className={h.headline}>{goal ? goal.title : progress.movedToday ? 'You already moved today.' : 'Make today count.'}</h2>
+            {goal && (
+              <span className={h.weekText}>
+                Week {goal.week}/{goal.plan.weeks}
+              </span>
             )}
           </div>
+          {next && (
+            <p className={h.lede}>
+              <IconFlag size={15} aria-hidden />
+              <span className={h.srOnly}>Next milestone:</span> {next.title}
+            </p>
+          )}
         </div>
         {ring}
+      </div>
+      {logOpen && <LogCard onClose={() => setLogOpen(false)} />}
+      <div className={h.stats}>
+        {stats.map(({Icon, label, value, unit, hot}) => (
+          <div key={label} className={`${h.stat} ${hot ? h.statHot : ''}`} title={label}>
+            <span className={h.statLabel}>
+              <Icon size={18} aria-hidden />
+              <span className={h.srOnly}>{label}</span>
+            </span>
+            <span className={h.statValue}>
+              {value ?? '—'} {unit && <em>{unit}</em>}
+            </span>
+          </div>
+        ))}
       </div>
     </section>
   );

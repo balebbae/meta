@@ -1,7 +1,8 @@
 'use client';
 
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {CalendarDays, Check, ShoppingBag} from 'lucide-react';
+import {IconCalendarEvent, IconCalendarPlus, IconCheck, IconReceipt, IconShoppingBag, IconX} from '@tabler/icons-react';
+import {InfoTip} from '@astryxdesign/core/InfoTip';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
@@ -16,9 +17,8 @@ import h from './home/home.module.css';
 
 const post = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
 const verb = (a: MuseAction) => (a.kind === 'event' ? 'Book it' : 'Buy it');
-const doneLabel = (a: MuseAction) => (a.kind === 'event' ? 'Registered' : 'Ordered');
 
-/** "From your Muse": private action items. Register and Buy are simulated: nothing is charged or sent out. */
+/** "Picked for you": the Muse's private action items. Register and Buy are simulated: nothing is charged or sent out. */
 export function MuseActions({initial, viewerName, say}: {initial: MuseActionsPayload; viewerName: string; say: (text: string) => void}) {
   const [data, setData] = useState(initial);
   const [asking, setAsking] = useState(false);
@@ -73,53 +73,49 @@ export function MuseActions({initial, viewerName, say}: {initial: MuseActionsPay
   };
 
   const done = open?.status === 'done';
-  const glyph = (a: MuseAction) => (a.kind === 'event' ? <CalendarDays size={16} /> : <ShoppingBag size={16} />);
+  const glyph = (a: MuseAction) => (a.kind === 'event' ? <IconCalendarEvent size={16} /> : <IconShoppingBag size={16} />);
   return (
-    <section className={h.section} style={{'--i': 1} as React.CSSProperties} aria-label="From your Muse" aria-busy={asking}>
+    <section className={h.section} style={{'--i': 1} as React.CSSProperties} aria-label="Picked for you" aria-busy={asking}>
       <div className={h.head}>
-        <div>
-          <h2 className={h.h2}>From your Muse</h2>
-          <span className={h.sub}>One tap each · only you see these · demo checkout</span>
-        </div>
-        <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillGhost}`} disabled={asking} onClick={() => void ask(data.needsLocation)}>
-          {asking ? 'Muse is looking…' : 'Ask again'}
-        </button>
+        <h2 className={h.h2}>Picked for you</h2>
       </div>
       <div className={h.list}>
         {data.actions.length === 0 ? (
           <p className={h.empty}>
-            {asking
-              ? 'Muse is looking at what you do and what is coming up near you. About half a minute.'
-              : data.needsLocation
-                ? 'Add your city to your profile, or tap Ask again to use your approximate location.'
-                : 'Nothing yet. Log a few activities and ask again.'}
+            {asking ? 'Looking…' : data.needsLocation ? 'Add your city to your profile for suggestions near you.' : 'Nothing yet.'}
           </p>
         ) : (
           data.actions.map((a, i) => (
             <div key={a.id} className={`${h.task} ${a.status === 'done' ? h.taskDone : ''}`} style={{'--i': i} as React.CSSProperties}>
               <span className={`${h.orb} ${a.kind === 'buy' ? h.orbBuy : ''} ${a.status === 'done' ? h.orbDone : ''}`} aria-hidden>
-                {a.status === 'done' ? <Check size={16} /> : glyph(a)}
+                {a.status === 'done' ? <IconCheck size={16} /> : glyph(a)}
               </span>
               <div>
                 <p className={h.taskText}>
                   <strong>{a.title}</strong>
                   {a.detail ? ` · ${a.detail}` : ''}
-                  {a.price ? <> <span className={`${h.chip} ${a.kind === 'buy' ? h.chipEmber : ''}`}>{a.price}</span></> : null}
+                  {a.price ? <> <span className={h.chip}>{a.price}</span></> : null}
+                  {a.why && (
+                    <>
+                      {' '}
+                      <InfoTip content={a.why} label="Why Muse suggests this" size="xsm" />
+                    </>
+                  )}
                 </p>
-                {a.why && <p className={h.taskWhy}>{a.why}</p>}
               </div>
               <div className={h.taskBtns}>
                 {a.status === 'done' ? (
-                  <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillQuiet}`} onClick={() => setOpen(a)}>
-                    {doneLabel(a)}
+                  <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillIcon} ${h.pillQuiet}`} aria-label="View confirmation" title="View confirmation" onClick={() => setOpen(a)}>
+                    <IconReceipt size={16} aria-hidden />
                   </button>
                 ) : (
                   <>
-                    <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillEmber}`} onClick={() => setOpen(a)}>
+                    <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillBlue}`} onClick={() => setOpen(a)}>
+                      {a.kind === 'event' ? <IconCalendarPlus size={16} aria-hidden /> : <IconShoppingBag size={16} aria-hidden />}
                       {verb(a)}
                     </button>
-                    <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillGhost}`} onClick={() => void act(a, 'dismiss')}>
-                      Not now
+                    <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillIcon} ${h.pillGhost}`} aria-label="Not now" title="Not now" onClick={() => void act(a, 'dismiss')}>
+                      <IconX size={16} aria-hidden />
                     </button>
                   </>
                 )}

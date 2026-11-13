@@ -44,7 +44,8 @@
   position: absolute;
   top: 2px;
   right: 2px;
-  min-width: 20px;
+  box-sizing: content-box;
+  min-width: 16px;
   height: 20px;
   padding: 0 5px;
   border-radius: 10px;
@@ -54,11 +55,6 @@
   font-weight: 600;
   line-height: 20px;
   text-align: center;
-  border: 2px solid var(--fb-card);
-  box-sizing: content-box;
-  min-width: 12px;
-  height: 16px;
-  line-height: 16px;
 }
 
 /* ---- title header (Menu / Friends pages) ---- */

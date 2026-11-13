@@ -1,6 +1,7 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
-import {Camera, Mic} from 'lucide-react';
+// Tabler icons, aliased to the names this file already uses
+import {IconCamera as Camera, IconMicrophone as Mic} from '@tabler/icons-react';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
@@ -23,11 +24,11 @@ import {dhashDataUrl} from '@/lib/activities/phash';
 import type {EventKind} from '@/lib/activities/types';
 
 export type LogTab = 'manual' | 'photo' | 'voice';
-type Form = {kind: EventKind; distanceKm: string; durationMin: string; steps: string};
-const KINDS: {id: EventKind; label: string}[] = [
+export type Form = {kind: EventKind; distanceKm: string; durationMin: string; steps: string};
+export const KINDS: {id: EventKind; label: string}[] = [
   {id: 'run', label: 'Run'}, {id: 'walk', label: 'Walk'}, {id: 'ride', label: 'Ride'}, {id: 'strength', label: 'Strength'}, {id: 'yoga', label: 'Yoga'}, {id: 'swim', label: 'Swim'}, {id: 'steps', label: 'Steps'}, {id: 'other', label: 'Other'},
 ];
-const EMPTY: Form = {kind: 'run', distanceKm: '', durationMin: '', steps: ''};
+export const EMPTY: Form = {kind: 'run', distanceKm: '', durationMin: '', steps: ''};
 const post = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
 
 export type LoggedEvent = {id: number; kind: EventKind; distanceKm?: number; durationMin?: number; steps?: number; trust: string; duplicateOf?: number | null; flags?: string[]};
@@ -90,7 +91,7 @@ export function LogWorkoutSheet({open, onClose, initialTab = 'manual', onLogged,
   );
 }
 
-function describe(e: {kind: EventKind; distanceKm?: number; durationMin?: number; steps?: number}): string {
+export function describe(e: {kind: EventKind; distanceKm?: number; durationMin?: number; steps?: number}): string {
   const bits = [e.kind, e.distanceKm ? `${e.distanceKm} km` : null, e.durationMin ? `${Math.round(e.durationMin)} min` : null, e.steps ? `${e.steps.toLocaleString()} steps` : null].filter(Boolean);
   return bits.join(' · ');
 }
@@ -116,7 +117,7 @@ function QuickForm({form, setForm, onSubmit, busy, submitLabel}: {form: Form; se
   );
 }
 
-function formToLog(form: Form) {
+export function formToLog(form: Form) {
   return {kind: form.kind, distanceKm: parseFloat(form.distanceKm.replace(',', '.')) || undefined, durationMin: parseFloat(form.durationMin) || undefined, steps: parseInt(form.steps.replace(/,/g, ''), 10) || undefined};
 }
 

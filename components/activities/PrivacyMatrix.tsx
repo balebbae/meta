@@ -1,6 +1,7 @@
 'use client';
 import {useState} from 'react';
-import {Footprints, HeartPulse, MapPin, Moon, PersonStanding, Scale, type LucideIcon} from 'lucide-react';
+// Tabler icons, aliased to the names this file already uses
+import {IconShoe as Footprints, IconHeartbeat as HeartPulse, IconMapPin as MapPin, IconMoon as Moon, IconWalk as PersonStanding, IconScale as Scale, type TablerIcon} from '@tabler/icons-react';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Collapsible, CollapsibleGroup} from '@astryxdesign/core/Collapsible';
 import {Grid} from '@astryxdesign/core/Grid';
@@ -14,7 +15,7 @@ import type {PolicyMatrix} from '@/lib/activities/policies';
 import {AUDIENCES, CATEGORIES, type Audience, type Category, type ShareLevel} from '@/lib/activities/types';
 
 const LEVELS: ShareLevel[] = ['exact', 'rounded', 'boolean', 'muse_only', 'none'];
-export const CATEGORY_ICON: Record<Category, LucideIcon> = {workouts: PersonStanding, steps: Footprints, heart: HeartPulse, sleep: Moon, body: Scale, location: MapPin};
+export const CATEGORY_ICON: Record<Category, TablerIcon> = {workouts: PersonStanding, steps: Footprints, heart: HeartPulse, sleep: Moon, body: Scale, location: MapPin};
 
 /** Category × audience grid with the five levels (§7.2). Saves each change with PUT /api/privacy/policies. */
 export function PrivacyMatrix({initial, onChange, compact}: {initial: PolicyMatrix; onChange?: (m: PolicyMatrix) => void; compact?: boolean}) {

@@ -1,10 +1,11 @@
 @import '@astryxdesign/core/reset.css';
 @import '@astryxdesign/core/astryx.css';
 @import '@astryxdesign/theme-neutral/theme.css';
-/* Tailwind for the mapcn map (components/ui/map.tsx) only: theme + utilities, no preflight so Facebook styles stay untouched */
+/* Tailwind for the mapcn map and donut chart (components/ui) only: theme + utilities, no preflight so Facebook styles stay untouched */
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss/utilities.css' layer(utilities) source(none);
 @source '../components/ui/map.tsx';
+@source '../components/ui/donut-chart.tsx';
 /* liquid-glass-react styles its overLight darkening with Tailwind classes */
 @source '../node_modules/liquid-glass-react/dist/index.esm.js';
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
@@ -66,7 +67,7 @@
   --fb-coach-accent-ink: #0b0d10;
   --fb-disabled-bg: #e4e6eb;
   /* Mobile tab bar: dark liquid glass (same in both themes, like Instagram's) */
-  --fb-glass-tint: rgba(6, 6, 10, 0.4);
+  --fb-glass-tint: rgba(6, 6, 10, 0.32);
   --fb-glass-pill: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.12));
   --fb-text-disabled: #bcc0c4;
   --fb-shimmer: #e4e6eb;
@@ -78,6 +79,8 @@
   --fb-act-line: #e5eaf2;
   --fb-act-ink: #0b1220;
   --fb-act-muted: #5f6b7c;
+  /* solid grey for badges and secondary buttons that carry white text */
+  --fb-act-gray-solid: #5f6b7c;
   --fb-act-blue: #0866ff;
   --fb-act-blue-deep: #0a44c2;
   --fb-act-blue-soft: #e8f0ff;
@@ -126,6 +129,7 @@ html {
   --fb-act-line: #1b2847;
   --fb-act-ink: #eef3ff;
   --fb-act-muted: #8f9cba;
+  --fb-act-gray-solid: #3b4766;
   --fb-act-blue: #4d8dff;
   --fb-act-blue-deep: #8fb6ff;
   --fb-act-blue-soft: #122a5c;

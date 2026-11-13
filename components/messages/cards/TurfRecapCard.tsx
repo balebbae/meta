@@ -49,7 +49,7 @@ export default function TurfRecapCard({message}: CardProps) {
       </div>
       {p.gameId != null && (
         <div className={styles.cardActions}>
-          <Link href={`/games/${p.gameId}`} className={`${h.pill} ${h.pillEmber}`}>
+          <Link href={`/games/${p.gameId}`} className={`${h.pill} ${h.pillBlue}`}>
             Open map
           </Link>
         </div>

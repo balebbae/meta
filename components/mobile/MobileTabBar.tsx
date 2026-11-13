@@ -56,7 +56,7 @@ export function MobileTabBar({user}: {user?: Pick<User, 'id' | 'avatarUrl' | 'na
         overLight
         cornerRadius={33}
         padding="0"
-        blurAmount={0.7}
+        blurAmount={0.18}
         saturation={150}
         displacementScale={70}
         aberrationIntensity={1}

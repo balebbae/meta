@@ -1,9 +1,8 @@
 import type {Metadata} from 'next';
 import {redirect} from 'next/navigation';
-import {Flag} from 'lucide-react';
+import {IconFlag as Flag} from '@tabler/icons-react';
 import {Card} from '@astryxdesign/core/Card';
 import {Heading} from '@astryxdesign/core/Heading';
-import {Icon} from '@astryxdesign/core/Icon';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {ProgressBar} from '@astryxdesign/core/ProgressBar';
 import {Text} from '@astryxdesign/core/Text';
@@ -37,7 +36,7 @@ export default async function GoalsPage() {
                   key={goal.id}
                   href={`/activities/goals/${goal.id}`}
                   align="start"
-                  startContent={<Icon icon={Flag} size="lg" color="accent" />}
+                  startContent={<Flag size={24} color="var(--color-icon-accent)" aria-hidden />}
                   label={<Text weight="bold">{goal.title}</Text>}
                   description={
                     <VStack gap={1.5}>

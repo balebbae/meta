@@ -4,7 +4,8 @@ import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 import type {MentorConsent, MentorRequestView} from '@/lib/activities/mentor';
 import type {MentorMatch} from '@/lib/activities/discover';
-import {UserRound} from 'lucide-react';
+// Tabler icons, aliased to the names this file already uses
+import {IconUser as UserRound} from '@tabler/icons-react';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
@@ -89,7 +90,7 @@ export function MentorPage({offer: initialOffer, matches, requests, adult, highl
     <VStack gap={4} paddingBlock={4}>
       <VStack gap={1} hAlign="start">
         <Button label="Activities" variant="ghost" size="sm" icon={<Icon icon="chevronLeft" />} href="/activities" />
-        <Heading level={1}>A few months ahead</Heading>
+        <Heading level={1}>Mentors</Heading>
         <Text color="secondary">
           People who are where you want to be in about 3 months. Ask their Muse what to do, or connect and keep talking. You only ever talk through your Muses, and names stay hidden unless you both choose to share. 18+ only.
         </Text>
@@ -118,10 +119,10 @@ export function MentorPage({offer: initialOffer, matches, requests, adult, highl
         </Card>
       )}
 
-      <Card aria-label="A few months ahead of you">
+      <Card aria-label="Suggested mentors">
         <VStack gap={3}>
           <VStack gap={1}>
-            <Heading level={2}>A few months ahead of you</Heading>
+            <Heading level={2}>Suggested mentors</Heading>
             <Text type="supporting" color="secondary">
               Matched on rounded activity from the last 7 days (and progress records people chose to share), never raw data.
             </Text>

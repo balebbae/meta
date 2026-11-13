@@ -1,7 +1,8 @@
 'use client';
 import {useCallback, useEffect, useState} from 'react';
 import {useRouter} from 'next/navigation';
-import {Brain, Flag, Lock, Map, Target, type LucideIcon} from 'lucide-react';
+// Tabler icons, aliased to the names this file already uses
+import {IconBrain as Brain, IconFlag as Flag, IconLock as Lock, IconMap2 as Map, IconTarget as Target, type TablerIcon} from '@tabler/icons-react';
 import {Button} from '@astryxdesign/core/Button';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {Icon} from '@astryxdesign/core/Icon';
@@ -44,7 +45,7 @@ export function IntroModal({open, invite, onClose}: {open: boolean; invite?: Int
     router.push(invite ? `/activities/onboarding/tags?invite=${invite.gameId}` : '/activities/onboarding/tags');
   }, [close, invite, router]);
 
-  const bullets: {icon: LucideIcon; title: string; body: string}[] = invite
+  const bullets: {icon: TablerIcon; title: string; body: string}[] = invite
     ? [
         {icon: Flag, title: invite.gameTitle, body: `${invite.inviterName} picked you. Accepting takes two quick steps: what you're into, and what your Muse may share.`},
         {icon: Lock, title: 'Your data stays yours', body: 'The game only ever sees what you allow. Routes and heart rate never leave your vault unless you say so.'},

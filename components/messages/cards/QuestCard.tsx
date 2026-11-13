@@ -88,7 +88,7 @@ export default function QuestCard({message, conversation}: CardProps) {
         <Link href={`/activities/games/${p.questId}`} className={`${h.pill} ${h.pillQuiet}`}>
           Open quest
         </Link>
-        <button type="button" className={`${h.pill} ${h.pillEmber}`} onClick={() => setLogOpen(true)} disabled={state?.quest.status === 'completed'}>
+        <button type="button" className={`${h.pill} ${h.pillBlue}`} onClick={() => setLogOpen(true)} disabled={state?.quest.status === 'completed'}>
           Log a move
         </button>
       </div>

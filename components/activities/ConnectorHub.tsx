@@ -1,7 +1,8 @@
 'use client';
 import {useRouter} from 'next/navigation';
 import {useState} from 'react';
-import {Activity, Apple, Bike, Camera, CircleDot, HeartPulse, Layers, Pencil, Smartphone, Watch, type LucideIcon} from 'lucide-react';
+// Tabler icons, aliased to the names this file already uses
+import {IconActivity as Activity, IconBrandApple as Apple, IconBrandStrava as Strava, IconCamera as Camera, IconCircleDot as CircleDot, IconHeartbeat as HeartPulse, IconStack2 as Layers, IconPencil as Pencil, IconDeviceMobile as Smartphone, IconDeviceWatch as Watch, type TablerIcon} from '@tabler/icons-react';
 import {Button} from '@astryxdesign/core/Button';
 import {HStack} from '@astryxdesign/core/HStack';
 import {Icon} from '@astryxdesign/core/Icon';
@@ -14,18 +15,29 @@ import type {ConnectResult, ConnectorId, Platform} from '@/lib/activities/types'
 
 export type PublicConnection = ReturnType<typeof publicConnection>;
 
-export const SOURCE_ICON: Record<ConnectorId, LucideIcon> = {
-  apple_health: Apple, health_connect: HeartPulse, google_health: Activity, strava: Bike, oura: CircleDot, whoop: Watch, garmin: Watch, aggregator: Layers, phone_steps: Smartphone, proof_photo: Camera, manual: Pencil, mock: Watch,
+export const SOURCE_ICON: Record<ConnectorId, TablerIcon> = {
+  apple_health: Apple, health_connect: HeartPulse, google_health: Activity, strava: Strava, oura: CircleDot, whoop: Watch, garmin: Watch, aggregator: Layers, phone_steps: Smartphone, proof_photo: Camera, manual: Pencil, mock: Watch,
 };
 
-const AVAIL_LABEL = {ready: null, not_configured: 'Not configured for this demo', needs_native: 'Needs the native app', other_platform: 'Open on your iPhone'} as const;
+export const AVAIL_LABEL = {ready: null, not_configured: 'Not configured for this demo', needs_native: 'Needs the native app', other_platform: 'Open on your iPhone'} as const;
 
-/** Connector hub (§4 step 3 / §5): every source visible, platform-ordered, unavailable ones explain the other route. */
-export function ConnectorHub({platform, cards, connections, onConnected, compact}: {platform: Platform; cards: ConnectorCard[]; connections: PublicConnection[]; onConnected?: (id: ConnectorId) => void; compact?: boolean}) {
+/** Connect / sync a source the same way everywhere: OAuth redirect, instant (demo), or its setup page. */
+export function useConnect(onConnected?: (id: ConnectorId) => void) {
   const router = useRouter();
   const [busy, setBusy] = useState<ConnectorId | null>(null);
   const [note, setNote] = useState<Partial<Record<ConnectorId, string>>>({});
-  const byId = new Map(connections.map(c => [c.source, c]));
+
+  async function sync(card: ConnectorCard) {
+    setBusy(card.id);
+    try {
+      const res = await fetch(`/api/connect/${card.id}/sync`, {method: 'POST'});
+      const j = (await res.json().catch(() => ({}))) as {imported?: number; error?: string};
+      setNote(n => ({...n, [card.id]: res.ok ? `Synced: ${j.imported ?? 0} new from ${card.label}.` : (j.error ?? 'Sync failed.')}));
+      if (res.ok) router.refresh();
+    } finally {
+      setBusy(null);
+    }
+  }
 
   async function connect(card: ConnectorCard) {
     if (card.id === 'manual' || card.id === 'proof_photo') {
@@ -54,6 +66,14 @@ export function ConnectorHub({platform, cards, connections, onConnected, compact
       setBusy(null);
     }
   }
+
+  return {busy, note, connect, sync};
+}
+
+/** Connector hub (§4 step 3 / §5): every source visible, platform-ordered, unavailable ones explain the other route. */
+export function ConnectorHub({platform, cards, connections, onConnected, compact}: {platform: Platform; cards: ConnectorCard[]; connections: PublicConnection[]; onConnected?: (id: ConnectorId) => void; compact?: boolean}) {
+  const {busy, note, connect} = useConnect(onConnected);
+  const byId = new Map(connections.map(c => [c.source, c]));
 
   return (
     <List hasDividers>

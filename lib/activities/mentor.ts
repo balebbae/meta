@@ -116,7 +116,7 @@ export async function getRequest(id: number, viewerId: number): Promise<MentorRe
 /** Tell the other side something happened, without naming who (actor_id stays null so the panel can't link a profile). */
 async function notifyOther(id: number, toUserId: number, message: string) {
   await sql`insert into notifications (user_id, actor_id, type, message) values (${toUserId}, null, 'ahead', ${message})`.catch(() => {});
-  await sendPushToUser(toUserId, {title: 'Activities · A few months ahead', body: message, url: `/activities/ahead/${id}`, tag: `ahead-${id}`}).catch(() => {});
+  await sendPushToUser(toUserId, {title: 'Activities · Mentors', body: message, url: `/activities/ahead/${id}`, tag: `ahead-${id}`}).catch(() => {});
 }
 
 export type ConnectAction = 'request' | 'accept' | 'decline' | 'reveal' | 'hide';

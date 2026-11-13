@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {Play, Sparkles} from 'lucide-react';
+import {IconChevronRight, IconEyeOff, IconMap2, IconMask, IconPlayerPlay, IconSwords, IconTrophy, IconWand} from '@tabler/icons-react';
+import {InfoTip} from '@astryxdesign/core/InfoTip';
+import {List, ListItem} from '@astryxdesign/core/List';
 import {Button} from '@astryxdesign/core/Button';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {HStack} from '@astryxdesign/core/HStack';
@@ -20,7 +22,7 @@ import type {MuseActionsPayload} from '@/lib/activities/actions';
 import type {ListingBrief} from '@/lib/rally/queries';
 import type {FitnessLevel} from '@/lib/activities/level';
 import {ActivityLeaderboard} from './ActivityLeaderboard';
-import {CoachToggle} from './CoachMode';
+import {CoachButton} from './CoachMode';
 import {MuseActions} from './MuseActions';
 import {Communities} from './home/Communities';
 import {EventsNearby} from './home/EventsNearby';
@@ -51,8 +53,8 @@ export function SectionHead({title, sub, href}: {title: string; sub?: string; hr
         {sub && <span className={h.sub}>{sub}</span>}
       </div>
       {href && (
-        <Link className={h.more} href={href}>
-          See all
+        <Link className={h.more} href={href} aria-label={`See all ${title}`} title="See all">
+          <IconChevronRight size={20} aria-hidden />
         </Link>
       )}
     </div>
@@ -161,7 +163,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
   const byId = (id: DiscoverSection['id']) => sections.find(s => s.id === id);
   let order = 0;
   const section = (key: string, title: string, body: React.ReactNode, sub?: string, href?: string) => (
-    <section key={key} className={h.section} style={{'--i': order++} as React.CSSProperties} aria-label={title}>
+    <section key={key} className={`${h.section} ${key === 'reels' ? h.sectionTight : ''}`} style={{'--i': order++} as React.CSSProperties} aria-label={title}>
       <SectionHead title={title} sub={sub} href={href} />
       {body}
     </section>
@@ -183,7 +185,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
           />
         ))}
       </div>,
-      s.id === 'mentors' ? 'Talk through your Muses · names stay hidden · 18+' : s.id === 'friends' ? 'Yes/no answers only' : undefined,
+      s.id === 'mentors' ? '18+' : undefined,
     );
   const firstMove = byId('first_move');
   const reels = byId('learn');
@@ -202,30 +204,26 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
   return (
     <div className={h.page}>
       <div className={h.titleRow}>
-        <h1 className={h.h1}>Activities</h1>
-        <CoachToggle />
+        <h1 className={h.h1}>Welcome back, {viewer.name.split(' ')[0]}</h1>
+        {/* the Coach mode button lives on the goal card; without that card it stays reachable here */}
+        {!progress && <CoachButton className={`${h.pill} ${h.pillSm} ${h.pillBlue}`} />}
       </div>
 
       {progress && (
         <div className={h.section} style={{'--i': order++} as React.CSSProperties}>
-          <ProgressHero name={viewer.name} progress={progress} goal={goal} level={level} />
+          <ProgressHero progress={progress} goal={goal} level={level} />
         </div>
       )}
-      <MuseActions initial={museActions} viewerName={viewer.name} say={say} />
-      {section('games', 'Your games', <YourGames games={games} onStart={() => setStartMode('sentence')} />, games.length ? undefined : 'Co-op with a group chat')}
-      {groups && section('groups', 'Communities', <Communities cards={groups.cards} onOpen={c => logEvents([c], 'click')} onHide={c => void notInterested(c)} />, 'Clubs your friends are in', '/groups')}
-
       {reels &&
         section(
           'reels',
-          'Suggested reels',
-          <nav className={b.bento} aria-label="Suggested reels">
+          'Workout reels',
+          <nav className={b.bento} aria-label="Workout reels">
             {reels.cards.map(c => (
               <Link key={c.id} href={c.href ?? '/reels'} className={b.reelTile} onClick={() => logEvents([c], 'click')}>
                 {c.imageUrl && <img src={c.imageUrl} alt="" loading="lazy" />}
-                <span className={b.reelTag}>
-                  <Play size={12} />
-                  For {String(c.meta?.label ?? 'Workouts')}
+                <span className={b.reelTag} title={`For ${String(c.meta?.label ?? 'Workouts')}`}>
+                  <IconPlayerPlay size={12} aria-hidden />
                 </span>
                 <span className={b.reelCaption}>{c.title}</span>
               </Link>
@@ -234,8 +232,11 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
           undefined,
           '/reels',
         )}
+      <MuseActions initial={museActions} viewerName={viewer.name} say={say} />
+      {section('games', 'Your games', <YourGames games={games} onStart={() => setStartMode('choose')} />)}
+      {groups && section('groups', 'Communities', <Communities cards={groups.cards} onOpen={c => logEvents([c], 'click')} onHide={c => void notInterested(c)} />, undefined, '/groups')}
 
-      {nearby && nearby.events.length > 0 && section('nearby', 'Near you', <EventsNearby events={nearby.events} home={nearby.home} />, nearby.home ? 'Distances from your city' : 'Add your city for distances', '/events')}
+      {nearby && nearby.events.length > 0 && section('nearby', 'Events near you', <EventsNearby events={nearby.events} home={nearby.home} />, nearby.home ? undefined : 'Add your city', '/events')}
 
       {listings.length > 0 &&
         section(
@@ -262,11 +263,25 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
         )}
 
       {firstMove && renderSection(firstMove)}
-      {sections.filter(s => !['first_move', 'learn', 'groups'].includes(s.id)).map(renderSection)}
+      {sections.filter(s => !['first_move', 'learn', 'groups', 'start'].includes(s.id)).map(renderSection)}
       <div className={h.section} style={{'--i': order++} as React.CSSProperties}>
         <ActivityLeaderboard />
       </div>
 
+      <Dialog isOpen={startMode === 'choose'} onOpenChange={o => !o && setStartMode(null)} width={420}>
+        <Layout
+          header={<DialogHeader title="New game" onOpenChange={() => setStartMode(null)} />}
+          content={
+            <LayoutContent>
+              <List hasDividers>
+                <ListItem startContent={<IconMap2 size={22} aria-hidden />} label="Turf" description="Claim streets on real runs and walks" onClick={() => setStartMode('turf')} />
+                <ListItem startContent={<IconPlayerPlay size={22} aria-hidden />} label="From a reel" description="Turn a workout reel into a boss fight" onClick={() => void startGame('reel')} />
+                <ListItem startContent={<IconWand size={22} aria-hidden />} label="From a sentence" description="Describe it; Muse builds the game" onClick={() => setStartMode('sentence')} />
+              </List>
+            </LayoutContent>
+          }
+        />
+      </Dialog>
       <Dialog isOpen={startMode === 'turf'} onOpenChange={o => !o && setStartMode(null)} purpose="form" width={480}>
         <Layout
           header={<DialogHeader title="Start Turf" onOpenChange={() => setStartMode(null)} />}
@@ -322,24 +337,27 @@ function DiscoverCardView({card, hero, onNotInterested, onOpen, onStart, busy}: 
       <img className={h.avatar} src={card.avatarUrl} alt="" />
     </div>
   ) : null;
-  const tags = [card.meta?.bossFight ? ['Boss fight IRL · counts double', h.chipEmber] : null, card.meta?.rally ? ['Weekly Rally', ''] : null, card.kind === 'mentor' ? ['Muse to Muse · name hidden', ''] : null].filter(Boolean) as [string, string][];
+  const tags: {key: string; title: string; icon: React.ReactNode; text: string}[] = [
+    ...(card.meta?.bossFight ? [{key: 'boss', title: 'Boss fight IRL · counts double', icon: <IconSwords size={12} aria-hidden />, text: '2×'}] : []),
+    ...(card.meta?.rally ? [{key: 'rally', title: 'Weekly Rally', icon: <IconTrophy size={12} aria-hidden />, text: 'Rally'}] : []),
+    ...(card.kind === 'mentor' ? [{key: 'anon', title: 'Muse to Muse · name hidden', icon: <IconMask size={12} aria-hidden />, text: 'Anonymous'}] : []),
+  ];
   const body = (
     <div className={h.cardBody}>
       {tags.length > 0 && (
         <div className={h.chips}>
-          {tags.map(([t, cls]) => (
-            <span key={t} className={`${h.chip} ${cls}`}>
-              {t}
+          {tags.map(t => (
+            <span key={t.key} className={h.chip} title={t.title}>
+              {t.icon} {t.text}
             </span>
           ))}
         </div>
       )}
-      <h3 className={h.cardTitle}>{card.title}</h3>
+      <div className={h.titleLine}>
+        <h3 className={h.cardTitle}>{card.title}</h3>
+        {card.why && <InfoTip content={card.why} label="Why you see this" size="xsm" />}
+      </div>
       {card.subtitle && <p className={h.cardSub}>{card.subtitle}</p>}
-      <p className={h.why}>
-        <Sparkles size={14} />
-        <span>{card.why}</span>
-      </p>
       <div className={h.cardBtns}>
         {onStart ? (
           <button
@@ -359,8 +377,8 @@ function DiscoverCardView({card, hero, onNotInterested, onOpen, onStart, busy}: 
           </Link>
         )}
         {card.kind !== 'start' && card.kind !== 'invite' && (
-          <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillGhost}`} title={card.tag ? `Removes the "${card.tag}" tag` : 'Hide'} onClick={onNotInterested}>
-            Not interested
+          <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillIcon} ${h.pillGhost}`} aria-label="Not interested" title={card.tag ? `Not interested · removes the "${card.tag}" tag` : 'Not interested'} onClick={onNotInterested}>
+            <IconEyeOff size={16} aria-hidden />
           </button>
         )}
       </div>

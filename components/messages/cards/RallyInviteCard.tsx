@@ -104,12 +104,12 @@ export default function RallyInviteCard({message}: CardProps) {
             <button type="button" className={`${h.pill} ${h.pillGhost}`} onClick={() => void decline()} disabled={busy || me.status === 'declined'}>
               {me.status === 'declined' ? 'Declined' : 'Decline'}
             </button>
-            <button type="button" className={`${h.pill} ${h.pillEmber}`} onClick={accept} disabled={busy}>
+            <button type="button" className={`${h.pill} ${h.pillBlue}`} onClick={accept} disabled={busy}>
               Accept
             </button>
           </>
         ) : (
-          <Link href={`/games/${gameId}`} className={`${h.pill} ${h.pillEmber}`}>
+          <Link href={`/games/${gameId}`} className={`${h.pill} ${h.pillBlue}`}>
             Open map
           </Link>
         )}

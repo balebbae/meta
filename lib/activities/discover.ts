@@ -199,7 +199,7 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   } else {
     firstMove.push(await build({id: 'first-start', kind: 'start', title: 'Start a game', subtitle: 'Turf with friends takes 30 seconds to set up', href: '/activities?start=turf', cta: 'Start a game', score: 70}, 'Nothing is waiting on you, so start something.'));
   }
-  sections.push({id: 'first_move', title: 'Your first move', cards: firstMove});
+  sections.push({id: 'first_move', title: 'Up next', cards: firstMove});
 
   // --- Friends doing Activities (privacy-safe booleans via ask()) ---
   const friendTagRows = friendIds.length ? await sql`select user_id, tag, visibility, confirmed from user_tags where user_id = any(${friendIds}::int[])` : [];
@@ -217,14 +217,14 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   }));
   await flushAudit(audit);
   friendCards.sort((a, b) => b.score - a.score);
-  if (friendCards.length) sections.push({id: 'friends', title: 'Friends doing Activities', cards: friendCards});
+  if (friendCards.length) sections.push({id: 'friends', title: 'Active friends', cards: friendCards});
 
   // --- Train for an event ---
   const eventCards: DiscoverCard[] = [];
   for (const e of events) {
     eventCards.push(await build({id: `event-${e.id}`, kind: 'event', title: e.title, subtitle: `Train for this with the ${e.going.length} ${e.going.length === 1 ? 'friend' : 'friends'} going`, href: `/events?id=${e.id}`, cta: 'Train with them', imageUrl: e.coverUrl, tag: e.tags[0], score: e.score, meta: {friends: e.going.length, bossFight: e.bossFight, startsAt: e.startsAt, location: e.location}}, e.bossFight ? 'This event is a Rally boss fight; moves there count double.' : `${e.going.map(g => first(g.name)).join(', ')} ${e.going.length === 1 ? 'is' : 'are'} going.`));
   }
-  if (eventCards.length) sections.push({id: 'events', title: 'Train for an event', cards: eventCards});
+  if (eventCards.length) sections.push({id: 'events', title: 'Events with friends', cards: eventCards});
 
   // --- Groups & clubs ---
   const groups = await sql`
@@ -244,7 +244,7 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
     groupCards.push(await build({id: `group-${g.id}`, kind: 'group', title: g.name as string, subtitle: `${Number(g.member_count).toLocaleString()} members${fm ? ` · ${fm} ${fm === 1 ? 'friend' : 'friends'}` : ''}${g.has_rally ? ' · weekly Rally' : ''}`, href: `/groups/${g.id}`, cta: g.joined ? 'Open' : 'Join', imageUrl: g.cover_url as string, tag: matched[0] ?? gTags[0], score: matched.length * 4 + fm * 2 + (g.has_rally ? 3 : 0), meta: {joined: !!g.joined, rally: !!g.has_rally}}, matched.length ? `Matches your ${matched[0]} tag${fm ? ` and ${fm} of your friends are in it` : ''}.` : g.has_rally ? 'This group runs a weekly Rally.' : 'An active club near you.'));
   }
   groupCards.sort((a, b) => b.score - a.score);
-  if (groupCards.length) sections.push({id: 'groups', title: 'Groups & clubs', cards: groupCards});
+  if (groupCards.length) sections.push({id: 'groups', title: 'Communities', cards: groupCards});
 
   // --- A few months ahead (names hidden; talk only through Muses) ---
   const mentorMatches = await matchMentors(userId, tags);
@@ -252,7 +252,7 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   for (const m of mentorMatches.slice(0, 6)) {
     mentorCards.push(build({id: `mentor-${m.mentorId}`, kind: 'mentor', title: m.title, subtitle: m.subtitle, href: `/activities/ahead?offer=${m.mentorId}`, cta: 'Ask their Muse', tag: m.goalTag ?? undefined, score: m.score, meta: {mentorId: m.mentorId, requestId: m.requestId, status: m.status}}, m.why));
   }
-  if (mentorCards.length) sections.push({id: 'mentors', title: 'A few months ahead of you', cards: mentorCards});
+  if (mentorCards.length) sections.push({id: 'mentors', title: 'Mentors', cards: mentorCards});
 
   // --- Suggested reels (the /activities bento): tag matches first, topped up with popular workouts so it is never empty ---
   const reels = await sql`select id, caption, poster_url, tags, difficulty, plays from reels where is_fitness order by plays desc, id desc limit 60`.catch(() => []);
@@ -265,7 +265,7 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
       return {id: `reel-${r.id}`, kind: 'reel' as const, title: (r.caption as string) || 'Workout reel', subtitle: [r.difficulty, ...rTags.slice(0, 2)].filter(Boolean).join(' · '), href: `/reels?reel=${r.id}#activities`, cta: 'Watch', imageUrl: r.poster_url as string | null, tag: matched[0] ?? rTags[0], why: `Suggested for ${label}.`, score: matched.length * 3 + Math.min(3, Number(r.plays) / 100), meta: {label}};
     })
     .sort((a, b) => b.score - a.score);
-  if (reelCards.length) sections.push({id: 'learn', title: 'Suggested reels', cards: reelCards});
+  if (reelCards.length) sections.push({id: 'learn', title: 'Workout reels', cards: reelCards});
 
   // --- Start a game (Rally library; endpoints owned by C/D) ---
   const start: DiscoverCard[] = [

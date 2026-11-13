@@ -24,7 +24,7 @@ const at = (days: number, hour: number) => {
 
 export const user: User = {id: 1, supertokensId: null, name: 'Sahas Sharma', email: 'preview@example.com', avatarUrl: 'https://i.pravatar.cc/160?img=12', coverUrl: null, bio: null, isOnline: true, createdAt: at(-400, 12)};
 
-export const progress: HomeProgress = {stepsToday: 6420, stepGoal: 8000, activeDays: 3, activeTarget: 4, sleepHours: 7.4, movedToday: true};
+export const progress: HomeProgress = {stepsToday: 6420, stepGoal: 8000, activeDays: 3, activeTarget: 4, sleepHours: 7.4, movedToday: true, distanceKm: 7.2, workouts: 3, avgHr: 152};
 
 export const level: FitnessLevel = {tier: 'building', weeks: 4, perWeek: 3.2, activeDaysPerWeek: 3.4, activities: [{kind: 'run', tier: 'building', perWeek: 2.1, kmPerWeek: 11.5, longestKm: 6.2, trend: 'up'}], stepsPerDay: 7400, sleepHours: 7.1, easyWeek: null};
 
@@ -101,12 +101,12 @@ export const data: DiscoverPayload = {
   sections: [
     {
       id: 'first_move',
-      title: 'Your first move this week',
+      title: 'Up next',
       cards: [{id: 'first-event-12', kind: 'event', title: 'Train for Katy Trail Saturday 5k', subtitle: '2 friends are going', why: 'Maya and Jordan RSVP’d and it matches your Running tag.', href: '/events?id=12', cta: 'Train with them', imageUrl: img('1452626038306-9aae5e071dd3'), tag: 'Running', score: 80, meta: {friends: 2}}],
     },
     {
       id: 'groups',
-      title: 'Groups & clubs',
+      title: 'Communities',
       cards: [
         {id: 'group-1', kind: 'group', title: 'Dallas Run Club', subtitle: '2,431 members · 3 friends · weekly Rally', why: 'Matches your Running tag and 3 of your friends are in it.', href: '/groups/1', cta: 'Join', imageUrl: img('1552674605-db6ffd4facb5'), tag: 'Running', score: 20, meta: {joined: false, rally: true}},
         {id: 'group-2', kind: 'group', title: 'Yoga at Klyde Warren', subtitle: '812 members · 1 friend', why: 'Matches your Yoga tag and 1 of your friends is in it.', href: '/groups/2', cta: 'Join', imageUrl: img('1544367567-0f2fcb009e0b'), tag: 'Yoga', score: 10, meta: {joined: false, rally: false}},
@@ -116,7 +116,7 @@ export const data: DiscoverPayload = {
     },
     {
       id: 'learn',
-      title: 'Suggested reels',
+      title: 'Workout reels',
       cards: [
         {id: 'reel-1', kind: 'reel', title: 'Easy-pace running form in 60 seconds', why: 'For your Running tag.', href: '/reels', imageUrl: img('1461896836934-ffe607ba8211', 800, 800), score: 9, meta: {label: 'Runners'}},
         {id: 'reel-2', kind: 'reel', title: 'Five-minute hip opener', why: 'For your Yoga tag.', href: '/reels', imageUrl: img('1575052814086-f385e2e2ad1b', 600, 800), score: 8, meta: {label: 'Yoga'}},
@@ -136,7 +136,7 @@ export const data: DiscoverPayload = {
     },
     {
       id: 'mentors',
-      title: 'A few months ahead',
+      title: 'Mentors',
       cards: [{id: 'mentor-1', kind: 'mentor', title: 'Someone who ran their first 5k in May', subtitle: 'Now at 10k · regular', why: 'They trained like you do now, 16 weeks ago.', href: '/activities/mentor/1', cta: 'Ask through Muses', score: 7}],
     },
     {

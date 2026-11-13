@@ -1,5 +1,6 @@
 'use client';
-import {Ban, EyeOff, MessageCircle} from 'lucide-react';
+// Tabler icons, aliased to the names this file already uses
+import {IconBan as Ban, IconEyeOff as EyeOff, IconMessageCircle as MessageCircle} from '@tabler/icons-react';
 import {Icon} from '@astryxdesign/core/Icon';
 import {List, ListItem} from '@astryxdesign/core/List';
 import type {MuseSummary} from '@/lib/activities/summary';

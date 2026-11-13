@@ -27,7 +27,7 @@ const QUESTION_LABEL: Record<string, string> = {
 function askerLabel(a: string): string {
   if (a.startsWith('preview')) return 'You (preview)';
   const [kind, id] = a.split(':');
-  const names: Record<string, string> = {turf: 'Turf game', quest: 'Rally game', rally: 'Rally game', mentor: 'A few months ahead', ahead: 'A few months ahead', discover: 'Discover', game: 'Game'};
+  const names: Record<string, string> = {turf: 'Turf game', quest: 'Rally game', rally: 'Rally game', mentor: 'Mentors', ahead: 'Mentors', discover: 'Discover', game: 'Game'};
   return `${names[kind] ?? kind}${id ? ` #${id}` : ''}`;
 }
 

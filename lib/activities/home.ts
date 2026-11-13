@@ -5,7 +5,7 @@ import {distanceKm, locate, type LatLng} from '@/lib/activities/geo';
 import type {QuestionType} from '@/lib/activities/types';
 
 /** Top of Activities: today's numbers for the owner (vault answers, 'only_me' audience, audit-logged). */
-export type HomeProgress = {stepsToday: number | null; stepGoal: number; activeDays: number | null; activeTarget: number; sleepHours: number | null; movedToday: boolean};
+export type HomeProgress = {stepsToday: number | null; stepGoal: number; activeDays: number | null; activeTarget: number; sleepHours: number | null; movedToday: boolean; distanceKm: number | null; workouts: number | null; avgHr: number | null};
 
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 // shortcut: fixed daily step goal, make it a profile field when goals get a steps component
@@ -14,9 +14,9 @@ const TARGET: Record<string, number> = {'0': 3, '1-2': 2, '3-4': 4, '5+': 5};
 
 export async function homeProgress(userId: number): Promise<HomeProgress> {
   const q = (question: QuestionType) => ask(userId, 'only_me', question, 'activities:home').then(a => a.value).catch(() => null);
-  const [steps, active, sleep, moved, rows] = await Promise.all([q('steps_today'), q('active_days_this_week'), q('sleep_last_night_hours'), q('completed_move_today'), sql`select weekly_active_days from activity_profiles where user_id = ${userId}`.catch(() => [])]);
+  const [steps, active, sleep, moved, km, workouts, hr, rows] = await Promise.all([q('steps_today'), q('active_days_this_week'), q('sleep_last_night_hours'), q('completed_move_today'), q('distance_this_week_km'), q('workouts_this_week'), q('avg_hr_this_week'), sql`select weekly_active_days from activity_profiles where user_id = ${userId}`.catch(() => [])]);
   const band = String(rows[0]?.weekly_active_days ?? '');
-  return {stepsToday: num(steps), stepGoal: STEP_GOAL, activeDays: num(active), activeTarget: TARGET[band] ?? 3, sleepHours: num(sleep), movedToday: moved === true};
+  return {stepsToday: num(steps), stepGoal: STEP_GOAL, activeDays: num(active), activeTarget: TARGET[band] ?? 3, sleepHours: num(sleep), movedToday: moved === true, distanceKm: num(km), workouts: num(workouts), avgHr: num(hr)};
 }
 
 export type NearbyEvent = {id: number; title: string; location: string; startsAt: string; coverUrl: string; pin: LatLng | null; distanceKm: number | null};

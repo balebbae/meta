@@ -216,7 +216,7 @@ export const conversations = {
 };
 
 const level1 = {day: 1, name: 'Day 1: Easy miles', exercises: [{name: 'Easy run', seconds: 1200}, {name: 'Squats', reps: 20}]};
-const squadMember = (p: typeof me, damage: number, moves: number) => ({...p, damage, moves, level: 3, team: null, gear: moves > 2 ? ['cape'] : [], target: p.id === user.id ? 20 : null, handicapNote: ''});
+const squadMember = (p: typeof me, damage: number, moves: number) => ({...p, damage, moves, level: 3, team: null, gear: moves > 2 ? ['cape'] : [], target: p.id === user.id ? 20 : null, handicapNote: '', hero: null});
 
 /** GET /api/quests/1/state: what the quest card polls. */
 export const questState: QuestState = {

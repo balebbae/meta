@@ -1,14 +1,32 @@
 /* Rally dashboard: everything is Astryx components; only the boss arena backdrop is custom. */
 .arenaStage {
+  position: relative;
+  overflow: hidden;
   border-radius: var(--radius-container);
+  min-height: clamp(480px, 62vw, 640px);
   background: radial-gradient(ellipse at 50% 100%, var(--color-background-orange) 0%, var(--color-background-blue) 75%);
 }
 .arenaCanvas {
-  width: 100%;
-  height: clamp(240px, 44vw, 400px);
-  border-radius: var(--radius-container);
-  overflow: hidden;
+  position: absolute;
+  inset: 0;
 }
 .arenaCanvas canvas {
   display: block;
+}
+/* Fade the bottom of the scene so the overlaid HUD text stays readable. */
+.arenaStage::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 45%;
+  background: linear-gradient(to bottom, transparent, var(--color-background-orange));
+  pointer-events: none;
+}
+.arenaHud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }

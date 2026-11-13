@@ -780,3 +780,5 @@ create table if not exists swim_logs (
   created_at timestamptz not null default now()
 );
 create index if not exists swim_logs_journey_idx on swim_logs (journey_id, created_at desc);
+
+alter table users add column if not exists hero jsonb;

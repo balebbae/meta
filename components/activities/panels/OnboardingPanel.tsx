@@ -8,7 +8,9 @@ import type {PolicyMatrix} from '@/lib/activities/policies';
 import {sourceLabel} from '@/lib/activities/source-label';
 import {museSummary} from '@/lib/activities/summary';
 import type {Platform, UserTag} from '@/lib/activities/types';
+import type {HeroPick} from '@/lib/kingdom/cast';
 import type {PublicConnection} from '../ConnectorHub';
+import {CharacterStep} from '../onboarding/CharacterStep';
 import {ConnectStep} from '../onboarding/ConnectStep';
 import {MuseStep} from '../onboarding/MuseStep';
 import {PrivacyStep} from '../onboarding/PrivacyStep';
@@ -16,7 +18,7 @@ import {QuestionsStep} from '../onboarding/QuestionsStep';
 import {TagsStep} from '../onboarding/TagsStep';
 import {useJson} from './nav';
 
-type Profile = {profile: ActivityProfile; tags: UserTag[]; policies: PolicyMatrix; connections: PublicConnection[]};
+type Profile = {profile: ActivityProfile; tags: UserTag[]; policies: PolicyMatrix; connections: PublicConnection[]; hero: HeroPick | null};
 
 /** Onboarding as a panel: the same five steps (two for a game invite), StepShell moves between them in place. Replaces /activities/onboarding/[step]. */
 export function OnboardingPanel({step, invite, viewerName}: {step: string | null; invite: number | null; viewerName: string}) {
@@ -39,6 +41,8 @@ export function OnboardingPanel({step, invite, viewerName}: {step: string | null
 
   if (!data || (needsCards && !conn.data)) return <Text color="secondary">{error ?? conn.error ?? 'Loading…'}</Text>;
   switch (s) {
+    case 'character':
+      return <CharacterStep initial={data.hero} invite={invite} />;
     case 'tags':
       return <TagsStep initial={data.tags} invite={invite} />;
     case 'questions':

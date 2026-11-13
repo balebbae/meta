@@ -53,8 +53,8 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
   const [reducedMotion, setReducedMotion] = useState(false);
   useEffect(() => setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches), []);
   const bossCast = useMemo(() => castBoss(state.quest.bossKind), [state.quest.bossKind]);
-  const heroKey = state.members.map(m => `${m.id}:${m.name}:${m.gear.length}`).join('|');
-  const arenaHeroes = useMemo(() => state.members.map(m => ({id: m.id, name: m.name, cast: castHero(m.name, m.gear)})), [heroKey]); // eslint-disable-line react-hooks/exhaustive-deps -- state is replaced on every poll
+  const heroKey = state.members.map(m => `${m.id}:${m.name}:${m.gear.length}:${JSON.stringify(m.hero ?? null)}`).join('|');
+  const arenaHeroes = useMemo(() => state.members.map(m => ({id: m.id, name: m.name, cast: castHero(m.name, m.gear, m.hero)})), [heroKey]); // eslint-disable-line react-hooks/exhaustive-deps -- state is replaced on every poll
   const lastMoveId = useRef(initial.moves[initial.moves.length - 1]?.id ?? 0);
   // Moves logged since this page opened, for the arena to play. My own carry the reps I typed; a teammate's set is shown at their personal target.
   const [strikes, setStrikes] = useState<ArenaStrike[]>([]);
@@ -169,7 +169,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
               <HStack gap={4} hAlign="center" wrap="wrap" aria-label="Squad">
                 {state.members.map(m => (
                   <VStack key={m.id} gap={1} hAlign="center">
-                    <RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} size={64} mvp={state.mvp === m.id} state={anim?.userId === m.id ? anim.state : done ? 'celebrate' : 'idle'} />
+                    <RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} hero={m.hero} size={64} mvp={state.mvp === m.id} state={anim?.userId === m.id ? anim.state : done ? 'celebrate' : 'idle'} />
                     <Text type="supporting" weight="bold">
                       {m.name.split(' ')[0]}
                     </Text>
@@ -241,7 +241,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
                     here.length > 0 ? (
                       <HStack gap={1}>
                         {here.map(m => (
-                          <RallyAvatar key={m.id} src={m.avatarUrl} name={m.name} gear={m.gear} size={28} state={l.day === state.levelDay && !done ? 'run' : 'idle'} />
+                          <RallyAvatar key={m.id} src={m.avatarUrl} name={m.name} gear={m.gear} hero={m.hero} size={28} state={l.day === state.levelDay && !done ? 'run' : 'idle'} />
                         ))}
                       </HStack>
                     ) : undefined
@@ -263,7 +263,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
                 .map(m => (
                   <ListItem
                     key={m.id}
-                    startContent={<RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} size={32} />}
+                    startContent={<RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} hero={m.hero} size={32} />}
                     label={
                       <HStack gap={1.5} vAlign="center" wrap="wrap">
                         <Text weight="bold">{m.name}</Text>
@@ -312,7 +312,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
             <Heading level={2}>Locker</Heading>
             {me && (
               <HStack gap={3} vAlign="center">
-                <RallyAvatar src={me.avatarUrl} name={me.name} gear={me.gear} size={96} state={done ? 'celebrate' : 'idle'} />
+                <RallyAvatar src={me.avatarUrl} name={me.name} gear={me.gear} hero={me.hero} size={96} state={done ? 'celebrate' : 'idle'} />
                 <VStack gap={1.5}>
                   <Text weight="bold">Your gear</Text>
                   {myGear.length ? (
@@ -399,7 +399,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
                   return (
                     <ListItem
                       key={m.id}
-                      startContent={<RallyAvatar src={who?.avatarUrl ?? ''} name={who?.name ?? ''} gear={who?.gear ?? []} size={28} />}
+                      startContent={<RallyAvatar src={who?.avatarUrl ?? ''} name={who?.name ?? ''} gear={who?.gear ?? []} hero={who?.hero} size={28} />}
                       label={
                         <HStack gap={1.5} vAlign="center" wrap="wrap">
                           <Text>

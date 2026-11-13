@@ -8,7 +8,9 @@ import type {PolicyMatrix} from '@/lib/activities/policies';
 import {sourceLabel} from '@/lib/activities/source-label';
 import {AUDIENCE_LABEL, CATEGORY_LABEL, categorySummary, describeAnswer, LEVEL_LABEL, museSummary} from '@/lib/activities/summary';
 import {AUDIENCES, CATEGORIES, type Audience, type Category, type ConnectResult, type Platform, type ShareLevel, type UserTag} from '@/lib/activities/types';
+import type {HeroPick} from '@/lib/kingdom/cast';
 import type {PublicConnection} from '../ConnectorHub';
+import {HeroPicker} from '@/components/rally/HeroPicker';
 import {ConnectSourcePanel} from '../ConnectSourcePanel';
 import {DevicesPanel} from '../DevicesPanel';
 import {CATEGORY_ICON} from '../PrivacyMatrix';
@@ -18,6 +20,7 @@ import p from './panels.module.css';
 import {SourceList} from './SourceList';
 
 const TABS = [
+  ['character', 'Character'],
   ['sources', 'Sources'],
   ['privacy', 'Privacy'],
   ['muse', 'Muse'],
@@ -31,7 +34,7 @@ const PHONE = new Set(['apple_health', 'health_connect', 'google_health', 'phone
 export function SettingsPanel({sp}: {sp: URLSearchParams}) {
   const {update} = usePanelNav();
   const t = sp.get('tab');
-  const tab: Tab = t === 'privacy' || t === 'muse' ? t : 'sources';
+  const tab: Tab = t === 'character' || t === 'privacy' || t === 'muse' ? t : 'sources';
   const source = sp.get('source');
   return (
     <div className={p.stack}>
@@ -42,13 +45,39 @@ export function SettingsPanel({sp}: {sp: URLSearchParams}) {
           </button>
         ))}
       </div>
-      {tab === 'sources' ? source ? <SourceDetail source={source} sp={sp} /> : <SourcesTab /> : tab === 'privacy' ? <PrivacyTab /> : <MuseTab />}
+      {tab === 'character' ? <CharacterTab /> : tab === 'sources' ? source ? <SourceDetail source={source} sp={sp} /> : <SourcesTab /> : tab === 'privacy' ? <PrivacyTab /> : <MuseTab />}
     </div>
   );
 }
 
 function Loading({error}: {error: string | null}) {
   return error ? <p className={p.error}>{error}</p> : <p className={p.note}>Loading…</p>;
+}
+
+function CharacterTab() {
+  const {data, error, reload} = useJson<{hero: HeroPick | null}>('/api/activities/profile');
+  const [picked, setPicked] = useState<HeroPick | null | undefined>(undefined);
+  const [err, setErr] = useState<string | null>(null);
+  const current = picked === undefined ? (data?.hero ?? null) : picked;
+  if (!data) return <Loading error={error} />;
+
+  async function pick(hero: HeroPick) {
+    setPicked(hero);
+    setErr(null);
+    const res = await fetch('/api/activities/onboarding', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({hero})});
+    if (!res.ok) {
+      setErr('Could not save your hero');
+      reload();
+    }
+  }
+
+  return (
+    <div className={p.stack}>
+      <p className={p.note}>Your hero walks with you in Turf and fights beside your squad in Rally.</p>
+      <HeroPicker value={current} onChange={hero => void pick(hero)} />
+      {err && <p className={p.error}>{err}</p>}
+    </div>
+  );
 }
 
 function SourcesTab() {

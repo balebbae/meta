@@ -10,8 +10,8 @@ import {VStack} from '@astryxdesign/core/VStack';
 import {INVITE_STEPS, ONBOARDING_STEPS, nextStep, type OnboardingStep} from '@/lib/activities/onboarding';
 import {usePanelNav} from '../panels/nav';
 
-export const STEP_TITLE: Record<OnboardingStep, string> = {tags: "What you're into", questions: 'Five quick questions', connect: 'Where your workouts come from', privacy: 'What your Muse may say', muse: 'Meet your Muse'};
-const STEP_SHORT: Record<OnboardingStep, string> = {tags: 'Interests', questions: 'Questions', connect: 'Sources', privacy: 'Privacy', muse: 'Your Muse'};
+export const STEP_TITLE: Record<OnboardingStep, string> = {character: 'Pick your hero', tags: "What you're into", questions: 'Five quick questions', connect: 'Where your workouts come from', privacy: 'What your Muse may say', muse: 'Meet your Muse'};
+const STEP_SHORT: Record<OnboardingStep, string> = {character: 'Hero', tags: 'Interests', questions: 'Questions', connect: 'Sources', privacy: 'Privacy', muse: 'Your Muse'};
 
 export function exitHref(invite: number | null): string {
   return invite ? `/games/${invite}?consent=1` : '/activities';

@@ -18,12 +18,12 @@ const M_PER_DEG = 111_320;
 function Board({arena, players, cells, trail, viewerId, reducedMotion}: Props) {
   const camera = useThree((s) => s.camera) as PerspectiveCamera, gl = useThree((s) => s.gl);
   useEffect(() => { gl.toneMapping = ACESFilmicToneMapping; gl.outputColorSpace = SRGBColorSpace; gl.shadowMap.type = PCFSoftShadowMap; }, [gl]);
-  const arenaKey = `${arena.center.lat},${arena.center.lng},${arena.radiusKm}`, roster = players.filter((p) => p.status === 'accepted'), rosterKey = roster.map((p) => `${p.id}:${p.name}:${p.color}`).join('|');
+  const arenaKey = `${arena.center.lat},${arena.center.lng},${arena.radiusKm}`, roster = players.filter((p) => p.status === 'accepted'), rosterKey = roster.map((p) => `${p.id}:${p.name}:${p.color}:${JSON.stringify(p.hero ?? null)}`).join('|');
   // built once per arena and roster; owners and the trail arrive through setOwners / setTrail so a poll never rebuilds the board
   const land = useMemo(() => {
     const k = Math.cos((arena.center.lat * Math.PI) / 180);
     const grid = arenaCells(arena).map((key) => { const p = cellCenter(key); return {key, x: (p.lng - arena.center.lng) * M_PER_DEG * k, z: -(p.lat - arena.center.lat) * M_PER_DEG}; }); // metres east and south
-    return createTerritory({camera}, {cells: grid, kingdoms: roster.map((p) => ({id: p.id, name: p.name, color: parseInt(p.color.slice(1), 16), cast: castHero(p.name)})), owners: cells, viewerId});
+    return createTerritory({camera}, {cells: grid, kingdoms: roster.map((p) => ({id: p.id, name: p.name, color: parseInt(p.color.slice(1), 16), cast: castHero(p.name, [], p.hero)})), owners: cells, viewerId});
   }, [camera, arenaKey, rosterKey, viewerId]); // eslint-disable-line react-hooks/exhaustive-deps -- keyed on the arena and roster, not object identity
   useEffect(() => () => land.dispose(), [land]);
   useEffect(() => land.setOwners(cells), [land, cells]);

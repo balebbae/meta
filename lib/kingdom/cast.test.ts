@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {BOSS_ASSET_IDS, HERO_TIERS, castBoss, castHero, castKey} from './cast.ts';
+import {BOSS_ASSET_IDS, HERO_TIERS, castBoss, castHero, castKey, parseHero} from './cast.ts';
 
 test('every Rally boss kind is played by a catalog creature in its boss variant', () => {
   for (const kind of ['goblin', 'golem', 'dragon', 'serpent', 'yeti', 'spectre', 'beast']) {

@@ -42,7 +42,7 @@ export function IntroModal({open, invite, onClose}: {open: boolean; invite?: Int
     await fetch('/api/activities/onboarding', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({action: 'start'})}).catch(() => {});
     setBusy(null);
     close();
-    openPanel({panel: 'onboarding', step: 'tags', invite: invite?.gameId});
+    openPanel({panel: 'onboarding', step: 'character', invite: invite?.gameId});
   }, [close, invite, openPanel]);
 
   // one short line each; the details live in the steps themselves

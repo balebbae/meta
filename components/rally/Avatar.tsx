@@ -1,6 +1,6 @@
 'use client';
 import {useMemo} from 'react';
-import {castHero} from '@/lib/kingdom/cast';
+import {castHero, type HeroPick} from '@/lib/kingdom/cast';
 import {useSprite} from '@/components/kingdom/sprite';
 import styles from './avatar.module.css';
 
@@ -10,8 +10,8 @@ export type AvatarState = 'idle' | 'run' | 'attack' | 'celebrate';
  * A player's Kingdom hero: looks are fixed by their name, rank (Page to Royal Champion) by the gear they have earned.
  * The profile photo rides along as a small chip so people stay recognisable.
  */
-export function RallyAvatar({src, name, gear = [], state = 'idle', size = 96, mvp = false, className}: {src: string; name: string; gear?: string[]; state?: AvatarState; size?: number; mvp?: boolean; className?: string}) {
-  const cast = useMemo(() => castHero(name, gear), [name, gear.length]); // eslint-disable-line react-hooks/exhaustive-deps -- rank only depends on the gear count
+export function RallyAvatar({src, name, gear = [], hero = null, state = 'idle', size = 96, mvp = false, className}: {src: string; name: string; gear?: string[]; hero?: HeroPick | null; state?: AvatarState; size?: number; mvp?: boolean; className?: string}) {
+  const cast = useMemo(() => castHero(name, gear, hero), [name, gear.length, hero]); // eslint-disable-line react-hooks/exhaustive-deps -- rank only depends on the gear count
   const url = useSprite(cast, state);
   const failed = url === 'error';
   const chip = Math.round(size * 0.36);

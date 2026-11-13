@@ -164,7 +164,12 @@ export type GameSpec = {
 // ---- Messenger cards -----------------------------------------------------
 
 /** messages.kind. Each non-text kind renders through components/messages/cards. */
-export type MessageKind = 'text' | 'rally_invite' | 'rally_game' | 'quest_card' | 'turf_recap' | 'proof' | 'system';
+export type MessageKind = 'text' | 'rally_invite' | 'rally_game' | 'quest_card' | 'turf_recap' | 'proof' | 'system' | 'mirror_card' | 'swim_card';
+
+/** A dance/yoga Reel sent to a chat (lib/rally/mirror-store.ts). */
+export type MirrorCardPayload = {matchId: number; title: string; mode: 'dance' | 'yoga'; reelId: number};
+/** A swimming Reel sent to a chat (lib/rally/swim-store.ts). */
+export type SwimCardPayload = {journeyId: number; title: string; route: string; totalM: number};
 
 export type RallyInvitePayload = {gameId: number; gameType: 'turf'; title: string; arenaLabel: string; endsAt: string};
 export type QuestCardPayload = {questId: number; title: string; template: GameTemplate; bossName?: string; bossHp?: number; reelId?: number};

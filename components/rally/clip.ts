@@ -120,6 +120,65 @@ export async function recordLive(v: HTMLVideoElement, onFrame: (landmarks: (Land
   };
 }
 
+/**
+ * Mirror Match: a same-origin video URL (the Reel via /api/mirror/[id]/video) -> one pose per frame between
+ * start and end seconds at `fps`. Runs once per match, on the first player's phone.
+ */
+export async function analyzeVideoUrl(url: string, start: number, end: number, fps: number, onProgress: (p: number) => void): Promise<(Landmark[] | null)[]> {
+  const det = await getDetector();
+  const v = document.createElement('video');
+  v.muted = true;
+  v.playsInline = true;
+  v.preload = 'auto';
+  v.src = url;
+  await once(v, 'loadeddata');
+  // iOS Safari only decodes frames for seeking after a play()
+  await v.play().catch(() => {});
+  v.pause();
+  const stop = Math.min(end, Number.isFinite(v.duration) ? v.duration : end);
+  const out: (Landmark[] | null)[] = [];
+  const n = Math.max(1, Math.floor((stop - start) * fps));
+  for (let i = 0; i < n; i++) {
+    await seek(v, start + i / fps);
+    out.push(pose(det, v));
+    if (i % 4 === 0) onProgress(i / n);
+  }
+  onProgress(1);
+  v.removeAttribute('src');
+  v.load();
+  return out;
+}
+
+/** Mirror Match: stills of a same-origin video at the given seconds, plus its width/height ratio. */
+export async function stillsFromUrl(url: string, times: number[]): Promise<{urls: string[]; aspect: number}> {
+  const v = document.createElement('video');
+  v.muted = true;
+  v.playsInline = true;
+  v.preload = 'auto';
+  v.src = url;
+  await once(v, 'loadeddata');
+  await v.play().catch(() => {});
+  v.pause();
+  const urls: string[] = [];
+  for (const t of times) {
+    await seek(v, Math.min(t, Math.max(0, v.duration - 0.05)));
+    urls.push(grab(v));
+  }
+  const aspect = v.videoWidth / Math.max(1, v.videoHeight);
+  v.removeAttribute('src');
+  v.load();
+  return {urls, aspect};
+}
+
+/** Live pose on the camera feed at ~CLIP_FPS, nothing stored. Returns stop(). */
+export async function trackLive(v: HTMLVideoElement, onPose: (lm: Landmark[] | null) => void): Promise<() => void> {
+  const det = await getDetector();
+  const timer = window.setInterval(() => {
+    if (v.readyState >= 2) onPose(pose(det, v));
+  }, 1000 / CLIP_FPS);
+  return () => window.clearInterval(timer);
+}
+
 /** Video file -> one pose per frame at CLIP_FPS (null = nobody found). onProgress gets 0..1. */
 export async function analyzeClip(file: File, onProgress: (p: number, stage: 'model' | 'frames') => void): Promise<ClipFrames> {
   onProgress(0, 'model');

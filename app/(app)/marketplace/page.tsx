@@ -21,7 +21,7 @@ export default async function MarketplacePage({searchParams}: {searchParams: Pro
         <h2 className={styles.headTitle}>{category ?? "Today's picks"}</h2>
         <a className={styles.headLocation} href="#location">
           <PinIcon size={16} />
-          {MARKETPLACE_LOCATION.city} · {MARKETPLACE_LOCATION.radius}
+          {[...new Set(listings.map(listing => listing.location))].join(' · ') || MARKETPLACE_LOCATION.city}
         </a>
       </div>
       {listings.length === 0 ? (

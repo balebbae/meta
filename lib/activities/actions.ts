@@ -87,6 +87,8 @@ Rules for each item:
 - For web finds: url is the https registration or product page you actually opened or saw in results, never a guess. title is the event or product name. detail is one line (date and place, or what it is). price is one amount as shown on the page for the option you suggest (like "$55"), or "" if unknown. startsAt is the event start as an ISO date, "" for products.
 - why: one friendly sentence (max 18 words) tying it to their activity, like "You ran three times this week and this half is five weeks out."
 - Never mention weight, bodies, health or performance judgements. Do not assume gender, age or sizes; prefer unisex gear.
+- Fit their measured level (level_detail, computed from their synced workouts; it beats the self-reported activeDays): a "new" or "building" runner gets a 5k or a beginner group, not a half marathon; gear matches the activity they actually do most.
+- If easy_week is true, nothing hard this week: events at least 2 weeks out, and recovery-friendly gear is fine. Never say why.
 - Return fewer items rather than weak ones.`,
   });
   return out.items ?? [];

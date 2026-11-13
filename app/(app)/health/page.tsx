@@ -2,11 +2,12 @@
 
 import {useEffect, useState} from 'react';
 import buttons from '@/components/closeness/closeness.module.css';
+import type {FitnessLevel} from '@/lib/activities/level';
 import {layoutHealth, type HealthReading} from '@/lib/health-format';
 import styles from './health.module.css';
 
 type Sample = HealthReading & {source: string};
-type Summary = {whoop: {userId: string | null; connectedAt: string} | null; samples: Sample[]};
+type Summary = {whoop: {userId: string | null; connectedAt: string} | null; samples: Sample[]; level?: FitnessLevel};
 
 const TABS = [
   {id: 'apple_health', label: 'Apple Health'},
@@ -19,6 +20,52 @@ declare global {
     ReactNativeWebView?: {postMessage: (msg: string) => void};
     __onHealthSync?: (result: {ok: boolean; saved?: number; error?: string}) => void;
   }
+}
+
+const TIER_LABEL = {new: 'Just starting', building: 'Building', regular: 'Regular', strong: 'Strong'};
+const EASY_WHY = {recovery: 'your Whoop recovery is low', spike: 'you did a lot more than usual this week', sleep: 'you have slept under 6 hours lately'};
+const per = (n: number) => (n < 1 ? 'under 1' : `${Math.round(n)}`);
+
+/** What the user's Muse plans from: decided by code over 4 weeks of synced + logged workouts. */
+function LevelCard({level}: {level: FitnessLevel}) {
+  return (
+    <section className={styles.card}>
+      <h2 className={styles.heading}>Your level</h2>
+      <p className={styles.sub}>
+        Worked out from your last {level.weeks === 1 ? 'week' : `${level.weeks} weeks`} of workouts. Your Muse uses it for goal plans, suggestions and fair Rally games. It gets this rounded, never your Whoop numbers.
+      </p>
+      {level.easyWeek && <div className={styles.note}>Your Muse is keeping this week easy because {EASY_WHY[level.easyWeek]}.</div>}
+      <div className={styles.grid}>
+        <div className={styles.tile}>
+          <div className={styles.tileValue}>{TIER_LABEL[level.tier]}</div>
+          <div className={styles.tileLabel}>{per(level.activeDaysPerWeek)} active days a week</div>
+        </div>
+        {level.stepsPerDay != null && (
+          <div className={styles.tile}>
+            <div className={styles.tileValue}>{Math.round(level.stepsPerDay / 100) / 10}k</div>
+            <div className={styles.tileLabel}>Steps a day</div>
+          </div>
+        )}
+        {level.sleepHours != null && (
+          <div className={styles.tile}>
+            <div className={styles.tileValue}>{level.sleepHours} h</div>
+            <div className={styles.tileLabel}>Sleep a night</div>
+          </div>
+        )}
+      </div>
+      {level.activities.map(a => (
+        <div key={a.kind} className={styles.row}>
+          <span>
+            <div className={styles.rowLabel}>{a.kind[0].toUpperCase() + a.kind.slice(1)}</div>
+            <div className={styles.rowWhen}>
+              {per(a.perWeek)} a week{a.kmPerWeek ? ` · ${a.kmPerWeek} km a week` : ''}{a.trend !== 'steady' ? ` · trending ${a.trend}` : ''}
+            </div>
+          </span>
+          <span className={styles.rowValue}>{TIER_LABEL[a.tier]}</span>
+        </div>
+      ))}
+    </section>
+  );
 }
 
 function Board({samples}: {samples: HealthReading[]}) {
@@ -139,6 +186,7 @@ export default function HealthPage() {
           </button>
         </div>
       </section>
+      {summary?.level && <LevelCard level={summary.level} />}
       <section className={styles.card}>
         <div className={styles.tabs}>
           {TABS.map(item => (

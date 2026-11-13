@@ -1,6 +1,7 @@
 import {randomBytes} from 'node:crypto';
 import {sql} from '@/lib/db';
-import {cleanHealthSample} from '@/lib/health-format';
+import {insertVaultEvent} from '@/lib/activities/vault';
+import {cleanHealthSample, healthToEvents} from '@/lib/health-format';
 
 export type HealthSource = 'whoop' | 'apple_health' | 'health_connect';
 
@@ -33,6 +34,8 @@ export async function insertHealthSamples(
       insert into health_samples (user_id, source, metric, value, unit, recorded_at)
       values (${userId}, ${source}, ${s.metric}, ${s.value}, ${s.unit}, ${s.recordedAt})`;
   }
+  // the snapshot above is replaced every sync; the vault keeps the history the level and Muse read
+  for (const e of healthToEvents(userId, source, clean)) await insertVaultEvent({...e, userId});
   return clean.length;
 }
 

@@ -97,7 +97,11 @@ export type QuestionType =
   | 'rides_2w'
   | 'strength_2w'
   | 'yoga_2w'
-  | 'workouts_2w';
+  | 'workouts_2w'
+  // Code-decided level over 4 weeks (lib/activities/level.ts): rounded = tier only.
+  | 'level_4w'
+  | 'steps_avg_7d'
+  | 'sleep_avg_7d';
 
 export const QUESTION_CATEGORY: Record<QuestionType, Category> = {
   workouts_this_week: 'workouts',
@@ -113,9 +117,12 @@ export const QUESTION_CATEGORY: Record<QuestionType, Category> = {
   strength_2w: 'workouts',
   yoga_2w: 'workouts',
   workouts_2w: 'workouts',
+  level_4w: 'workouts',
   steps_today: 'steps',
+  steps_avg_7d: 'steps',
   avg_hr_this_week: 'heart',
   sleep_last_night_hours: 'sleep',
+  sleep_avg_7d: 'sleep',
 };
 
 // ---- Tags (§4 step 1) -----------------------------------------------------

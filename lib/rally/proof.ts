@@ -19,7 +19,7 @@ export async function verifyProofImage(opts: {image: string; task: string; frame
       console.info('[rally] proof check', {backend: 'glimmer', ms: Date.now() - t0, status: r.status});
       return r;
     } catch (err) {
-      console.error('[rally] glimmer proof check failed, using Ember', {ms: Date.now() - t0, error: err instanceof Error ? err.message : String(err)});
+      console.error('[rally] glimmer proof check failed, using Ember', {ms: Date.now() - t0, error: err instanceof Error ? err.name : 'unknown'});
     }
   }
   if (!museConfigured()) return {...UNVERIFIED_PROOF, verdict: 'Muse offline: proof saved, it counts once verified.'};

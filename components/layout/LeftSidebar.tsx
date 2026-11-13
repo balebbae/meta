@@ -31,6 +31,7 @@ const PRIMARY = [
   {label: 'Meta AI', href: '/meta-ai', Icon: RailMetaAIIcon},
   {label: 'Friends', href: '/friends', Icon: RailFriendsIcon},
   {label: 'Activities', href: '/activities', Icon: RailGamingIcon},
+  {label: 'Goals', href: '/activities/goals', Icon: RailGamingIcon},
   {label: 'Closeness', href: '/closeness', Icon: RailMemoriesIcon},
   {label: 'Log a workout', href: '/activities/log', Icon: RailGamingIcon},
   {label: 'Health', href: '/health', Icon: RailClimateIcon},

@@ -54,7 +54,7 @@ async function localCandidates(userId: number, tags: string[]): Promise<Candidat
       const startsAt = new Date(e.starts_at as string);
       return {candidateId: `event:${e.id}`, kind: 'event', title: e.title as string, detail: `${startsAt.toLocaleDateString('en-US', {weekday: 'short', month: 'short', day: 'numeric'})} · ${e.location}`, price: 'Free', url: `/events?id=${e.id}`, imageUrl: (e.cover_url as string) ?? null, startsAt: startsAt.toISOString(), eventId: Number(e.id), listingId: null};
     }),
-    ...pick(listings, l => l.title as string, l => l.category === 'Sporting Goods').map((l): Candidate => ({candidateId: `listing:${l.id}`, kind: 'buy', title: l.title as string, detail: `${String(l.condition).replace(/_/g, ' ')} · ${l.location} · Marketplace`, price: usd(Number(l.price_cents)), url: `/marketplace/${l.id}`, imageUrl: (l.image_url as string) ?? null, startsAt: null, eventId: null, listingId: Number(l.id)})),
+    ...pick(listings, l => l.title as string, l => l.category === 'Sporting Goods').map((l): Candidate => ({candidateId: `listing:${l.id}`, kind: 'buy', title: l.title as string, detail: `${String(l.condition).replace(/_/g, ' ')} · ${l.location} · Marketplace`, price: usd(Number(l.price_cents)), url: `/marketplace/item/${l.id}`, imageUrl: (l.image_url as string) ?? null, startsAt: null, eventId: null, listingId: Number(l.id)})),
   ];
 }
 

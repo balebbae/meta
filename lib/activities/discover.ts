@@ -252,23 +252,24 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   }
   if (mentorCards.length) sections.push({id: 'mentors', title: 'A few months ahead of you', cards: mentorCards});
 
-  // --- Learn (reels for the user's tags) ---
+  // --- Suggested reels (the /activities bento): tag matches first, topped up with popular workouts so it is never empty ---
   const reels = await sql`select id, caption, poster_url, tags, difficulty, plays from reels where is_fitness order by plays desc, id desc limit 60`.catch(() => []);
-  const reelCards: DiscoverCard[] = [];
-  for (const r of reels) {
-    const rTags = (r.tags as string[]) ?? [];
-    const matched = rTags.filter(t => tags.some(ut => ut.toLowerCase() === t.toLowerCase()));
-    if (!matched.length && tags.length) continue;
-    reelCards.push(await build({id: `reel-${r.id}`, kind: 'reel', title: (r.caption as string) || 'Workout reel', subtitle: [r.difficulty, ...rTags.slice(0, 2)].filter(Boolean).join(' · '), href: `/reels?reel=${r.id}`, cta: 'Watch', imageUrl: r.poster_url as string | null, tag: matched[0], score: matched.length * 3 + Math.min(3, Number(r.plays) / 100)}, `Tagged ${matched[0] ?? rTags[0] ?? 'fitness'}, which you follow.`));
-    if (reelCards.length >= 6) break;
-  }
-  reelCards.sort((a, b) => b.score - a.score);
-  if (reelCards.length) sections.push({id: 'learn', title: 'Learn', cards: reelCards});
+  const reelCards: DiscoverCard[] = reels
+    .map(r => {
+      const rTags = (r.tags as string[]) ?? [];
+      const matched = rTags.filter(t => tags.some(ut => ut.toLowerCase() === t.toLowerCase()));
+      const label = matched[0] ?? rTags[0] ?? 'Workouts';
+      // No Ember line: the bento shows the label, not a "why".
+      return {id: `reel-${r.id}`, kind: 'reel' as const, title: (r.caption as string) || 'Workout reel', subtitle: [r.difficulty, ...rTags.slice(0, 2)].filter(Boolean).join(' · '), href: `/reels?reel=${r.id}#activities`, cta: 'Watch', imageUrl: r.poster_url as string | null, tag: matched[0], why: `Suggested for ${label}.`, score: matched.length * 3 + Math.min(3, Number(r.plays) / 100), meta: {label}};
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 6);
+  if (reelCards.length) sections.push({id: 'learn', title: 'Suggested reels', cards: reelCards});
 
   // --- Start a game (Rally library; endpoints owned by C/D) ---
   const start: DiscoverCard[] = [
     await build({id: 'start-turf', kind: 'start', title: 'Turf', subtitle: 'Claim streets with friends on real runs and walks', href: '/activities?start=turf', cta: 'Start Turf', score: 3, meta: {template: 'turf'}}, 'Turf fits your Running tag and small-group style.'),
-    await build({id: 'start-reel', kind: 'start', title: 'Quest from a Reel', subtitle: 'Turn any workout reel into a weekly boss fight', href: '/reels', cta: 'Pick a reel', score: 2, meta: {template: 'reel'}}, 'Reels you watch can become group quests.'),
+    await build({id: 'start-reel', kind: 'start', title: 'Quest from a Reel', subtitle: 'Turn any workout reel into a weekly boss fight', href: '/reels?tab=fitness', cta: 'Pick a reel', score: 2, meta: {template: 'reel'}}, 'Reels you watch can become group quests.'),
     await build({id: 'start-sentence', kind: 'start', title: 'Quest from a sentence', subtitle: '"Run 3 km three times this week" → a game for your chat', href: '/activities?start=sentence', cta: 'Write one', score: 1, meta: {template: 'sentence'}}, 'Describe the game; Muse builds the rules.'),
   ];
   sections.push({id: 'start', title: 'Start a game', cards: start});

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useEffect, useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
-import {BellIcon, FriendsIcon, HomeIcon, MarketplaceIcon, VideoIcon} from '@/components/icons';
+import {ActivitiesIcon, BellIcon, FriendsIcon, HomeIcon, MarketplaceIcon, VideoIcon} from '@/components/icons';
 import type {User} from '@/lib/types';
 import styles from './mobile.module.css';
 
@@ -21,7 +21,7 @@ export function MobileTabBar({user}: {user?: Pick<User, 'id' | 'avatarUrl' | 'na
   const tabs = [
     {href: '/', label: 'Home', Icon: HomeIcon},
     {href: '/reels', label: 'Reels', Icon: VideoIcon},
-    {href: '/friends', label: 'Friends', Icon: FriendsIcon},
+    {href: '/activities', label: 'Activities', Icon: ActivitiesIcon},
     {href: '/marketplace', label: 'Marketplace', Icon: MarketplaceIcon},
     {href: '/notifications', label: 'Notifications', Icon: (p: {size?: number; active?: boolean}) => <BellIcon size={p.size} />, badge: notif},
   ];

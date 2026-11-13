@@ -21,7 +21,7 @@ async function post(body: {action: string; deleteHistory?: boolean}): Promise<Co
 
 /**
  * Coach mode is a mode of /activities, not a page: the Coach mode button on the goal card swaps the Activities page (children)
- * for the Coach view, drawn in a nested dark theme with a lime accent. The page always opens with it off; switching on
+ * for the Coach view; the X at the top leaves it. The page always opens with it off; switching on
  * records the opt-in (activity_profiles.coach_mode), which the Coach report needs.
  */
 export function CoachMode({initialOn, children}: {initialOn: boolean; children: ReactNode}) {

@@ -1,7 +1,8 @@
 import {sql} from '@/lib/db';
+import type {HeroPick} from '@/lib/kingdom/cast';
 
 /** Onboarding steps in order (§4). 'intro' = never started, 'done' = finished. */
-export const ONBOARDING_STEPS = ['tags', 'questions', 'connect', 'privacy', 'muse'] as const;
+export const ONBOARDING_STEPS = ['character', 'tags', 'questions', 'connect', 'privacy', 'muse'] as const;
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 export type OnboardingState = 'intro' | OnboardingStep | 'done';
 
@@ -67,6 +68,10 @@ export async function setOnboardingStep(userId: number, step: OnboardingState): 
   await sql`
     insert into activity_profiles (user_id, onboarding_step) values (${userId}, ${step})
     on conflict (user_id) do update set onboarding_step = excluded.onboarding_step, updated_at = now()`;
+}
+
+export async function saveHero(userId: number, hero: HeroPick | null): Promise<void> {
+  await sql`update users set hero = ${hero === null ? null : JSON.stringify(hero)} where id = ${userId}`;
 }
 
 export type StarterAnswers = {

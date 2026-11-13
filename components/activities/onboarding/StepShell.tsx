@@ -9,9 +9,10 @@ import {Step, Stepper} from '@astryxdesign/core/Stepper';
 import {VStack} from '@astryxdesign/core/VStack';
 import {INVITE_STEPS, ONBOARDING_STEPS, nextStep, type OnboardingStep} from '@/lib/activities/onboarding';
 import {usePanelNav} from '../panels/nav';
+import s from './onboarding.module.css';
 
-export const STEP_TITLE: Record<OnboardingStep, string> = {tags: "What you're into", questions: 'Five quick questions', connect: 'Where your workouts come from', privacy: 'What your Muse may say', muse: 'Meet your Muse'};
-const STEP_SHORT: Record<OnboardingStep, string> = {tags: 'Interests', questions: 'Questions', connect: 'Sources', privacy: 'Privacy', muse: 'Your Muse'};
+export const STEP_TITLE: Record<OnboardingStep, string> = {character: 'Pick your hero', tags: "What you're into", questions: 'Five quick questions', connect: 'Where your workouts come from', privacy: 'What your Muse may say', muse: 'Meet your Muse'};
+const STEP_SHORT: Record<OnboardingStep, string> = {character: 'Hero', tags: 'Interests', questions: 'Questions', connect: 'Sources', privacy: 'Privacy', muse: 'Your Muse'};
 
 export function exitHref(invite: number | null): string {
   return invite ? `/games/${invite}?consent=1` : '/activities';
@@ -48,22 +49,24 @@ export function StepShell({step, invite, children, save, skippable = true, conti
   }
 
   return (
-    <VStack gap={4}>
+    <VStack gap={4} className={s.step}>
       <Stepper activeStep={idx} label={`Step ${idx + 1} of ${steps.length}`} density="compact" horizontalOptions={{minimumStepWidth: 88, collapsedVariant: 'withLabel'}}>
-        {steps.map((s, i) => (
-          <Step key={s} step={i + 1} label={STEP_SHORT[s]} status={i < idx ? 'success' : 'accent'} />
+        {steps.map((st, i) => (
+          <Step key={st} step={i + 1} label={STEP_SHORT[st]} status={i < idx ? 'success' : 'accent'} />
         ))}
       </Stepper>
       <Heading level={1}>{STEP_TITLE[step]}</Heading>
       {children}
       {err && <Banner status="error" title={err} />}
-      <HStack gap={2} vAlign="center" justify="between">
-        {idx > 0 ? <Button label="Back" onClick={() => update({step: steps[idx - 1]})} /> : <Button label="Exit" variant="ghost" onClick={close} />}
-        <HStack gap={2}>
-          {skippable && <Button label="Skip" variant="ghost" isDisabled={busy} onClick={() => void go(true)} />}
-          <Button label={continueLabel} variant="primary" isLoading={busy} onClick={() => void go(false)} />
+      <div className={s.actions}>
+        <HStack gap={2} vAlign="center" justify="between">
+          {idx > 0 ? <Button label="Back" onClick={() => update({step: steps[idx - 1]})} /> : <Button label="Exit" variant="ghost" onClick={close} />}
+          <HStack gap={2}>
+            {skippable && <Button label="Skip" variant="ghost" isDisabled={busy} onClick={() => void go(true)} />}
+            <Button label={continueLabel} variant="primary" isLoading={busy} onClick={() => void go(false)} />
+          </HStack>
         </HStack>
-      </HStack>
+      </div>
     </VStack>
   );
 }

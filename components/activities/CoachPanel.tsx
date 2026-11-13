@@ -167,7 +167,7 @@ export function CoachPanel({state, onState, error: outerError, onTurnOff}: {stat
           }
           content={
             <LayoutContent>
-              <Text>Coach mode turns off and your past weekly reports are deleted. To just leave Coach mode and keep them, use the switch at the top.</Text>
+              <Text>Coach mode turns off and your past weekly reports are deleted. To just leave Coach mode and keep them, use the X at the top.</Text>
             </LayoutContent>
           }
         />

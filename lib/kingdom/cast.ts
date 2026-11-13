@@ -27,13 +27,29 @@ export function castBoss(kind: string): Cast {
 export const HERO_TIERS: Tier[] = ['page', 'squire', 'iron', 'silver', 'golden', 'champion'];
 const GENDERS: Gender[] = ['fem', 'masc', 'neutral'];
 
-/** A player's hero: looks come from their name, rank from the gear they have earned (one rank per item, Page to Royal Champion). */
-export function castHero(name: string, gear: readonly string[] = []): Cast {
+/** The hero look a player picked in onboarding; when unset, looks come from their name. */
+export type HeroPick = {gender: Gender; skin: number; seed: number};
+
+/** The picker grid: every skin tone on every silhouette, each with its own hair/face seed. */
+export const HERO_CHOICES: HeroPick[] = GENDERS.flatMap((gender, gi) => C.skin.map((skin, si) => ({gender, skin, seed: ((gi * 31 + si * 13) % 97) + 1})));
+
+export const parseHero = (v: unknown): HeroPick | null => {
+  if (v == null || typeof v !== 'object') return null;
+  const h = v as Record<string, unknown>;
+  const gender = h.gender as Gender;
+  const skin = Number(h.skin);
+  const seed = Math.floor(Number(h.seed));
+  if (!GENDERS.includes(gender) || !(C.skin as readonly number[]).includes(skin) || !(seed >= 1 && seed <= 97)) return null;
+  return {gender, skin, seed};
+};
+
+/** A player's hero: their pick when they made one, else looks come from their name; rank from the gear they have earned. */
+export function castHero(name: string, gear: readonly string[] = [], pick?: HeroPick | null): Cast {
   const h = hashString(name.trim().toLowerCase() || 'player');
   const tier = HERO_TIERS[Math.min(gear.length, HERO_TIERS.length - 1)];
   return {
     assetId: `hero-${tier}`,
-    options: {hero: {gender: GENDERS[h % 3], skin: C.skin[(h >>> 3) % C.skin.length], seed: (h % 97) + 1}},
+    options: {hero: pick ?? {gender: GENDERS[h % 3], skin: C.skin[(h >>> 3) % C.skin.length], seed: (h % 97) + 1}},
   };
 }
 

@@ -1,11 +1,12 @@
 import type {LatLng} from './engine';
+import type {HeroPick} from '@/lib/kingdom/cast';
 
 export type TurfSettings = {center: LatLng; radiusKm: number; lengthDays: number; arenaLabel: string; startsAt?: string | null};
 export type GameStatus = 'pending' | 'live' | 'ended' | 'cancelled';
 export type InviteStatus = 'invited' | 'accepted' | 'declined' | 'expired' | 'left';
 export type OutingStatus = 'open' | 'claimed' | 'cut' | 'discarded';
 
-export type TurfPlayer = {id: number; name: string; avatarUrl: string; color: string; status: InviteStatus; isHost: boolean};
+export type TurfPlayer = {id: number; name: string; avatarUrl: string; color: string; status: InviteStatus; isHost: boolean; hero?: HeroPick | null};
 export type TurfScore = {playerId: number; cells: number; rank: number};
 
 /** What an outing did, from the deterministic engine only. This is all Muse ever sees. */

@@ -8,6 +8,7 @@ import {neon, type NeonQueryFunction} from '@neondatabase/serverless';
 import {sql} from '@/lib/db';
 import {getProfile, hasOnboarded} from '@/lib/activities/onboarding';
 import type {RallyInvitePayload, SystemPayload, TurfRecapPayload} from '@/lib/activities/types';
+import {parseHero} from '@/lib/kingdom/cast';
 import {isMember, sendMessage} from '@/lib/messaging-queries';
 import {sendPushToUser} from '@/lib/push';
 import {colorAt} from './colors';
@@ -74,10 +75,10 @@ const arenaOf = (g: Game): Arena => ({center: g.settings.center, radiusKm: g.set
 
 export async function listPlayers(gameId: number): Promise<TurfPlayer[]> {
   const rows = await sql`
-    select i.user_id, i.status, i.color, u.name, u.avatar_url, (g.host_id = i.user_id) as is_host
+    select i.user_id, i.status, i.color, u.name, u.avatar_url, u.hero, (g.host_id = i.user_id) as is_host
     from game_invites i join users u on u.id = i.user_id join games g on g.id = i.game_id
     where i.game_id = ${gameId} order by (g.host_id = i.user_id) desc, i.responded_at nulls last, i.user_id`;
-  return rows.map(r => ({id: Number(r.user_id), name: String(r.name), avatarUrl: String(r.avatar_url ?? ''), color: String(r.color ?? colorAt(0)), status: r.status as InviteStatus, isHost: Boolean(r.is_host)}));
+  return rows.map(r => ({id: Number(r.user_id), name: String(r.name), avatarUrl: String(r.avatar_url ?? ''), color: String(r.color ?? colorAt(0)), status: r.status as InviteStatus, isHost: Boolean(r.is_host), hero: parseHero(r.hero)}));
 }
 
 async function cellCounts(gameId: number): Promise<{userId: number; cells: number; reachedAt: number}[]> {

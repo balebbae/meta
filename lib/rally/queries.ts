@@ -7,6 +7,7 @@ import {after} from 'next/server';
 import {sql} from '@/lib/db';
 import {ask} from '@/lib/activities/answers';
 import type {GameSpec, QuestCardPayload, RallyGamePayload, Trust} from '@/lib/activities/types';
+import {parseHero, type HeroPick} from '@/lib/kingdom/cast';
 import {insertXpEvent} from '@/lib/closeness-queries';
 import {sendMessage} from '@/lib/messaging-queries';
 import {sendPushToUser} from '@/lib/push';
@@ -378,11 +379,11 @@ async function maybeAdapt(quest: QuestRow) {
   }
 }
 
-export type QuestMember = {id: number; name: string; avatarUrl: string};
+export type QuestMember = {id: number; name: string; avatarUrl: string; hero: HeroPick | null};
 
 async function questMembers(questId: number): Promise<QuestMember[]> {
-  const rows = await sql`select u.id, u.name, u.avatar_url from quest_progress p join users u on u.id = p.user_id where p.quest_id = ${questId} order by u.id`;
-  return rows.map(r => ({id: r.id as number, name: r.name as string, avatarUrl: r.avatar_url as string}));
+  const rows = await sql`select u.id, u.name, u.avatar_url, u.hero from quest_progress p join users u on u.id = p.user_id where p.quest_id = ${questId} order by u.id`;
+  return rows.map(r => ({id: r.id as number, name: r.name as string, avatarUrl: r.avatar_url as string, hero: parseHero(r.hero)}));
 }
 
 async function userBrief(id: number): Promise<{id: number; name: string} | null> {

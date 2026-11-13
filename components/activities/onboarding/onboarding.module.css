@@ -1,0 +1,31 @@
+/* Onboarding step transitions + action bar. */
+.step {
+  animation: stepIn 240ms ease-out;
+}
+
+.actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  margin-top: 4px;
+  padding-block: 10px;
+  background: var(--fb-card);
+  border-top: 1px solid var(--fb-divider-soft);
+}
+
+@keyframes stepIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step {
+    animation: none;
+  }
+}

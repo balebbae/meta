@@ -7,7 +7,17 @@ import {cellToLatLng, gridDisk, gridPathCells, latLngToCell, polygonToCells} fro
 
 export const TURF_RES = 11;
 export const TRIM_M = 200;
+/** Per-outing trim range; see outingTrimM. */
+export const TRIM_MIN_M = 150;
+export const TRIM_MAX_M = 400;
 export const MAX_KMH = 25;
+/** fastPoints windows (s) and allowances: see there. Tuned so 20 m jitter at 1 Hz passes and a 20 km/h car in a walk doesn't. */
+const CAP_WINDOW_S = 20;
+const SLACK_M = 60;
+const SPEED_HALF_S = 30;
+const BASE_S = 60;
+/** Sustained speed jump (m/s) above the local walking/running pace treated like a speed violation. */
+export const MAX_STEP_MS = 3;
 export const CLOSE_M = 50;
 const AWAY_M = 120;
 const MAX_GAP_CELLS = 8;
@@ -17,7 +27,7 @@ export type LatLng = {lat: number; lng: number};
 export type GpsPoint = LatLng & {t: number};
 export type Arena = {center: LatLng; radiusKm: number};
 export type Zone = LatLng & {radiusM: number};
-/** hidden = inside the first/last 200 m of the outing: usable for closing a loop, never claimed or shown. */
+/** hidden = within the trim distance of the outing's ends or a privacy zone: usable for closing a loop, never claimed or shown. */
 export type TrailCell = {cell: string; t: number; hidden?: boolean};
 
 export type TrailOptions = {
@@ -26,6 +36,8 @@ export type TrailOptions = {
   maxKmh?: number;
   /** Return hidden cells too (flagged). Server-only bookkeeping; the default drops them. */
   keepHidden?: boolean;
+  /** GPS measurement noise (m) for the Kalman/RTS smoother; 0 turns smoothing off. */
+  smoothM?: number;
 };
 
 const R = 6_371_000;
@@ -57,27 +69,188 @@ export function arenaCells(arena: Arena, res = TURF_RES): string[] {
 }
 
 /**
+ * Stable per-outing trim in [150, 400) m. A fixed trim makes every visible start sit exactly trim + r from the
+ * zone centre, so N outings trilaterate it; a per-outing value blurs that ring. Seeded so replays are stable.
+ * shortcut: seed is only the outing id (guessable), mix in a server secret if outing ids become visible to other players.
+ */
+export function outingTrimM(seed: number | string): number {
+  let h = 2166136261;
+  for (const ch of String(seed)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  h = Math.imul(h ^ (h >>> 15), 2246822507);
+  h = Math.imul(h ^ (h >>> 13), 3266489909);
+  return TRIM_MIN_M + (((h ^ (h >>> 16)) >>> 0) / 2 ** 32) * (TRIM_MAX_M - TRIM_MIN_M);
+}
+
+/**
+ * Obfuscate a privacy zone once, at creation (u1, u2 uniform in [0, 1)).
+ * The stored centre c' is the true point c moved by d = 0.5 r * sqrt(u1) at angle 2 pi u2 (uniform over a disk of
+ * radius r/2), and the stored radius is r' = 1.5 r. Every point p of the original circle stays hidden:
+ * |p - c'| <= |p - c| + |c - c'| <= r + r/2 = r'. r' is the same for every offset, so it leaks nothing about d.
+ * An attacker who fits a circle to visible exit points recovers c', which is d from home (mean r/3, up to r/2).
+ */
+export function obfuscateZone(z: Zone, u1: number, u2: number): Zone {
+  const d = 0.5 * z.radiusM * Math.sqrt(u1);
+  const a = 2 * Math.PI * u2;
+  return {
+    lat: z.lat + (d * Math.sin(a)) / 111_320,
+    lng: z.lng + (d * Math.cos(a)) / (111_320 * Math.cos(rad(z.lat))),
+    radiusM: Math.round(z.radiusM * 1.5),
+  };
+}
+
+/**
+ * Per point (sorted by t): true when it is part of a stretch no runner makes (plan 5b). Judged over windows, not fix to
+ * fix, so 5-20 m phone jitter at 1 Hz can't trip it:
+ * - speed cap: displacement over >= CAP_WINDOW_S (or to the previous fix when sparser), minus SLACK_M of GPS error,
+ *   faster than maxKmh (vehicles, teleports); every point in the window is flagged.
+ * - sustained jump: speed over a +-SPEED_HALF_S window more than MAX_STEP_MS (plus a margin for the track's own
+ *   estimated jitter) above the faster of the paces BASE_S before and after (walking, then a car at 20 km/h for a
+ *   minute); the whole window is flagged.
+ * shortcut: a fast stretch longer than ~2 BASE_S under the speed cap looks like a fast runner and is kept.
+ */
+export function fastPoints(pts: GpsPoint[], maxKmh = MAX_KMH): boolean[] {
+  const maxMs = maxKmh / 3.6;
+  const n = pts.length;
+  const fast: boolean[] = new Array(n).fill(false);
+  const sec = (i: number) => pts[i].t / 1000;
+  const mark = (a: number, b: number) => {
+    for (let k = a; k <= b; k++) fast[k] = true;
+  };
+  for (let i = 1, j = 0; i < n; i++) {
+    while (j < i - 1 && sec(i) - sec(j + 1) >= CAP_WINDOW_S) j++;
+    const d = haversineM(pts[j], pts[i]) - SLACK_M;
+    const dt = sec(i) - sec(j);
+    if (d > 0 && (dt <= 0 || d / dt > maxMs)) mark(j + 1, i);
+  }
+  const win: [number, number][] = [];
+  const v = pts.map((_, i) => {
+    let a = i;
+    let b = i;
+    while (a > 0 && sec(i) - sec(a - 1) <= SPEED_HALF_S) a--;
+    while (b < n - 1 && sec(b + 1) - sec(i) <= SPEED_HALF_S) b++;
+    win.push([a, b]);
+    const dt = sec(b) - sec(a);
+    return dt >= SPEED_HALF_S ? haversineM(pts[a], pts[b]) / dt : NaN;
+  });
+  // jitter estimate: |p[i-1] + p[i+1] - 2 p[i]| of 2-D noise sigma has median 2.88 sigma
+  const dd = pts.slice(1, -1).map((p, k) => 2 * haversineM(p, {lat: (pts[k].lat + pts[k + 2].lat) / 2, lng: (pts[k].lng + pts[k + 2].lng) / 2}));
+  const sigma = dd.length ? dd.sort((a, b) => a - b)[dd.length >> 1] / 2.88 : 0;
+  // two window speeds differ by ~sigma / SPEED_HALF_S from noise alone; allow 2 of those
+  const step = MAX_STEP_MS + (2 * sigma) / SPEED_HALF_S;
+  const at = (i: number, ds: number) => {
+    let k = i;
+    while (k + Math.sign(ds) >= 0 && k + Math.sign(ds) < n && Math.abs(sec(k) - sec(i)) < Math.abs(ds)) k += Math.sign(ds);
+    return Math.abs(sec(k) - sec(i)) >= Math.abs(ds) * 0.9 ? v[k] : NaN;
+  };
+  for (let i = 0; i < n; i++) {
+    if (!(v[i] > step)) continue;
+    // pace a minute before and after; the faster one is the base, so a U-turn (displacement ~0) is not a slow base
+    const base = Math.max(...[at(i, -BASE_S), at(i, BASE_S)].filter(x => !Number.isNaN(x)));
+    if (base > -Infinity && v[i] - base > step) mark(...win[i]);
+  }
+  return fast;
+}
+
+/** Default GPS measurement noise (m) for smoothTrack: typical phone fix error in the open. */
+export const GPS_NOISE_M = 10;
+/** White-noise acceleration (m^2/s^3) of the constant-velocity model: lets a runner turn a corner in a few seconds. */
+const ACCEL_NOISE = 1;
+
+/**
+ * Constant-velocity Kalman filter + Rauch-Tung-Striebel smoother over one run of points (sorted by t), in local
+ * metres around the first point. x and y are independent 1-D [position, velocity] filters. Returns smoothed lat/lng.
+ */
+export function smoothTrack(pts: GpsPoint[], noiseM = GPS_NOISE_M): LatLng[] {
+  if (pts.length < 3 || !(noiseM > 0)) return pts.map(p => ({lat: p.lat, lng: p.lng}));
+  const o = pts[0];
+  const mLat = (Math.PI / 180) * R;
+  const mLng = mLat * Math.cos(rad(o.lat));
+  const axis = (z: number[]): number[] => {
+    const r = noiseM * noiseM;
+    const n = z.length;
+    // filtered state/covariance (f) and one-step prediction (p) per point; P = [a b; b c]
+    const f: number[][] = [];
+    const p: number[][] = [];
+    let [x, v, a, b, c] = [z[0], 0, r, 0, 100]; // velocity prior: 0 +- 10 m/s
+    for (let i = 0; i < n; i++) {
+      if (i > 0) {
+        const dt = Math.max(0, (pts[i].t - pts[i - 1].t) / 1000);
+        const q = ACCEL_NOISE;
+        x += v * dt;
+        [a, b, c] = [a + 2 * dt * b + dt * dt * c + (q * dt ** 3) / 3, b + dt * c + (q * dt * dt) / 2, c + q * dt];
+      }
+      p.push([x, v, a, b, c]);
+      const k0 = a / (a + r);
+      const k1 = b / (a + r);
+      const y = z[i] - x;
+      [x, v] = [x + k0 * y, v + k1 * y];
+      [a, b, c] = [(1 - k0) * a, (1 - k0) * b, c - k1 * b];
+      f.push([x, v, a, b, c]);
+    }
+    const out = new Array<number>(n);
+    let [sx, sv] = [f[n - 1][0], f[n - 1][1]];
+    out[n - 1] = sx;
+    for (let i = n - 2; i >= 0; i--) {
+      const [fx, fv, fa, fb, fc] = f[i];
+      const [px, pv, pa, pb, pc] = p[i + 1];
+      const dt = Math.max(0, (pts[i + 1].t - pts[i].t) / 1000);
+      // C = P_f F^T P_p^-1, with P_f F^T = [fa + dt fb, fb; fb + dt fc, fc]
+      const det = pa * pc - pb * pb || 1e-9;
+      const [m00, m01, m10, m11] = [fa + dt * fb, fb, fb + dt * fc, fc];
+      const c00 = (m00 * pc - m01 * pb) / det;
+      const c01 = (m01 * pa - m00 * pb) / det;
+      const c10 = (m10 * pc - m11 * pb) / det;
+      const c11 = (m11 * pa - m10 * pb) / det;
+      [sx, sv] = [fx + c00 * (sx - px) + c01 * (sv - pv), fv + c10 * (sx - px) + c11 * (sv - pv)];
+      out[i] = sx;
+    }
+    return out;
+  };
+  const xs = axis(pts.map(p => (p.lng - o.lng) * mLng));
+  const ys = axis(pts.map(p => (p.lat - o.lat) * mLat));
+  return pts.map((_, i) => ({lat: o.lat + ys[i] / mLat, lng: o.lng + xs[i] / mLng}));
+}
+
+/**
  * GPS points -> ordered trail cells.
- * Drops: points outside the arena circle, points inside a privacy zone, stretches faster than 25 km/h
- * (bikes, cars, GPS jumps). Hides the first and last 200 m of path. Consecutive kept points are joined
+ * Drops: points outside the arena circle, points inside a privacy zone, stretches faster than 25 km/h or
+ * that jump implausibly above the pace around them (bikes, cars, GPS jumps; see fastPoints). Hides the path within trimM of the outing's
+ * start/end and of every privacy-zone exit/entry, so a zone's edge is never drawn. Consecutive kept points are joined
  * with the H3 grid path so sparse GPX tracks still leave a continuous trail.
+ * Each unbroken run of kept points is smoothed (smoothTrack) before cell assignment. The speed, arena and zone filters
+ * judge the raw points; a smoothed point that would land in a zone or outside the arena keeps its raw position.
+ * Trim distances are measured along the smoothed path, which is closer to the true distance than the jittery (longer) raw path.
  */
 export function pointsToCells(points: GpsPoint[], arena: Arena, opts: TrailOptions = {}): TrailCell[] {
   const trimM = opts.trimM ?? TRIM_M;
-  const maxMs = ((opts.maxKmh ?? MAX_KMH) * 1000) / 3600;
   const zones = opts.zones ?? [];
   const pts = points.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng) && Number.isFinite(p.t)).sort((a, b) => a.t - b.t);
   if (!pts.length) return [];
 
-  const cum: number[] = [0];
-  const fast: boolean[] = [false];
-  for (let i = 1; i < pts.length; i++) {
-    const d = haversineM(pts[i - 1], pts[i]);
-    const dt = (pts[i].t - pts[i - 1].t) / 1000;
-    cum.push(cum[i - 1] + d);
-    fast.push(d > 0 && (dt <= 0 || d / dt > maxMs));
+  const fast = fastPoints(pts, opts.maxKmh ?? MAX_KMH);
+  const inZone = pts.map(p => zones.some(z => haversineM(p, z) <= z.radiusM));
+  const ok = pts.map((p, i) => !fast[i] && inArena(p, arena) && !inZone[i]);
+  const pos: LatLng[] = pts.slice();
+  for (let i = 0, j = 0; i < pts.length; i = j + 1) {
+    for (j = i; j < pts.length && ok[j]; j++);
+    smoothTrack(pts.slice(i, j), opts.smoothM ?? GPS_NOISE_M).forEach((s, k) => {
+      if (inArena(s, arena) && !zones.some(z => haversineM(s, z) <= z.radiusM)) pos[i + k] = s;
+    });
   }
-  const total = cum[cum.length - 1];
+  // Path distance on the smoothed track: jitter inflates raw path length (~2x at 12 m noise), which would shrink the trim.
+  const cum: number[] = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + haversineM(pos[i - 1], pos[i]));
+  // path distance since the previous / until the next zone point (or the outing's start / end)
+  const since: number[] = [];
+  const until: number[] = [];
+  for (let i = 0, edge = 0; i < pts.length; i++) {
+    if (inZone[i]) edge = cum[i];
+    since.push(cum[i] - edge);
+  }
+  for (let i = pts.length - 1, edge = cum[pts.length - 1]; i >= 0; i--) {
+    if (inZone[i]) edge = cum[i];
+    until[i] = edge - cum[i];
+  }
 
   const out: TrailCell[] = [];
   const push = (cell: string, t: number, hidden: boolean) => {
@@ -91,13 +264,12 @@ export function pointsToCells(points: GpsPoint[], arena: Arena, opts: TrailOptio
 
   let prev: {cell: string; t: number; hidden: boolean} | null = null;
   for (let i = 0; i < pts.length; i++) {
-    const p = pts[i];
-    const ok = !fast[i] && inArena(p, arena) && !zones.some(z => haversineM(p, z) <= z.radiusM);
-    if (!ok) {
+    if (!ok[i]) {
       prev = null;
       continue;
     }
-    const hidden = cum[i] < trimM || total - cum[i] < trimM;
+    const p = {...pos[i], t: pts[i].t};
+    const hidden = since[i] < trimM || until[i] < trimM;
     const cell = latLngToCell(p.lat, p.lng, TURF_RES);
     if (prev && prev.cell !== cell) {
       let path: string[] = [];

@@ -8,19 +8,19 @@ import {MARKETPLACE_CATEGORIES, MARKETPLACE_LOCATION} from '@/lib/secondary-data
 import panel from './secondary.module.css';
 import styles from './marketplace.module.css';
 
-export function MarketplacePanel({activeCategory}: {activeCategory?: string}) {
+export function MarketplacePanel({activeCategory, activeTab}: {activeCategory?: string; activeTab?: string}) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <PanelHeader title="Marketplace" />
       <PanelSearch placeholder="Search Marketplace" />
-      <PanelRow icon={<StoreIcon />} label="Browse all" href="/marketplace" active={!activeCategory} />
-      <PanelRow icon={<BriefcaseIcon />} label="Jobs" href="/marketplace?tab=jobs" />
-      <PanelRow icon={<BellIcon />} label="Notifications" href="/marketplace?tab=notifications" />
-      <PanelRow icon={<InboxIcon />} label="Inbox" href="/marketplace?tab=inbox" />
-      <PanelRow icon={<ShieldIcon />} label="Marketplace status" href="/marketplace?tab=status" />
-      <PanelRow icon={<TagIcon />} label="Buying" href="/marketplace?tab=buying" chevron />
-      <PanelRow icon={<DollarIcon />} label="Selling" href="/marketplace?tab=selling" chevron />
+      <PanelRow icon={<StoreIcon />} label="Browse all" href="/marketplace" active={!activeCategory && !activeTab} />
+      <PanelRow icon={<BriefcaseIcon />} label="Jobs" href="/marketplace?tab=jobs" active={activeTab === 'jobs'} />
+      <PanelRow icon={<BellIcon />} label="Notifications" href="/marketplace?tab=notifications" active={activeTab === 'notifications'} />
+      <PanelRow icon={<InboxIcon />} label="Inbox" href="/marketplace?tab=inbox" active={activeTab === 'inbox'} />
+      <PanelRow icon={<ShieldIcon />} label="Marketplace status" href="/marketplace?tab=status" active={activeTab === 'status'} />
+      <PanelRow icon={<TagIcon />} label="Buying" href="/marketplace?tab=buying" active={activeTab === 'buying'} chevron />
+      <PanelRow icon={<DollarIcon />} label="Selling" href="/marketplace?tab=selling" active={activeTab === 'selling'} chevron />
       <button type="button" className={panel.panelButton} onClick={() => setOpen(true)}>
         <PlusIcon size={16} />
         Create new listing

@@ -60,7 +60,8 @@ self.addEventListener('push', event => {
     icon: data.icon || '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
     tag: data.tag || 'fb',
-    renotify: true,
+    renotify: data.renotify !== false,
+    silent: data.silent === true,
     data: {url: data.url || '/'},
   };
   event.waitUntil(self.registration.showNotification(title, options));

@@ -1,20 +1,25 @@
 'use client';
-import type {ReactNode} from 'react';
-import {Glyph} from './glyphs';
 import {useState} from 'react';
-import {ChevronDownIcon, ChevronUpIcon} from '@/components/icons';
+import {Footprints, HeartPulse, MapPin, Moon, PersonStanding, Scale, type LucideIcon} from 'lucide-react';
+import {Banner} from '@astryxdesign/core/Banner';
+import {Collapsible, CollapsibleGroup} from '@astryxdesign/core/Collapsible';
+import {Grid} from '@astryxdesign/core/Grid';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Icon} from '@astryxdesign/core/Icon';
+import {Selector} from '@astryxdesign/core/Selector';
+import {Text} from '@astryxdesign/core/Text';
+import {VStack} from '@astryxdesign/core/VStack';
 import {AUDIENCE_LABEL, CATEGORY_EXAMPLE, CATEGORY_LABEL, LEVEL_HELP, LEVEL_LABEL, categorySummary} from '@/lib/activities/summary';
 import type {PolicyMatrix} from '@/lib/activities/policies';
 import {AUDIENCES, CATEGORIES, type Audience, type Category, type ShareLevel} from '@/lib/activities/types';
-import styles from './activities.module.css';
 
 const LEVELS: ShareLevel[] = ['exact', 'rounded', 'boolean', 'muse_only', 'none'];
-const ICON: Record<Category, ReactNode> = {workouts: Glyph.run(), steps: Glyph.steps(), heart: Glyph.heart(), sleep: Glyph.sleep(), body: Glyph.body(), location: Glyph.location()};
+export const CATEGORY_ICON: Record<Category, LucideIcon> = {workouts: PersonStanding, steps: Footprints, heart: HeartPulse, sleep: Moon, body: Scale, location: MapPin};
 
 /** Category × audience grid with the five levels (§7.2). Saves each change with PUT /api/privacy/policies. */
 export function PrivacyMatrix({initial, onChange, compact}: {initial: PolicyMatrix; onChange?: (m: PolicyMatrix) => void; compact?: boolean}) {
   const [matrix, setMatrix] = useState<PolicyMatrix>(initial);
-  const [open, setOpen] = useState<Category | null>(compact ? null : 'heart');
+  const [open, setOpen] = useState<string>(compact ? '' : 'heart');
   const [saving, setSaving] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -31,58 +36,51 @@ export function PrivacyMatrix({initial, onChange, compact}: {initial: PolicyMatr
   }
 
   return (
-    <div>
-      {CATEGORIES.map(c => {
-        const isOpen = open === c;
-        return (
-          <div key={c} className={styles.matrixRow}>
-            <button className={styles.matrixHead} onClick={() => setOpen(isOpen ? null : c)} aria-expanded={isOpen}>
-              <span className={styles.iconBox} aria-hidden>
-                {ICON[c]}
-              </span>
-              <span className={styles.grow}>
-                <span className={styles.title}>{CATEGORY_LABEL[c]}</span>
-                <span className={styles.small} style={{display: 'block'}}>
-                  {categorySummary(matrix, c)}
-                </span>
-              </span>
-              <span className={styles.muted}>{isOpen ? <ChevronUpIcon size={20} /> : <ChevronDownIcon size={20} />}</span>
-            </button>
-            {isOpen && (
-              <div className={styles.matrixGrid}>
-                <span className={styles.small} style={{gridColumn: '1 / -1'}}>
-                  {CATEGORY_EXAMPLE[c]}
-                </span>
-                {AUDIENCES.map(a => (
-                  <AudienceRow key={a} audience={a} value={matrix[c][a]} busy={saving === `${c}:${a}`} onChange={l => void update(c, a, l)} />
-                ))}
-                <span className={styles.levelHelp}>{LEVELS.map(l => `${LEVEL_LABEL[l]}: ${LEVEL_HELP[l]}`).join(' · ')}</span>
-              </div>
-            )}
-          </div>
-        );
-      })}
-      {err && <div className={styles.err}>{err}</div>}
-    </div>
-  );
-}
-
-function AudienceRow({audience, value, busy, onChange}: {audience: Audience; value: ShareLevel; busy: boolean; onChange: (l: ShareLevel) => void}) {
-  const owner = audience === 'only_me';
-  const options = owner ? (['exact', 'none'] as ShareLevel[]) : LEVELS;
-  return (
-    <>
-      <label className={styles.title} style={{fontWeight: 500}} htmlFor={`pol-${audience}`}>
-        {AUDIENCE_LABEL[audience]}
-        {owner && <span className={styles.small}> (you always see exact, or don&apos;t import it)</span>}
-      </label>
-      <select id={`pol-${audience}`} className={styles.select} value={value} disabled={busy} onChange={e => onChange(e.target.value as ShareLevel)} aria-label={`${AUDIENCE_LABEL[audience]} level`}>
-        {options.map(l => (
-          <option key={l} value={l}>
-            {owner && l === 'none' ? 'Not imported' : LEVEL_LABEL[l]}
-          </option>
+    <VStack gap={2}>
+      <CollapsibleGroup type="single" value={open} onChange={v => setOpen(String(v ?? ''))} hasDividers>
+        {CATEGORIES.map(c => (
+          <Collapsible
+            key={c}
+            value={c}
+            trigger={
+              <HStack gap={3} vAlign="center">
+                <Icon icon={CATEGORY_ICON[c]} size="md" color="accent" />
+                <VStack gap={0.5}>
+                  <Text weight="bold">{CATEGORY_LABEL[c]}</Text>
+                  <Text type="supporting" color="secondary">
+                    {categorySummary(matrix, c)}
+                  </Text>
+                </VStack>
+              </HStack>
+            }>
+            <VStack gap={3} paddingBlock={2}>
+              <Text type="supporting" color="secondary">
+                {CATEGORY_EXAMPLE[c]}
+              </Text>
+              <Grid columns={{minWidth: 200}} gap={3}>
+                {AUDIENCES.map(a => {
+                  const owner = a === 'only_me';
+                  return (
+                    <Selector
+                      key={a}
+                      label={AUDIENCE_LABEL[a]}
+                      description={owner ? 'You always see exact, or don’t import it' : undefined}
+                      options={(owner ? (['exact', 'none'] as ShareLevel[]) : LEVELS).map(l => ({value: l, label: owner && l === 'none' ? 'Not imported' : LEVEL_LABEL[l]}))}
+                      value={matrix[c][a]}
+                      isLoading={saving === `${c}:${a}`}
+                      onChange={l => void update(c, a, l as ShareLevel)}
+                    />
+                  );
+                })}
+              </Grid>
+              <Text type="supporting" color="secondary">
+                {LEVELS.map(l => `${LEVEL_LABEL[l]}: ${LEVEL_HELP[l]}`).join(' · ')}
+              </Text>
+            </VStack>
+          </Collapsible>
         ))}
-      </select>
-    </>
+      </CollapsibleGroup>
+      {err && <Banner status="error" title={err} />}
+    </VStack>
   );
 }

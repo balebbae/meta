@@ -21,6 +21,7 @@ export const turfApi = {
   respond: (id: number, status: 'accepted' | 'declined', locationConsent = false) => call<TurfState>(`/api/games/${id}/invites/respond`, post({status, locationConsent})),
   resend: (id: number) => call<{sent: number; state: TurfState}>(`/api/games/${id}/invites/resend`, post()),
   start: (id: number) => call<TurfState>(`/api/games/${id}/start`, post()),
+  importStrava: (id: number) => call<{gained: number}>(`/api/games/${id}/strava`, post()),
   leave: (id: number) => call<TurfState>(`/api/games/${id}/leave`, post()),
   startOuting: (id: number) => call<{outing: MyOuting}>(`/api/games/${id}/outings`, post()),
   points: (id: number, outingId: number, points: GpsPoint[], finish = false) => call<PointsResult>(`/api/games/${id}/outings/${outingId}`, post({points, finish}, 'PATCH')),

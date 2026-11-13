@@ -1,7 +1,9 @@
 import type {ReactNode} from 'react';
 import Link from 'next/link';
 import styles from './secondary.module.css';
-import {ChevronRightIcon, GearIcon, SearchIcon} from './icons';
+import {ChevronRightIcon, GearIcon} from './icons';
+
+export {PanelSearch} from './PanelSearch';
 
 export function SecondaryLayout({panel, children, center}: {panel: ReactNode; children: ReactNode; center?: boolean}) {
   return (
@@ -25,15 +27,6 @@ export function PanelHeader({title, subtitle, settings = true}: {title: string; 
       </div>
       {subtitle && <div className={styles.panelSubtitle}>{subtitle}</div>}
     </>
-  );
-}
-
-export function PanelSearch({placeholder}: {placeholder: string}) {
-  return (
-    <div className={styles.search}>
-      <SearchIcon />
-      <input type="search" placeholder={placeholder} aria-label={placeholder} />
-    </div>
   );
 }
 

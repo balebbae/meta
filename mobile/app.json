@@ -1,17 +1,51 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "Facebook",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Meta reads steps, sleep, heart rate, and workouts so friends can see real-life closeness.",
+        "NSHealthUpdateUsageDescription": "Meta does not write to Apple Health.",
+        "NSCameraUsageDescription": "Facebook uses the camera for video calls.",
+        "NSMicrophoneUsageDescription": "Facebook uses the microphone for voice and video calls."
+      },
+      "bundleIdentifier": "com.veerms.mobile"
     },
     "android": {
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_DISTANCE",
+        "android.permission.health.READ_FLOORS_CLIMBED",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.READ_TOTAL_CALORIES_BURNED",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_RESTING_HEART_RATE",
+        "android.permission.health.READ_HEART_RATE_VARIABILITY",
+        "android.permission.health.READ_EXERCISE",
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_HEIGHT",
+        "android.permission.health.READ_BODY_FAT",
+        "android.permission.health.READ_LEAN_BODY_MASS",
+        "android.permission.health.READ_OXYGEN_SATURATION",
+        "android.permission.health.READ_RESPIRATORY_RATE",
+        "android.permission.health.READ_VO2_MAX",
+        "android.permission.health.READ_BLOOD_PRESSURE",
+        "android.permission.health.READ_BLOOD_GLUCOSE",
+        "android.permission.health.READ_BODY_TEMPERATURE",
+        "android.permission.health.READ_HYDRATION",
+        "android.permission.health.READ_NUTRITION"
+      ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0866FF",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -22,7 +56,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-status-bar"
+      "./plugins/withHealthReader.js",
+      "expo-status-bar",
+      [
+        "react-native-health",
+        {
+          "healthSharePermission": "Meta reads steps, sleep, heart rate, and workouts so friends can see real-life closeness.",
+          "healthUpdatePermission": "Meta does not write to Apple Health."
+        }
+      ]
     ]
   }
 }

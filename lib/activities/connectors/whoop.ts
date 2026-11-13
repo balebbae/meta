@@ -17,8 +17,9 @@ export function whoopConfigured(): boolean {
   return Boolean(process.env.WHOOP_CLIENT_ID?.trim() && process.env.WHOOP_CLIENT_SECRET?.trim());
 }
 
+/** Same URI as the Health flow so WHOOP needs exactly one pre-registered redirect URL; /api/whoop/callback hands this flow back to /api/connect/whoop/callback. */
 function redirectUri(origin: string) {
-  return `${origin}/api/connect/whoop/callback`;
+  return `${origin}/api/whoop/callback`;
 }
 
 type Tokens = {access_token: string; refresh_token: string; expires_at: number; scope?: string; state?: string; last_sync?: string};
@@ -131,8 +132,11 @@ export async function backfill(conn: Connection, limit = 25): Promise<number> {
 }
 
 /** base64(HMAC_SHA256(timestamp + rawBody, client_secret)) == X-WHOOP-Signature */
-export function verifyWhoopSignature(rawBody: string, timestamp: string | null, signature: string | null, secret = process.env.WHOOP_CLIENT_SECRET ?? ''): boolean {
+export function verifyWhoopSignature(rawBody: string, timestamp: string | null, signature: string | null, secret = process.env.WHOOP_CLIENT_SECRET ?? '', now = Date.now()): boolean {
   if (!timestamp || !signature || !secret) return false;
+  // Reject captured webhooks replayed later: the signed timestamp must be within 5 minutes (ms or s epoch).
+  const ts = Number(timestamp);
+  if (!Number.isFinite(ts) || Math.abs(now - (ts > 1e12 ? ts : ts * 1000)) > 5 * 60_000) return false;
   const expected = createHmac('sha256', secret).update(timestamp + rawBody).digest('base64');
   const a = Buffer.from(expected);
   const b = Buffer.from(signature);

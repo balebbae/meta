@@ -28,6 +28,8 @@ export type Reel = {
   /** Quests started from this Reel ("played by N squads"); shown only when > 0. */
   squads: number;
   attribution: string;
+  /** From the fitness library (`reels`), not `feed_reels`: shown with #activities and a Challenge button. */
+  fitness: boolean;
 };
 
 const SELECT = () => sql`
@@ -62,6 +64,7 @@ function mapReel(r: Record<string, unknown>): Reel {
     plays: Number(r.plays ?? 0),
     squads: Number(r.squads ?? 0),
     attribution: creator ? `Video by ${creator} on Pixabay` : 'Video on Pixabay',
+    fitness: true,
   };
 }
 
@@ -87,8 +90,43 @@ export async function getReel(id: number): Promise<Reel | null> {
 }
 
 
-export async function recordPlay(id: number): Promise<number | null> {
+/** Counts one play and remembers who watched (reel_plays, latest play per user) for interest suggestions. */
+export async function recordPlay(id: number, userId: number): Promise<number | null> {
   const rows = await sql`update reels set plays = plays + 1 where id = ${id} returning plays`;
-  return rows[0] ? Number(rows[0].plays) : null;
+  if (!rows[0]) return null;
+  await sql`insert into reel_plays (user_id, reel_id) values (${userId}, ${id}) on conflict (user_id, reel_id) do update set played_at = now()`.catch(() => {});
+  return Number(rows[0].plays);
+}
+
+// ---- General "For you" Reels (feed_reels) ------------------------------------------------------
+// Same shape as a fitness Reel so one viewer renders both; the fitness-only fields stay empty.
+
+const FEED_SELECT = () => sql`
+  select id, pixabay_id, video_url, poster_url, duration_sec, width, height, creator_name, creator_url, source_url, caption, tags, plays
+  from feed_reels`;
+
+function mapFeedReel(r: Record<string, unknown>): Reel {
+  return {...mapReel({...r, pexels_id: r.pixabay_id, slug: null, transcript: null, synthetic: false, exercises: [], difficulty: null, equipment: [], setting: null, confidence: null, squads: 0}), fitness: false};
+}
+
+/** Newest-first page of general Reels; [] when the table isn't there yet so /reels still renders. */
+export async function listFeedReels(opts: {after?: number; limit?: number} = {}): Promise<Reel[]> {
+  const limit = Math.min(50, Math.max(1, opts.limit ?? 20));
+  try {
+    const rows = opts.after ? await sql`${FEED_SELECT()} where id < ${opts.after} order by id desc limit ${limit}` : await sql`${FEED_SELECT()} order by id desc limit ${limit}`;
+    return rows.map(mapFeedReel);
+  } catch (err) {
+    console.error('[reels] feed_reels unavailable', err instanceof Error ? err.message : err);
+    return [];
+  }
+}
+
+export async function getFeedReel(id: number): Promise<Reel | null> {
+  const rows = await sql`${FEED_SELECT()} where id = ${id}`.catch(() => []);
+  return rows[0] ? mapFeedReel(rows[0]) : null;
+}
+
+export async function recordFeedPlay(id: number): Promise<void> {
+  await sql`update feed_reels set plays = plays + 1 where id = ${id}`;
 }
 

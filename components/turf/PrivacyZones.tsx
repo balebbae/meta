@@ -39,7 +39,7 @@ export function PrivacyZones({arena, position}: {arena: Arena; position: LatLng 
         Privacy zones{zones?.length ? ` (${zones.length})` : ''}
       </summary>
       <p className={styles.muted} style={{margin: '8px 0'}}>
-        GPS points within 200 m of a zone are dropped before they reach any game. Only you can see your zones.
+        GPS points within 200 m of a zone are dropped before they reach any game. Each zone is saved slightly offset and enlarged so your exact spot can&apos;t be worked out. Only you can see your zones.
       </p>
       {zones?.map(z => (
         <div key={z.id} className={styles.legendRow}>

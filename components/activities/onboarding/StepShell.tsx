@@ -1,17 +1,22 @@
 'use client';
-import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useState, type ReactNode} from 'react';
+import {Banner} from '@astryxdesign/core/Banner';
+import {Button} from '@astryxdesign/core/Button';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Step, Stepper} from '@astryxdesign/core/Stepper';
+import {VStack} from '@astryxdesign/core/VStack';
 import {INVITE_STEPS, ONBOARDING_STEPS, nextStep, type OnboardingStep} from '@/lib/activities/onboarding';
-import styles from '../activities.module.css';
 
 export const STEP_TITLE: Record<OnboardingStep, string> = {tags: "What you're into", questions: 'Five quick questions', connect: 'Where your workouts come from', privacy: 'What your Muse may say', muse: 'Meet your Muse'};
+const STEP_SHORT: Record<OnboardingStep, string> = {tags: 'Interests', questions: 'Questions', connect: 'Sources', privacy: 'Privacy', muse: 'Your Muse'};
 
 export function exitHref(invite: number | null): string {
   return invite ? `/games/${invite}?consent=1` : '/activities';
 }
 
-/** Progress bar + Back / Skip / Continue. `save` runs before advancing and may throw to stay on the step. */
+/** Stepper + Back / Skip / Continue. `save` runs before advancing and may throw to stay on the step. */
 export function StepShell({step, invite, children, save, skippable = true, continueLabel = 'Continue'}: {step: OnboardingStep; invite: number | null; children: ReactNode; save?: () => Promise<void>; skippable?: boolean; continueLabel?: string}) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -35,38 +40,22 @@ export function StepShell({step, invite, children, save, skippable = true, conti
   }
 
   return (
-    <main className={styles.page}>
-      <div className={styles.progress} aria-label={`Step ${idx + 1} of ${steps.length}`}>
+    <VStack gap={4} paddingBlock={4}>
+      <Stepper activeStep={idx} label={`Step ${idx + 1} of ${steps.length}`} density="compact" horizontalOptions={{minimumStepWidth: 88, collapsedVariant: 'withLabel'}}>
         {steps.map((s, i) => (
-          <span key={s} className={i <= idx ? styles.progressOn : styles.progressDot} />
+          <Step key={s} step={i + 1} label={STEP_SHORT[s]} status={i < idx ? 'success' : 'accent'} />
         ))}
-      </div>
-      <h1 className={styles.h1}>{STEP_TITLE[step]}</h1>
+      </Stepper>
+      <Heading level={1}>{STEP_TITLE[step]}</Heading>
       {children}
-      {err && <div className={styles.err}>{err}</div>}
-      <div className={styles.stepNav}>
-        <span className={styles.row}>
-          {idx > 0 ? (
-            <Link href={`/activities/onboarding/${steps[idx - 1]}${q}`} className={styles.btn}>
-              Back
-            </Link>
-          ) : (
-            <Link href={exitHref(null)} className={styles.btnText}>
-              Exit
-            </Link>
-          )}
-        </span>
-        <span className={styles.row}>
-          {skippable && (
-            <button className={styles.btnText} disabled={busy} onClick={() => void go(true)}>
-              Skip
-            </button>
-          )}
-          <button className={styles.btnPrimary} disabled={busy} onClick={() => void go(false)}>
-            {busy ? 'Saving…' : continueLabel}
-          </button>
-        </span>
-      </div>
-    </main>
+      {err && <Banner status="error" title={err} />}
+      <HStack gap={2} vAlign="center" justify="between">
+        {idx > 0 ? <Button label="Back" href={`/activities/onboarding/${steps[idx - 1]}${q}`} /> : <Button label="Exit" variant="ghost" href={exitHref(null)} />}
+        <HStack gap={2}>
+          {skippable && <Button label="Skip" variant="ghost" isDisabled={busy} onClick={() => void go(true)} />}
+          <Button label={continueLabel} variant="primary" isLoading={busy} onClick={() => void go(false)} />
+        </HStack>
+      </HStack>
+    </VStack>
   );
 }

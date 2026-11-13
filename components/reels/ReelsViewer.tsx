@@ -2,17 +2,36 @@
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import Link from 'next/link';
+import {useRouter} from 'next/navigation';
 import type {Reel} from '@/lib/reels';
 import {BookmarkIcon, ChevronDownIcon, ChevronUpIcon, CommentIcon, LikeIcon, ShareIcon} from '@/components/icons';
 import ChallengeDialog from './ChallengeDialog';
 import styles from './reels.module.css';
 
-type Props = {initialReels: Reel[]; nextAfter: number | null; initialTag?: string};
+type Page = {reels: Reel[]; nextAfter: number | null};
+type Props = {
+  /** The AI-tagged fitness library (Challenge the GC), shown inside the feed with #activities. */
+  fitness: Page;
+  /** General "For you" Reels. */
+  feed: Page;
+  /** A shared reel (?reel= / ?feed=) to show first. */
+  first?: Reel | null;
+  initialTag?: string;
+};
 type Toast = {text: string; href?: string; hrefLabel?: string; error?: boolean};
 
-export default function ReelsViewer({initialReels, nextAfter, initialTag}: Props) {
-  const [reels, setReels] = useState(initialReels);
-  const [after, setAfter] = useState(nextAfter);
+const API = {fitness: '/api/reels', feed: '/api/reels/feed'} as const;
+// Two tables, so ids can collide across them.
+const keyOf = (r: Reel) => `${r.fitness ? 'f' : 'g'}${r.id}`;
+const mix = (feed: Reel[], fitness: Reel[]) => Array.from({length: Math.max(feed.length, fitness.length)}, (_, i) => [feed[i], fitness[i]]).flat().filter((r): r is Reel => Boolean(r));
+
+export default function ReelsViewer({fitness, feed, first, initialTag}: Props) {
+  const router = useRouter();
+  const [reels, setReels] = useState(() => {
+    const mixed = mix(feed.reels, fitness.reels);
+    return first ? [first, ...mixed.filter(r => keyOf(r) !== keyOf(first))] : mixed;
+  });
+  const [after, setAfter] = useState({fitness: fitness.nextAfter, feed: feed.nextAfter});
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
   const [challenge, setChallenge] = useState<Reel | null>(null);
@@ -40,19 +59,23 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag}: Props
 
   // Infinite paging near the end.
   useEffect(() => {
-    if (after == null || loadingRef.current || active < reels.length - 3) return;
+    if ((after.fitness == null && after.feed == null) || loadingRef.current || active < reels.length - 3) return;
     loadingRef.current = true;
-    const qs = new URLSearchParams({after: String(after), limit: '10'});
-    if (initialTag) qs.set('tag', initialTag);
-    fetch(`/api/reels?${qs}`)
-      .then(r => (r.ok ? r.json() : null))
-      .then((data: {reels: Reel[]; nextAfter: number | null} | null) => {
-        if (!data) return;
+    const next = (v: keyof typeof API): Promise<Page | null> => {
+      if (after[v] == null) return Promise.resolve(null);
+      const qs = new URLSearchParams({after: String(after[v]), limit: '10'});
+      if (initialTag && v === 'fitness') qs.set('tag', initialTag);
+      return fetch(`${API[v]}?${qs}`)
+        .then(r => (r.ok ? r.json() : null))
+        .catch(() => null);
+    };
+    Promise.all([next('fitness'), next('feed')])
+      .then(([f, g]) => {
         setReels(prev => {
-          const seen = new Set(prev.map(r => r.id));
-          return [...prev, ...data.reels.filter(r => !seen.has(r.id))];
+          const seen = new Set(prev.map(keyOf));
+          return [...prev, ...mix(g?.reels ?? [], f?.reels ?? []).filter(r => !seen.has(keyOf(r)))];
         });
-        setAfter(data.nextAfter);
+        setAfter(a => ({fitness: f ? f.nextAfter : a.fitness, feed: g ? g.nextAfter : a.feed}));
       })
       .finally(() => {
         loadingRef.current = false;
@@ -87,7 +110,7 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag}: Props
         <div className={styles.empty}>
           <strong>No Reels yet</strong>
           <span>
-            Run <code>node --env-file=.env.local scripts/seed-reels.mjs</code> to seed the demo library.
+            Run <code>node --env-file=.env.local scripts/seed-reels.mjs</code> and <code>scripts/seed-feed-reels.mjs</code> to seed the demo library.
           </span>
         </div>
       </div>
@@ -99,14 +122,14 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag}: Props
       <div className={styles.feed} ref={feedRef}>
         {reels.map((reel, i) => (
           <ReelItem
-            key={reel.id}
+            key={keyOf(reel)}
             reel={reel}
             index={i}
             isActive={i === active}
             shouldLoad={Math.abs(i - active) <= 1}
             muted={muted}
             onToggleMute={() => setMuted(m => !m)}
-            onChallenge={() => setChallenge(reel)}
+            onChallenge={reel.fitness ? () => setChallenge(reel) : undefined}
             onToast={setToast}
           />
         ))}
@@ -129,10 +152,7 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag}: Props
         <ChallengeDialog
           reel={challenge}
           onClose={() => setChallenge(null)}
-          onSent={(group, conversationId) => {
-            setChallenge(null);
-            setToast({text: `Quest sent to ${group}`, href: `/messages/${conversationId}`, hrefLabel: 'Open chat'});
-          }}
+          onSent={(_group, conversationId) => router.push(`/messages/${conversationId}`)}
           onError={text => setToast({text, error: true})}
         />
       )}
@@ -162,15 +182,30 @@ function ReelItem({
   shouldLoad: boolean;
   muted: boolean;
   onToggleMute: () => void;
-  onChallenge: () => void;
+  onChallenge?: () => void;
   onToast: (t: Toast) => void;
 }) {
+  const variant = reel.fitness ? 'fitness' : 'feed';
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
   const [paused, setPaused] = useState(false);
   const [liked, setLiked] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [comments, setComments] = useState<{id: number; authorName: string; content: string}[]>([]);
+  const [draft, setDraft] = useState('');
   const countedRef = useRef(false);
+
+  const loadComments = useCallback(async () => {
+    const res = await fetch(`/api/reels/${reel.id}/comments?kind=${variant}`);
+    if (!res.ok) return;
+    const data = (await res.json()) as {comments?: {id: number; authorName: string; content: string}[]};
+    setComments(data.comments ?? []);
+  }, [reel.id, variant]);
+
+  useEffect(() => {
+    if (isActive) void loadComments();
+  }, [isActive, loadComments]);
 
   useEffect(() => {
     const v = videoRef.current;
@@ -181,7 +216,7 @@ function ReelItem({
       if (p) p.catch(() => {});
       if (!countedRef.current) {
         countedRef.current = true;
-        fetch(`/api/reels/${reel.id}/play`, {method: 'POST'}).catch(() => {});
+        fetch(`${API[variant]}/${reel.id}/play`, {method: 'POST'}).catch(() => {});
       }
     } else {
       v.pause();
@@ -190,7 +225,7 @@ function ReelItem({
         setPaused(false);
       }
     }
-  }, [isActive, paused, muted, reel.id]);
+  }, [isActive, paused, muted, reel.id, variant]);
 
   const onTap = () => {
     if (muted) {
@@ -201,7 +236,7 @@ function ReelItem({
   };
 
   const share = async () => {
-    const url = `${window.location.origin}/reels?reel=${reel.id}`;
+    const url = `${window.location.origin}/reels?${variant === 'feed' ? 'feed' : 'reel'}=${reel.id}`;
     try {
       if (navigator.share) {
         await navigator.share({title: reel.caption ?? 'Reel', url});
@@ -274,6 +309,7 @@ function ReelItem({
             </div>
           )}
           <div className={styles.meta}>
+            {reel.fitness && <span className={styles.tag}>#activities</span>}
             {reel.tags.slice(0, 5).map(t => (
               <span key={t} className={styles.tag}>
                 #{t.replace(/\s+/g, '')}
@@ -285,6 +321,37 @@ function ReelItem({
         </div>
 
       </div>
+      {commentsOpen && (
+        <div className={styles.comments}>
+          <div className={styles.commentList}>
+            {comments.length === 0 && <p className={styles.commentMeta}>No comments yet.</p>}
+            {comments.map(comment => (
+              <p key={comment.id}>
+                <strong>{comment.authorName}</strong> {comment.content}
+              </p>
+            ))}
+          </div>
+          <form
+            className={styles.commentForm}
+            onSubmit={async event => {
+              event.preventDefault();
+              const content = draft.trim();
+              if (!content) return;
+              setDraft('');
+              const res = await fetch(`/api/reels/${reel.id}/comments`, {
+                method: 'POST',
+                headers: {'content-type': 'application/json'},
+                body: JSON.stringify({content, kind: variant}),
+              });
+              if (!res.ok) onToast({text: 'Could not comment', error: true});
+              else void loadComments();
+            }}
+          >
+            <input aria-label="Write a comment" maxLength={500} placeholder="Write a comment…" value={draft} onChange={e => setDraft(e.target.value)} />
+            <button type="submit" className="fb-btn-primary">Post</button>
+          </form>
+        </div>
+      )}
       <div className={styles.rail}>
         <button type="button" className={styles.railBtn} onClick={() => setLiked(l => !l)} aria-pressed={liked}>
           <span className={`${styles.railIcon} ${liked ? styles.railIconOn : ''}`}>
@@ -292,11 +359,11 @@ function ReelItem({
           </span>
           {liked ? 'Liked' : 'Like'}
         </button>
-        <button type="button" className={styles.railBtn} onClick={() => onToast({text: 'Comments on Reels are coming soon'})}>
+        <button type="button" className={styles.railBtn} aria-label={comments.length ? `${comments.length} comments` : 'Comment'} onClick={() => setCommentsOpen(open => !open)} aria-expanded={commentsOpen}>
           <span className={styles.railIcon}>
             <CommentIcon size={24} />
           </span>
-          Comment
+          {comments.length || 'Comment'}
         </button>
         <button type="button" className={styles.railBtn} onClick={share}>
           <span className={styles.railIcon}>
@@ -310,14 +377,16 @@ function ReelItem({
           </span>
           {saved ? 'Saved' : 'Save'}
         </button>
-        <button type="button" className={styles.railBtn} onClick={onChallenge}>
-          <span className={`${styles.railIcon} ${styles.railChallenge}`}>
-            <SwordsGlyph />
-          </span>
-          Challenge
-          <br />
-          the GC
-        </button>
+        {onChallenge && (
+          <button type="button" className={styles.railBtn} onClick={onChallenge}>
+            <span className={`${styles.railIcon} ${styles.railChallenge}`}>
+              <SwordsGlyph />
+            </span>
+            Challenge
+            <br />
+            the GC
+          </button>
+        )}
       </div>
     </section>
   );

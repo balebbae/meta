@@ -21,7 +21,13 @@ export const GAMES: Game[] = [
   {id: 'chess', name: 'Chess Royale', publisher: 'Gameloft', players: '1.1M monthly players', cover: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=640&h=360&q=80', tag: 'Strategy', instant: true},
 ];
 
+export function matchesQuery(q: string | undefined, ...parts: (string | null | undefined)[]) {
+  const needle = q?.trim().toLowerCase();
+  return !needle || parts.some(part => (part ?? '').toLowerCase().includes(needle));
+}
+
 export const MARKETPLACE_CATEGORIES = [
+  'Jobs',
   'Vehicles',
   'Property Rentals',
   'Apparel',

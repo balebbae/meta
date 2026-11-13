@@ -1,6 +1,27 @@
 @import '@astryxdesign/core/reset.css';
 @import '@astryxdesign/core/astryx.css';
 @import '@astryxdesign/theme-neutral/theme.css';
+/* Tailwind for the mapcn map (components/ui/map.tsx) only: theme + utilities, no preflight so Facebook styles stay untouched */
+@import 'tailwindcss/theme.css' layer(theme);
+@import 'tailwindcss/utilities.css' layer(utilities) source(none);
+@source '../components/ui/map.tsx';
+/* liquid-glass-react styles its overLight darkening with Tailwind classes */
+@source '../node_modules/liquid-glass-react/dist/index.esm.js';
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+@theme inline {
+  --color-background: var(--fb-card);
+  --color-foreground: var(--fb-text);
+  --color-muted: var(--fb-input-bg);
+  --color-muted-foreground: var(--fb-text-secondary);
+  --color-popover: var(--fb-card);
+  --color-popover-foreground: var(--fb-text);
+  --color-accent: var(--fb-hover);
+  --color-accent-foreground: var(--fb-text);
+  --color-border: var(--fb-divider-soft);
+  --color-ring: var(--fb-blue);
+  --color-primary: var(--fb-blue);
+  --color-primary-foreground: #fff;
+}
 
 /* Facebook design tokens (measured against facebook.com desktop, Nov 2026) */
 :root {
@@ -34,7 +55,19 @@
   --fb-bubble: #f0f2f5;
   --fb-input-bg: #f0f2f5;
   --fb-overlay: rgba(255, 255, 255, 0.8);
+  /* text and scrims drawn over camera/video: same in both themes */
+  --fb-scrim: rgba(0, 0, 0, 0.55);
+  --fb-on-media: #fff;
+  /* Coach mode on /activities: dark training surface + lime accent, same in both themes */
+  --fb-coach-bg: #0b0d10;
+  --fb-coach-raised: #1d2128;
+  --fb-coach-accent: #c6ff3d;
+  --fb-coach-accent-muted: #3d4d16;
+  --fb-coach-accent-ink: #0b0d10;
   --fb-disabled-bg: #e4e6eb;
+  /* Mobile tab bar: dark liquid glass (same in both themes, like Instagram's) */
+  --fb-glass-tint: rgba(6, 6, 10, 0.4);
+  --fb-glass-pill: linear-gradient(180deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.12));
   --fb-text-disabled: #bcc0c4;
   --fb-shimmer: #e4e6eb;
   --fb-shimmer-highlight: #f0f2f5;
@@ -67,50 +100,54 @@ html {
   --fb-shimmer-highlight: #4e4f50;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* Element resets live in the lowest layer so Astryx component styles (layered) win over them;
+   Facebook CSS Modules are unlayered and still win over both. */
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
 
-body {
-  background: var(--fb-bg);
-  color: var(--fb-text);
-  font-family: var(--fb-font);
-  font-size: 15px;
-  line-height: 1.3333;
-  -webkit-font-smoothing: antialiased;
-}
+  body {
+    background: var(--fb-bg);
+    color: var(--fb-text);
+    font-family: var(--fb-font);
+    font-size: 15px;
+    line-height: 1.3333;
+    -webkit-font-smoothing: antialiased;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-button {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-}
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
 
-input,
-textarea {
-  font: inherit;
-}
+  input,
+  textarea {
+    font: inherit;
+  }
 
-img {
-  display: block;
-  max-width: 100%;
+  img {
+    display: block;
+    max-width: 100%;
+  }
 }
 
 /* Shared primitives */
@@ -165,6 +202,13 @@ img {
   background: var(--fb-blue-hover);
 }
 
+.fb-btn-primary:disabled,
+.fb-btn-secondary:disabled {
+  background: var(--fb-disabled-bg);
+  color: var(--fb-text-disabled);
+  cursor: not-allowed;
+}
+
 .fb-btn-secondary {
   background: var(--fb-icon-bg);
   color: var(--fb-text);
@@ -208,4 +252,68 @@ main:has([data-layout='full']) > div {
 div:has(> main [data-layout='wide']) > :not(main),
 div:has(> main [data-layout='full']) > :not(main) {
   display: none;
+}
+
+/* mapcn (registry css for @mapcn/map) */
+@layer base {
+  .maplibregl-popup-content {
+    @apply bg-transparent! shadow-none! p-0! rounded-none!;
+  }
+  .maplibregl-popup-tip {
+    @apply hidden!;
+  }
+  .maplibregl-ctrl-attrib {
+    @apply bg-background! text-muted-foreground! border-border! rounded-md! border! shadow-sm!;
+  }
+  .maplibregl-ctrl-attrib a {
+    @apply text-muted-foreground!;
+  }
+  .maplibregl-ctrl-attrib a:hover {
+    @apply text-foreground!;
+  }
+  .maplibregl-ctrl-attrib-button {
+    @apply bg-transparent! dark:invert;
+  }
+}
+
+/* Astryx overrides (Activities): solid fills with light text, never pale tints with dark text.
+   Unlayered, so they win over Astryx's layered component styles. */
+.astryx-token[data-color] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border-color: transparent;
+}
+.astryx-token[data-color] * {
+  color: inherit;
+}
+.astryx-token[data-color='red'] { background: var(--color-icon-red); }
+.astryx-token[data-color='orange'] { background: var(--color-icon-orange); }
+.astryx-token[data-color='yellow'] { background: var(--color-icon-yellow); }
+.astryx-token[data-color='green'] { background: var(--color-icon-green); }
+.astryx-token[data-color='teal'] { background: var(--color-icon-teal); }
+.astryx-token[data-color='cyan'] { background: var(--color-icon-cyan); }
+.astryx-token[data-color='blue'] { background: var(--color-icon-blue); }
+.astryx-token[data-color='purple'] { background: var(--color-icon-purple); }
+.astryx-token[data-color='pink'] { background: var(--color-icon-pink); }
+.astryx-token[data-color='gray'] { background: var(--color-icon-gray); }
+.astryx-button[data-variant='secondary'] {
+  background: var(--color-icon-secondary);
+  color: var(--color-on-accent);
+}
+.astryx-button[data-variant='secondary'] * {
+  color: inherit;
+}
+.astryx-segmented-control-item[data-selected]:not([data-selected='false']) {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.astryx-segmented-control-item[data-selected]:not([data-selected='false']) * {
+  color: inherit;
+}
+.astryx-toggle-button[data-is-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.astryx-toggle-button[data-is-pressed='true'] * {
+  color: inherit;
 }

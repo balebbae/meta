@@ -61,3 +61,48 @@ export function generateDemoWeek(userId: number, source: ConnectorId = 'mock', n
   }
   return events;
 }
+
+/**
+ * Weeks 1-15 before the demo week (0-15 for users without one), so "A few months ahead" can match on past state (16 weeks with the demo week).
+ * [kind, its ontology MET at the pace below, weekly MET-minutes 15 weeks ago, last week, weeks ago the climb starts].
+ * User 1 (seeker) is flat; mentor 6 trained like him 12 weeks ago then ramped, 8 and 10 are near misses, 3 and 5 never climbed from his level.
+ */
+const HISTORY: Record<number, [EventKind, number, number, number, number]> = {
+  1: ['run', 9.3, 1100, 1100, 1],
+  3: ['strength', 3.5, 1400, 1400, 1],
+  4: ['yoga', 2.3, 300, 800, 10],
+  5: ['run', 9.3, 2500, 2800, 12],
+  6: ['run', 9.3, 1100, 3100, 12],
+  8: ['run', 9.3, 1300, 2300, 8],
+  10: ['run', 9.3, 500, 1200, 12],
+};
+
+export function generateDemoHistory(userId: number, source: ConnectorId = 'mock', now = new Date()): RawEvent[] {
+  const h = HISTORY[userId];
+  if (!h) return [];
+  const [kind, met, from, to, start] = h;
+  const rand = rng(userId + 100);
+  const events: RawEvent[] = [];
+  // users 1-6 already have the demo week (week 0) seeded; the others get this week from here too
+  for (let w = userId <= WORKOUT_PLANS.length ? 1 : 0; w <= 15; w++) {
+    const load = (w >= start ? from : from * (to / from) ** ((start - w) / Math.max(1, start - 1))) * (0.95 + rand() * 0.1);
+    const durationMin = Math.round(load / 3 / met);
+    [1, 3, 5].forEach((day, i) => {
+      const d = new Date(now.getTime() - (7 * w + day) * 24 * 3_600_000);
+      d.setHours(7, 0, 0, 0);
+      events.push({
+        userId,
+        source,
+        externalId: `${source}:${userId}:hist:w${w}:${i}`,
+        kind,
+        startedAt: d.toISOString(),
+        endedAt: new Date(d.getTime() + durationMin * 60_000).toISOString(),
+        distanceKm: kind === 'run' ? Math.round((durationMin / 6) * 100) / 100 : undefined, // 10 km/h
+        durationMin,
+        trust: 'device',
+        displayScope: 'normal',
+      });
+    });
+  }
+  return events;
+}

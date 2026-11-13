@@ -48,6 +48,9 @@ import {formatCompactTime} from '@/lib/format';
 import {MessengerPanel, useMessengerUnread} from '@/components/layout/MessengerPanel';
 import {NotificationsPanel} from '@/components/layout/NotificationsPanel';
 import type {Contact, Notification} from '@/lib/queries';
+import type {AppSearch} from '@/lib/search';
+import {COMPOSE_EVENT} from '@/components/layout/ComposeFab';
+import {CreateStoryDialog} from '@/components/feed/StoryDialogs';
 import type {User} from '@/lib/types';
 import styles from './layout.module.css';
 
@@ -152,12 +155,13 @@ export function Header({user, contacts = []}: {user: User; contacts?: Contact[]}
 
 /* ---------------- Search ---------------- */
 const RECENT_KEY = 'fb.recentSearches';
+const noHits: AppSearch = {users: [], posts: [], groups: [], listings: [], events: []};
 
 function SearchBox() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
-  const [results, setResults] = useState<Contact[]>([]);
+  const [results, setResults] = useState<AppSearch>(noHits);
   const [recent, setRecent] = useState<Contact[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -185,14 +189,14 @@ function SearchBox() {
   useEffect(() => {
     const term = q.trim();
     if (!term) {
-      setResults([]);
+      setResults(noHits);
       return;
     }
     const ctrl = new AbortController();
     const t = setTimeout(() => {
-      fetch(`/api/users/search?q=${encodeURIComponent(term)}`, {signal: ctrl.signal})
-        .then(r => (r.ok ? r.json() : {users: []}))
-        .then((d: {users: Contact[]}) => setResults(d.users))
+      fetch(`/api/search?q=${encodeURIComponent(term)}`, {signal: ctrl.signal})
+        .then(r => (r.ok ? r.json() : noHits))
+        .then((d: AppSearch) => setResults({users: d.users ?? [], posts: d.posts ?? [], groups: d.groups ?? [], listings: d.listings ?? [], events: d.events ?? []}))
         .catch(() => {});
     }, 150);
     return () => {
@@ -201,13 +205,15 @@ function SearchBox() {
     };
   }, [q]);
 
-  const pick = (c: Contact) => {
-    const next = [c, ...recent.filter(r => r.id !== c.id)].slice(0, 6);
-    setRecent(next);
-    localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+  const go = (href: string, person?: Contact) => {
+    if (person) {
+      const next = [person, ...recent.filter(r => r.id !== person.id)].slice(0, 6);
+      setRecent(next);
+      localStorage.setItem(RECENT_KEY, JSON.stringify(next));
+    }
     setOpen(false);
     setQ('');
-    router.push(`/profile/${c.id}`);
+    router.push(href);
   };
   const removeRecent = (id: number) => {
     const next = recent.filter(r => r.id !== id);
@@ -215,7 +221,17 @@ function SearchBox() {
     localStorage.setItem(RECENT_KEY, JSON.stringify(next));
   };
 
-  const list = q.trim() ? results : recent;
+  const searching = Boolean(q.trim());
+  const count = results.users.length + results.posts.length + results.groups.length + results.listings.length + results.events.length;
+  const row = (key: string, href: string, title: string, sub: string, person?: Contact) => (
+    <div key={key} className={styles.searchRow} role="button" tabIndex={0} onClick={() => go(href, person)} onKeyDown={e => e.key === 'Enter' && go(href, person)}>
+      {person ? <Avatar src={person.avatarUrl} alt="" size={36} /> : <span className={styles.searchRowIcon}><SearchIcon size={18} /></span>}
+      <span className={styles.searchRowText}>
+        {title}
+        {sub && <div className={styles.searchRowSub}>{sub}</div>}
+      </span>
+    </div>
+  );
 
   return (
     <>
@@ -239,19 +255,25 @@ function SearchBox() {
               {recent.length > 0 && <button onClick={() => { setRecent([]); localStorage.removeItem(RECENT_KEY); }}>Edit</button>}
             </div>
           )}
-          {list.length === 0 && <div className={styles.searchEmpty}>{q.trim() ? 'No results found' : 'No recent searches'}</div>}
-          {list.map(c => (
-            <div key={c.id} className={styles.searchRow} role="button" tabIndex={0} onClick={() => pick(c)} onKeyDown={e => e.key === 'Enter' && pick(c)}>
-              {q.trim() ? <Avatar src={c.avatarUrl} alt="" size={36} /> : <span className={styles.searchRowIcon}><ClockIcon size={18} /></span>}
-              <span className={styles.searchRowText}>
-                {c.name}
-                {q.trim() && <div className={styles.searchRowSub}>Friend</div>}
-              </span>
-              {!q.trim() && (
-                <button className={styles.rrIconBtn} aria-label="Remove" onClick={e => { e.stopPropagation(); removeRecent(c.id); }}>
-                  <CloseIcon size={16} />
-                </button>
-              )}
+          {searching && count === 0 && <div className={styles.searchEmpty}>No results found</div>}
+          {!searching && recent.length === 0 && <div className={styles.searchEmpty}>No recent searches</div>}
+          {searching && results.users.length > 0 && <div className={styles.searchHeading}><span>People</span></div>}
+          {searching && results.users.map(c => row(`u${c.id}`, `/profile/${c.id}`, c.name, '', {id: c.id, name: c.name, avatarUrl: c.avatarUrl, isOnline: false}))}
+          {searching && results.posts.length > 0 && <div className={styles.searchHeading}><span>Posts</span></div>}
+          {searching && results.posts.map(p => row(`p${p.id}`, `/posts/${p.id}`, p.snippet, p.authorName))}
+          {searching && results.groups.length > 0 && <div className={styles.searchHeading}><span>Groups</span></div>}
+          {searching && results.groups.map(g => row(`g${g.id}`, `/groups/${g.id}`, g.name, 'Group'))}
+          {searching && results.listings.length > 0 && <div className={styles.searchHeading}><span>Marketplace</span></div>}
+          {searching && results.listings.map(l => row(`l${l.id}`, `/marketplace/item/${l.id}`, l.title, `$${(l.priceCents / 100).toFixed(2)}`))}
+          {searching && results.events.length > 0 && <div className={styles.searchHeading}><span>Events</span></div>}
+          {searching && results.events.map(e => row(`e${e.id}`, '/events', e.title, 'Event'))}
+          {!searching && recent.map(c => (
+            <div key={c.id} className={styles.searchRow} role="button" tabIndex={0} onClick={() => go(`/profile/${c.id}`, c)} onKeyDown={e => e.key === 'Enter' && go(`/profile/${c.id}`, c)}>
+              <span className={styles.searchRowIcon}><ClockIcon size={18} /></span>
+              <span className={styles.searchRowText}>{c.name}</span>
+              <button className={styles.rrIconBtn} aria-label="Remove" onClick={e => { e.stopPropagation(); removeRecent(c.id); }}>
+                <CloseIcon size={16} />
+              </button>
             </div>
           ))}
         </div>
@@ -275,16 +297,20 @@ const MENU_ITEMS = [
 ];
 
 function MenuPanel() {
+  const router = useRouter();
+  const [menuQuery, setMenuQuery] = useState('');
+  const [storyOpen, setStoryOpen] = useState(false);
+  const items = MENU_ITEMS.filter(item => item.label.toLowerCase().includes(menuQuery.trim().toLowerCase()));
   return (
     <div className={styles.panel}>
       <div className={styles.panelTitle}>Menu</div>
       <div className={styles.msgSearch}>
         <SearchIcon size={16} />
-        <input placeholder="Search menu" aria-label="Search menu" />
+        <input placeholder="Search menu" aria-label="Search menu" value={menuQuery} onChange={e => setMenuQuery(e.target.value)} />
       </div>
       <div className={styles.panelSub}>Social</div>
       <div className={styles.menuGrid}>
-        {MENU_ITEMS.map(({label, Icon, href}) => (
+        {items.map(({label, Icon, href}) => (
           <Link key={label} href={href} className={styles.menuTile}>
             <Icon />
             <span>{label}</span>
@@ -292,19 +318,23 @@ function MenuPanel() {
         ))}
       </div>
       <div className={styles.panelSub}>Create</div>
-      {[
-        {label: 'Post', Icon: PencilIcon},
-        {label: 'Story', Icon: PlusIcon},
-        {label: 'Group', Icon: UsersIcon},
-        {label: 'Event', Icon: RailEventsIcon},
-      ].map(({label, Icon}) => (
-        <button key={label} className={styles.menuRow}>
-          <span className={styles.menuIcon}>
-            <Icon size={20} />
-          </span>
-          {label}
-        </button>
-      ))}
+      <button className={styles.menuRow} onClick={() => { window.dispatchEvent(new Event(COMPOSE_EVENT)); router.push('/'); }}>
+        <span className={styles.menuIcon}><PencilIcon size={20} /></span>
+        Post
+      </button>
+      <button className={styles.menuRow} onClick={() => setStoryOpen(true)}>
+        <span className={styles.menuIcon}><PlusIcon size={20} /></span>
+        Story
+      </button>
+      <Link href="/groups" className={styles.menuRow}>
+        <span className={styles.menuIcon}><UsersIcon size={20} /></span>
+        Group
+      </Link>
+      <Link href="/events" className={styles.menuRow}>
+        <span className={styles.menuIcon}><RailEventsIcon /></span>
+        Event
+      </Link>
+      <CreateStoryDialog open={storyOpen} onClose={() => setStoryOpen(false)} />
     </div>
   );
 }
@@ -326,6 +356,25 @@ export function useTheme() {
     document.cookie = `fb.theme=${t};path=/;max-age=31536000;SameSite=Lax`;
   };
   return {theme, setTheme};
+}
+
+function FeedbackBox() {
+  const [message, setMessage] = useState('');
+  const [note, setNote] = useState<string | null>(null);
+  const send = async () => {
+    const text = message.trim();
+    if (!text) return;
+    const res = await fetch('/api/feedback', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({message: text})});
+    setNote(res.ok ? 'Sent. It is in your notifications.' : 'Could not send that');
+    if (res.ok) setMessage('');
+  };
+  return (
+    <div style={{padding: 8}}>
+      <textarea className={styles.imageUrlInput} style={{width: '100%', height: 100, padding: 8, borderRadius: 8, border: '1px solid var(--fb-divider)', background: 'transparent', color: 'inherit'}} placeholder="Tell us what broke" value={message} onChange={e => setMessage(e.target.value)} />
+      <button className="fb-btn-primary" style={{marginTop: 8}} onClick={send}>Send</button>
+      {note && <div className={styles.footerNote}>{note}</div>}
+    </div>
+  );
 }
 
 function AccountPanel({user}: {user: User}) {
@@ -376,29 +425,22 @@ function AccountPanel({user}: {user: User}) {
             <PushToggle />
           </>
         )}
-        {view === 'settings' &&
-          ['Settings', 'Privacy Checkup', 'Privacy Center', 'Activity log', 'Feed', 'Language'].map(l => (
-            <button key={l} className={styles.menuRow}>
-              <span className={styles.menuIcon}>
-                <SettingsIcon size={20} />
-              </span>
-              {l}
-            </button>
-          ))}
-        {view === 'help' &&
-          ['Help Center', 'Account status', 'Support Inbox', 'Report a problem'].map(l => (
-            <button key={l} className={styles.menuRow}>
-              <span className={styles.menuIcon}>
-                <HelpIcon size={20} />
-              </span>
-              {l}
-            </button>
-          ))}
-        {view === 'feedback' && (
-          <div style={{padding: 8}}>
-            <textarea className={styles.imageUrlInput} style={{width: '100%', height: 100, padding: 8, borderRadius: 8, border: '1px solid var(--fb-divider)', background: 'transparent', color: 'inherit'}} placeholder="Tell us what you think (demo only)" />
-          </div>
+        {view === 'settings' && (
+          <>
+            <Link href="/settings" className={styles.menuRow}><span className={styles.menuIcon}><SettingsIcon size={20} /></span>Settings</Link>
+            <Link href="/privacy" className={styles.menuRow}><span className={styles.menuIcon}><SettingsIcon size={20} /></span>Privacy Checkup</Link>
+            <Link href={`/profile/${user.id}`} className={styles.menuRow}><span className={styles.menuIcon}><SettingsIcon size={20} /></span>Activity log</Link>
+            <Link href="/" className={styles.menuRow}><span className={styles.menuIcon}><SettingsIcon size={20} /></span>Feed</Link>
+          </>
         )}
+        {view === 'help' && (
+          <>
+            <Link href="/settings#help" className={styles.menuRow}><span className={styles.menuIcon}><HelpIcon size={20} /></span>Help Center</Link>
+            <Link href="/notifications" className={styles.menuRow}><span className={styles.menuIcon}><HelpIcon size={20} /></span>Support Inbox</Link>
+            <Link href="/settings#feedback" className={styles.menuRow}><span className={styles.menuIcon}><HelpIcon size={20} /></span>Report a problem</Link>
+          </>
+        )}
+        {view === 'feedback' && <FeedbackBox />}
       </div>
     );
   }
@@ -411,7 +453,7 @@ function AccountPanel({user}: {user: User}) {
           {user.name}
         </Link>
         <div className={styles.acctDivider} />
-        <button className={styles.acctAll}>See all profiles</button>
+        <Link href="/friends" className={styles.acctAll}>See all profiles</Link>
       </div>
       {(
         [

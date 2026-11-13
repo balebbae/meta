@@ -1,8 +1,23 @@
 import {MODELS, museConfigured, museJson} from '@/lib/muse/client';
+import {classifyActivity} from '@/lib/activities/classify';
+import {metMinutes, resolve} from '@/lib/activities/ontology';
 import type {EventKind} from '@/lib/activities/types';
 
-/** Manual log (§5.2): one sentence -> structured workout. Spark JSON schema, regex fallback when Muse is offline. */
-export type ParsedLog = {kind: EventKind; distanceKm?: number; durationMin?: number; steps?: number; whenOffsetHours?: number; usedMuse: boolean};
+/**
+ * Manual log (§5.2): one sentence -> structured workout. Spark JSON schema, regex fallback when Muse is offline.
+ * The embedder fills `kind` when neither can; code (ontology.ts), never a model, picks the Compendium code and MET-minutes.
+ */
+export type ParsedLog = {
+  kind: EventKind;
+  distanceKm?: number;
+  durationMin?: number;
+  steps?: number;
+  whenOffsetHours?: number;
+  usedMuse: boolean;
+  activity?: string;
+  compendiumCode?: string;
+  metMinutes?: number;
+};
 
 const KIND_WORDS: [RegExp, EventKind][] = [
   [/\b(ran|run|running|jog|jogged|jogging|5k|10k|treadmill)\b/i, 'run'],
@@ -60,7 +75,35 @@ const schema = {
   additionalProperties: false,
 };
 
+/** Ontology activity -> vault EventKind (rowing, kayak and dance have no kind of their own yet). */
+const ACTIVITY_KIND: Record<string, EventKind> = {
+  run: 'run', trail_run: 'run', walk: 'walk', hike: 'walk', swim: 'swim', cycle: 'ride',
+  strength: 'strength', bodyweight: 'strength', yoga: 'yoga', pilates: 'yoga', stretch: 'yoga',
+  row_erg: 'other', row_water: 'other', kayak: 'other', dance: 'other',
+};
+const KIND_ACTIVITY: Partial<Record<EventKind, string>> = {run: 'run', walk: 'walk', ride: 'cycle', strength: 'strength', yoga: 'yoga', swim: 'swim'};
+const SPEED_BANDED = new Set(['run', 'walk', 'cycle']);
+const MIN_SCORE = 0.5; // below this the embedder's best guess is noise (e.g. "meditated 10 min")
+
+/** Fill kind from the embedder when rules/Muse said 'other', then compute the Compendium code + MET-minutes in code. */
+export async function withOntology(p: ParsedLog, text: string): Promise<ParsedLog> {
+  let activity = KIND_ACTIVITY[p.kind];
+  if (p.kind === 'other') {
+    const [top] = await classifyActivity(text);
+    if (top && top.score >= MIN_SCORE) activity = top.activity;
+  }
+  if (!activity) return p;
+  const speedMph = SPEED_BANDED.has(activity) && p.distanceKm && p.durationMin ? p.distanceKm / 1.609_34 / (p.durationMin / 60) : undefined;
+  const out: ParsedLog = {...p, kind: p.kind === 'other' ? ACTIVITY_KIND[activity] : p.kind, activity, compendiumCode: resolve(activity, {speedMph}).code};
+  if (p.durationMin) out.metMinutes = metMinutes(activity, p.durationMin, {speedMph});
+  return out;
+}
+
 export async function parseLog(text: string): Promise<ParsedLog> {
+  return withOntology(await parseLogText(text), text);
+}
+
+async function parseLogText(text: string): Promise<ParsedLog> {
   const fallback = {...parseLogSentence(text), usedMuse: false};
   if (!museConfigured()) return fallback;
   try {

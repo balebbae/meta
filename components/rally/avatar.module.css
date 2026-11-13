@@ -1,131 +1,77 @@
 .avatar {
-  display: block;
-  overflow: visible;
+  position: relative;
+  display: inline-block;
+  flex: none;
   transform-origin: 50% 100%;
 }
-.head,
-.torso,
-.legL,
-.legR,
-.armL,
-.armR,
-.cape,
+.sprite,
+.pending,
+.photoOnly {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.sprite {
+  object-fit: contain;
+  filter: drop-shadow(0 2px 3px var(--fb-shadow-2, rgba(0, 0, 0, 0.2)));
+  animation: pop 0.25s ease-out;
+  user-select: none;
+}
+.pending {
+  inset: 18%;
+  width: 64%;
+  height: 64%;
+  border-radius: 50%;
+  background: var(--fb-bg-hover, rgba(0, 0, 0, 0.06));
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.photoOnly {
+  border-radius: 50%;
+  object-fit: cover;
+}
+.shadow {
+  position: absolute;
+  left: 22%;
+  right: 22%;
+  bottom: 2%;
+  height: 8%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.14);
+  filter: blur(2px);
+}
+.chip {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--fb-bg-card, #fff);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
 .badge {
-  transform-box: fill-box;
-}
-.head {
-  transform-origin: 50% 90%;
-}
-.armL,
-.armR {
-  transform-origin: 50% 5%;
-}
-.legL,
-.legR {
-  transform-origin: 50% 0%;
-}
-.cape {
-  transform-origin: 50% 0%;
+  position: absolute;
+  top: -6%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--fb-yellow, gold);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  animation: sparkle 1.2s ease-in-out infinite;
 }
 
-/* idle: gentle breathing */
-.idle .torso {
-  animation: breathe 2.6s ease-in-out infinite;
-}
-.idle .head {
-  animation: nod 2.6s ease-in-out infinite;
-}
-.idle .cape {
-  animation: flutter 3s ease-in-out infinite;
-}
+.idle .sprite { animation: pop 0.25s ease-out, breathe 2.8s ease-in-out 0.25s infinite; transform-origin: 50% 100%; }
+.run { animation: bob 0.45s ease-in-out infinite; }
+.attack { animation: lunge 0.9s ease-in-out infinite; }
+.celebrate { animation: jump 0.8s ease-in-out infinite; }
 
-/* run: bob + swinging limbs */
-.run {
-  animation: bob 0.5s ease-in-out infinite;
-}
-.run .legL,
-.run .armR {
-  animation: swing 0.5s ease-in-out infinite;
-}
-.run .legR,
-.run .armL {
-  animation: swing 0.5s ease-in-out infinite reverse;
-}
-.run .cape {
-  animation: flutter 0.5s ease-in-out infinite;
-  transform: rotate(-18deg);
-}
+@keyframes pop { from { opacity: 0; transform: scale(0.85); } to { opacity: 1; transform: scale(1); } }
+@keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+@keyframes breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.03); } }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+@keyframes lunge { 0%, 100% { transform: translateX(0) rotate(0); } 40% { transform: translateX(-4px) rotate(-6deg); } 60% { transform: translateX(10px) rotate(6deg); } }
+@keyframes jump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12%); } }
+@keyframes sparkle { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 
-/* attack: wind up and punch */
-.attack {
-  animation: lunge 0.9s ease-in-out infinite;
-}
-.attack .armR {
-  animation: punch 0.9s ease-in-out infinite;
-}
-.attack .armL {
-  transform: rotate(25deg);
-}
-
-/* celebrate: jump + arms up */
-.celebrate {
-  animation: jump 0.8s ease-in-out infinite;
-}
-.celebrate .armL {
-  transform: rotate(150deg);
-}
-.celebrate .armR {
-  transform: rotate(-150deg);
-}
-.celebrate .head {
-  animation: nod 0.8s ease-in-out infinite;
-}
-.celebrate .badge {
-  animation: sparkle 0.8s ease-in-out infinite;
-}
-
-@keyframes breathe {
-  0%, 100% { transform: scaleY(1); }
-  50% { transform: scaleY(1.03); }
-}
-@keyframes nod {
-  0%, 100% { transform: rotate(-2deg); }
-  50% { transform: rotate(2deg); }
-}
-@keyframes flutter {
-  0%, 100% { transform: skewX(0deg); }
-  50% { transform: skewX(-6deg); }
-}
-@keyframes bob {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
-}
-@keyframes swing {
-  0%, 100% { transform: rotate(-30deg); }
-  50% { transform: rotate(30deg); }
-}
-@keyframes lunge {
-  0%, 100% { transform: translateX(0) rotate(0); }
-  40% { transform: translateX(-4px) rotate(-6deg); }
-  60% { transform: translateX(10px) rotate(6deg); }
-}
-@keyframes punch {
-  0%, 100% { transform: rotate(0); }
-  40% { transform: rotate(40deg); }
-  60% { transform: rotate(-110deg); }
-}
-@keyframes jump {
-  0%, 100% { transform: translateY(0) scaleY(1); }
-  30% { transform: translateY(0) scaleY(0.94); }
-  60% { transform: translateY(-14px) scaleY(1.04); }
-}
-@keyframes sparkle {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.25); }
-}
 @media (prefers-reduced-motion: reduce) {
-  .avatar,
-  .avatar * {
-    animation: none !important;
-  }
+  .avatar, .sprite, .pending, .badge, .idle .sprite { animation: none; }
 }

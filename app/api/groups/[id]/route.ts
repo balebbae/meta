@@ -7,7 +7,7 @@ export async function GET(_req: Request, {params}: {params: Promise<{id: string}
     const {id} = await params;
     const group = await getGroup(user.id, Number(id));
     if (!group) return notFound();
-    const [posts, members] = await Promise.all([listGroupPosts(group.id), listGroupMembers(group.id)]);
+    const [posts, members] = await Promise.all([listGroupPosts(group.id, user.id), listGroupMembers(group.id)]);
     return NextResponse.json({group, posts, members});
   });
 }

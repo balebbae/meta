@@ -1,5 +1,6 @@
 'use client';
 import {Glyph} from './glyphs';
+import {blobToWav16k} from '@/lib/wav';
 import {useEffect, useRef, useState} from 'react';
 import {Dialog} from '@/components/ui/Dialog';
 import {fileToDataUrlFit} from '@/lib/image-upload';
@@ -13,7 +14,7 @@ const KINDS: {id: EventKind; label: string}[] = [
 ];
 const EMPTY: Form = {kind: 'run', distanceKm: '', durationMin: '', steps: ''};
 
-export type LoggedEvent = {id: number; kind: EventKind; distanceKm?: number; durationMin?: number; steps?: number; trust: string};
+export type LoggedEvent = {id: number; kind: EventKind; distanceKm?: number; durationMin?: number; steps?: number; trust: string; duplicateOf?: number | null};
 
 /**
  * Reusable "Log a workout" sheet (§5.2): manual (form or one sentence), photo proof, voice.
@@ -46,6 +47,7 @@ export function LogWorkoutSheet({open, onClose, initialTab = 'manual', onLogged,
             <p className={styles.sub}>
               {describe(done)} · trust: {done.trust.replace('_', ' ')}. Only your Muse sees the raw entry; others get what your privacy settings allow.
             </p>
+            {done.duplicateOf && <p className={styles.sub}>This overlaps a workout already in your vault, so it was merged with that higher-trust entry (listed under it on your Muse page).</p>}
             <div className={styles.row} style={{justifyContent: 'center'}}>
               <button className={styles.btn} onClick={() => setDone(null)}>
                 Log another
@@ -80,7 +82,7 @@ function describe(e: {kind: EventKind; distanceKm?: number; durationMin?: number
 }
 
 function toForm(p: {kind: EventKind; distanceKm?: number | null; durationMin?: number | null; steps?: number | null}): Form {
-  return {kind: p.kind, distanceKm: p.distanceKm ? String(p.distanceKm) : '', durationMin: p.durationMin ? String(p.durationMin) : '', steps: p.steps ? String(p.steps) : ''};
+  return {kind: p.kind, distanceKm: p.distanceKm ? String(Math.round(p.distanceKm * 100) / 100) : '', durationMin: p.durationMin ? String(Math.round(p.durationMin)) : '', steps: p.steps ? String(p.steps) : ''};
 }
 
 function QuickForm({form, setForm, onSubmit, busy, submitLabel}: {form: Form; setForm: (f: Form) => void; onSubmit: () => void; busy: boolean; submitLabel: string}) {
@@ -293,10 +295,10 @@ function VoiceTab({onLogged}: {onLogged: (e: LoggedEvent) => void}) {
       r.ondataavailable = e => chunks.current.push(e.data);
       r.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
-        const blob = new Blob(chunks.current, {type: r.mimeType || 'audio/webm'});
         setBusy(true);
+        const wav = await blobToWav16k(new Blob(chunks.current, {type: r.mimeType || 'audio/webm'}));
         const fd = new FormData();
-        fd.append('file', new File([blob], 'note.webm', {type: blob.type}));
+        fd.append('file', new File([wav], 'note.wav', {type: 'audio/wav'}));
         const res = await fetch('/api/muse/transcribe', {method: 'POST', body: fd});
         setBusy(false);
         if (!res.ok) {

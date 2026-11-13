@@ -42,7 +42,7 @@ export async function weekLeaderboard(viewerId: number, limit = 10): Promise<Lea
     select u.id as user_id, u.name, u.avatar_url, coalesce(sum(x.xp), 0)::int as xp
     from pool p
     join users u on u.id = p.id
-    left join xp_events x on x.user_id = u.id and x.created_at > now() - interval '7 days'
+    left join xp_events x on x.user_id = u.id and x.created_at > now() - interval '7 days' and x.source_type not like 'rally%'
     group by u.id, u.name, u.avatar_url
     order by xp desc, u.name asc
     limit ${limit}`;

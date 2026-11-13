@@ -18,7 +18,7 @@ export function PrivacyPanel({initial, showPreview = true}: {initial: PolicyMatr
       {showPreview && (
         <div className={styles.card}>
           <h2 className={styles.h2}>Try it</h2>
-          <p className={styles.sub}>This is the exact call games, Discover and mentors make. Flip Heart rate above and watch the answer change.</p>
+          <p className={styles.sub}>This is the exact call games, Discover and other people's Muses make. Flip Heart rate above and watch the answer change.</p>
           <AnswerPreview refreshKey={tick} />
         </div>
       )}

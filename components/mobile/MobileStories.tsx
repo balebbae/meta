@@ -7,6 +7,7 @@ import {PlusIcon} from '@/components/icons';
 import {profileApi} from '@/components/profile/api';
 import type {FriendSummary} from '@/lib/profile-queries';
 import type {Story, User} from '@/lib/types';
+import {CreateStoryDialog, StoryViewer} from '@/components/feed/StoryDialogs';
 import styles from './mobile.module.css';
 
 function MusicNoteIcon() {
@@ -20,6 +21,8 @@ function MusicNoteIcon() {
 export function MobileStories({viewer, requests, stories}: {viewer: Pick<User, 'id' | 'name' | 'avatarUrl'>; requests: FriendSummary[]; stories: Story[]}) {
   const [reqs, setReqs] = useState(requests);
   const [done, setDone] = useState<Record<number, 'confirmed' | 'deleted'>>({});
+  const [creating, setCreating] = useState(false);
+  const [viewing, setViewing] = useState<number | null>(null);
   const confirm = async (id: number) => {
     setDone(d => ({...d, [id]: 'confirmed'}));
     await profileApi.accept(id).catch(() => {});
@@ -37,7 +40,7 @@ export function MobileStories({viewer, requests, stories}: {viewer: Pick<User, '
           </span>
           <span className={styles.musicLabel}>Music</span>
         </Link>
-        <button className={styles.storyCard} aria-label="Create story">
+        <button className={styles.storyCard} aria-label="Create story" onClick={() => setCreating(true)}>
           <img className={styles.createImg} src={viewer.avatarUrl} alt="" />
           <span className={styles.createBottom}>
             <span className={styles.createPlus}>
@@ -65,16 +68,18 @@ export function MobileStories({viewer, requests, stories}: {viewer: Pick<User, '
             )}
           </div>
         ))}
-        {stories.map(s => (
-          <Link key={s.id} href={`/profile/${s.user.id}`} className={styles.storyCard} aria-label={`${s.user.name}'s story`}>
+        {stories.map((s, i) => (
+          <button key={s.id} type="button" className={styles.storyCard} aria-label={`${s.user.name}'s story`} onClick={() => setViewing(i)}>
             <img className={styles.storyImg} src={s.imageUrl} alt="" />
             <span className={styles.storyRing}>
               <Avatar src={s.user.avatarUrl} alt="" size={34} />
             </span>
             <span className={styles.storyName}>{s.user.id === viewer.id ? 'Your story' : s.user.name}</span>
-          </Link>
+          </button>
         ))}
       </div>
+      <CreateStoryDialog open={creating} onClose={() => setCreating(false)} />
+      <StoryViewer stories={stories} index={viewing} onClose={() => setViewing(null)} onIndex={setViewing} />
     </section>
   );
 }

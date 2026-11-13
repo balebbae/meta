@@ -59,6 +59,8 @@ function compute(question: QuestionType, events: VaultEvent[], level: ShareLevel
   const workouts = events.filter(e => WORKOUT_KINDS.has(e.kind));
   const thisWeek = workouts.filter(e => new Date(e.startedAt).getTime() >= weekStart);
   const today = workouts.filter(e => new Date(e.startedAt).getTime() >= todayStart);
+  // rolling window for "a few months ahead" matching, so Mondays don't read as zero
+  const last7 = workouts.filter(e => new Date(e.startedAt).getTime() >= Date.now() - WEEK_MS);
   switch (question) {
     case 'workouts_this_week':
       return level === 'exact' ? thisWeek.length : level === 'rounded' ? bandCount(thisWeek.length) : thisWeek.length > 0;
@@ -79,6 +81,14 @@ function compute(question: QuestionType, events: VaultEvent[], level: ShareLevel
       const kind = KIND_2W[question];
       const n = kind ? workouts.filter(e => e.kind === kind).length : workouts.length;
       return level === 'exact' ? n : level === 'rounded' ? bandCount(n) : n > 0;
+    }
+    case 'distance_last_7_days_km': {
+      const km = last7.reduce((s, e) => s + (e.distanceKm ?? 0), 0);
+      return level === 'exact' ? Math.round(km * 100) / 100 : level === 'rounded' ? roundKm(km) : km > 0;
+    }
+    case 'active_days_last_7_days': {
+      const days = new Set(last7.map(e => new Date(e.startedAt).toDateString())).size;
+      return level === 'exact' ? days : level === 'rounded' ? bandCount(days) : days > 0;
     }
     case 'completed_move_today':
       return today.length > 0;

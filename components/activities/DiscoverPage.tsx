@@ -10,15 +10,17 @@ import type {DiscoverCard, DiscoverPayload, DiscoverSection} from '@/lib/activit
 import type {InterestSuggestion} from '@/lib/activities/interests';
 import type {Goal} from '@/lib/activities/goals';
 import {GoalSpotlight} from '@/components/activities/goals/GoalSpotlight';
+import type {MuseActionsPayload} from '@/lib/activities/actions';
+import {MuseActions} from './MuseActions';
 import sec from '@/components/pages/secondary.module.css';
 import styles from './discover.module.css';
 
 type Viewer = {id: number; name: string; avatarUrl: string};
-type Props = {viewer: Viewer; data: DiscoverPayload; interests: {enabled: boolean; suggestions: InterestSuggestion[]}; showIntro: boolean; showInterests: boolean; start: string | null; eventId: number | null; goal?: Goal | null};
+type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; interests: {enabled: boolean; suggestions: InterestSuggestion[]}; showIntro: boolean; showInterests: boolean; start: string | null; eventId: number | null; goal?: Goal | null};
 
 const json = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
 
-export function DiscoverPage({viewer, data, interests: initialInterests, showIntro, showInterests, start, eventId, goal = null}: Props) {
+export function DiscoverPage({viewer, data, museActions, interests: initialInterests, showIntro, showInterests, start, eventId, goal = null}: Props) {
   const router = useRouter();
   const [sections, setSections] = useState<DiscoverSection[]>(data.sections);
   const [tags, setTags] = useState<string[]>(data.tags);
@@ -41,6 +43,27 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
       .catch(() => {});
   }, [startMode, chats.length]);
   const [busy, setBusy] = useState<string | null>(null);
+
+  // Ember's "why you see this" lines arrive after first paint: one batched request for every card
+  // still carrying its deterministic fallback, so the page itself never waits on Muse.
+  useEffect(() => {
+    const pending = data.sections.flatMap(s => s.cards.filter(c => c.whyPending));
+    if (!pending.length) return;
+    const ctrl = new AbortController();
+    fetch('/api/activities/why', {
+      method: 'POST',
+      headers: {'content-type': 'application/json'},
+      signal: ctrl.signal,
+      body: JSON.stringify({cards: pending.map(c => ({id: c.id, kind: c.kind, title: c.title, subtitle: c.subtitle, tag: c.tag, meta: c.meta, fallback: c.fallback ?? c.why}))}),
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then((d: {why?: Record<string, string>} | null) => {
+        if (!d?.why) return;
+        setSections(list => list.map(s => ({...s, cards: s.cards.map(c => (d.why![c.id] ? {...c, why: d.why![c.id], whyPending: false} : c))})));
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, [data.sections]);
 
   const say = useCallback((t: string) => {
     setToast(t);
@@ -138,11 +161,11 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
           </span>
           <span className={sec.rowLabel}>Goals</span>
         </Link>
-        <Link href="/activities/mentor" className={sec.row}>
+        <Link href="/activities/ahead" className={sec.row}>
           <span className={sec.rowIcon}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z"/></svg>
           </span>
-          <span className={sec.rowLabel}>Mentors</span>
+          <span className={sec.rowLabel}>A few months ahead</span>
         </Link>
         <Link href="/reels?tab=fitness" className={sec.row}>
           <span className={sec.rowIcon}>
@@ -227,11 +250,12 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
         </span>
         <span className={data.museOffline ? styles.offline : undefined}>{data.museOffline ? 'Muse offline · template reasons' : 'Muse · Ember reasons'}</span>
       </div>
+      <MuseActions initial={museActions} viewerName={viewer.name} say={say} />
       {sections.map(s => (
         <section key={s.id} className={styles.section} aria-label={s.title}>
           <div className={styles.sectionHead}>
             <h2 className={styles.sectionTitle}>{s.title}</h2>
-            {s.id === 'mentors' && <span className={styles.sectionSub}>Identity hidden until they accept · 18+</span>}
+            {s.id === 'mentors' && <span className={styles.sectionSub}>Talk through your Muses · names stay hidden · 18+</span>}
             {s.id === 'friends' && <span className={styles.sectionSub}>Yes/no answers only</span>}
           </div>
           <div className={s.id === 'first_move' ? undefined : styles.grid}>
@@ -304,10 +328,10 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
           <ul>
             <li>Play Rally and Turf with friends — games built from real workouts.</li>
             <li>Your Muse keeps the details private and only answers yes/no on your behalf.</li>
-            <li>You choose what friends, games and mentors can see. Nothing is on by default.</li>
+            <li>You choose what friends, games and other people's Muses can see. Nothing is on by default.</li>
           </ul>
           <div className={styles.actions}>
-            <Link href="/activities/setup" className={styles.primary} onClick={() => setIntro(false)}>
+            <Link href="/activities/onboarding/tags" className={styles.primary} onClick={() => setIntro(false)}>
               Set up Activities
             </Link>
             <button
@@ -342,7 +366,7 @@ function Card({card, hero, viewer, onNotInterested, onStart, busy}: {card: Disco
         </div>
       ) : card.kind === 'mentor' ? (
         <div className={styles.avatarWrap}>
-          <span className={styles.pill}>Anonymous until accept</span>
+          <span className={styles.pill}>Muse to Muse · name hidden</span>
         </div>
       ) : null}
       <div className={styles.body}>

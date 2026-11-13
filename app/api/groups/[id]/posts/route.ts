@@ -6,9 +6,9 @@ import {listGroupPosts} from '@/lib/secondary-queries';
 type Ctx = {params: Promise<{id: string}>};
 
 export async function GET(_req: Request, {params}: Ctx) {
-  return withUser(async () => {
+  return withUser(async user => {
     const {id} = await params;
-    return NextResponse.json({posts: await listGroupPosts(Number(id))});
+    return NextResponse.json({posts: await listGroupPosts(Number(id), user.id)});
   });
 }
 

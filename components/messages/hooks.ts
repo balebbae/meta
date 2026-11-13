@@ -42,7 +42,7 @@ export function useVisiblePolling(fn: () => void | Promise<void>, ms: number, en
 }
 
 /** The viewer's conversation list, refreshed every 5s while visible. */
-export function useConversations(initial: Conversation[] | null = null, intervalMs = 5000) {
+export function useConversations(initial: Conversation[] | null = null, intervalMs = 2500) {
   const [conversations, setConversations] = useState<Conversation[] | null>(initial);
   const [error, setError] = useState<string | null>(null);
   const refresh = useCallback(async () => {
@@ -62,7 +62,7 @@ export function useConversations(initial: Conversation[] | null = null, interval
 }
 
 /** Number of conversations with unread messages (Messenger badge), polled every 5s. */
-export function useMessengerUnread(intervalMs = 5000) {
+export function useMessengerUnread(intervalMs = 3000) {
   const [count, setCount] = useState(0);
   useVisiblePolling(async () => {
     try {

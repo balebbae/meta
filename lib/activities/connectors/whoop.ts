@@ -17,8 +17,9 @@ export function whoopConfigured(): boolean {
   return Boolean(process.env.WHOOP_CLIENT_ID?.trim() && process.env.WHOOP_CLIENT_SECRET?.trim());
 }
 
+/** Same URI as the Health flow so WHOOP needs exactly one pre-registered redirect URL; /api/whoop/callback hands this flow back to /api/connect/whoop/callback. */
 function redirectUri(origin: string) {
-  return `${origin}/api/connect/whoop/callback`;
+  return `${origin}/api/whoop/callback`;
 }
 
 type Tokens = {access_token: string; refresh_token: string; expires_at: number; scope?: string; state?: string; last_sync?: string};

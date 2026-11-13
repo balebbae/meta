@@ -120,8 +120,10 @@ export function MobileMenu({user}: {user: User}) {
     const root = document.documentElement;
     const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
     root.dataset.theme = next;
+    root.dataset.fbTheme = next;
     try {
       localStorage.setItem('fb.theme', next);
+      document.cookie = `fb.theme=${next};path=/;max-age=31536000;SameSite=Lax`;
     } catch {}
   };
   return (
@@ -129,7 +131,7 @@ export function MobileMenu({user}: {user: User}) {
       <header className={`${styles.titleBar} ${styles.mobileOnly}`} style={{margin: '0 -12px', padding: 'calc(env(safe-area-inset-top) + 10px) 12px 10px 16px'}}>
         <h1>Menu</h1>
         <div style={{display: 'flex', gap: 8}}>
-          <Link href={`/profile/${user.id}`} className={styles.titleBtn} aria-label="Settings">
+          <Link href="/settings" className={styles.titleBtn} aria-label="Settings">
             <SettingsIcon size={22} />
           </Link>
           <PeopleSearchButton className={styles.titleBtn} />
@@ -157,20 +159,20 @@ export function MobileMenu({user}: {user: User}) {
         title="Help & support"
         Icon={HelpIcon}
         rows={[
-          {label: 'Help Center', Icon: HelpIcon},
-          {label: 'Support Inbox', Icon: BookmarkIcon},
-          {label: 'Report a problem', Icon: WarningIcon},
-          {label: 'Safety Center', Icon: LockIcon},
+          {label: 'Help Center', Icon: HelpIcon, href: '/settings#help'},
+          {label: 'Support Inbox', Icon: BookmarkIcon, href: '/notifications'},
+          {label: 'Report a problem', Icon: WarningIcon, href: '/settings#feedback'},
+          {label: 'Safety Center', Icon: LockIcon, href: '/privacy'},
         ]}
       />
       <Accordion
         title="Settings & privacy"
         Icon={SettingsIcon}
         rows={[
-          {label: 'Settings', Icon: SettingsIcon, href: `/profile/${user.id}`},
-          {label: 'Privacy Checkup', Icon: LockIcon},
-          {label: 'Activity log', Icon: ClockIcon},
-          {label: 'Feedback', Icon: FeedbackIcon},
+          {label: 'Settings', Icon: SettingsIcon, href: '/settings'},
+          {label: 'Privacy Checkup', Icon: LockIcon, href: '/privacy'},
+          {label: 'Activity log', Icon: ClockIcon, href: `/profile/${user.id}`},
+          {label: 'Feedback', Icon: FeedbackIcon, href: '/settings#feedback'},
         ]}
       />
       <button className={styles.accordion + ' ' + styles.accordionHead} style={{marginTop: 8}} onClick={toggleTheme}>

@@ -4,6 +4,7 @@ import {useRouter} from 'next/navigation';
 import {useEffect, useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import {SearchIcon} from '@/components/icons';
+import {PeopleSearchButton} from '@/components/mobile/MobileHeader';
 import {profileApi} from '@/components/profile/api';
 import type {FriendSummary} from '@/lib/profile-queries';
 import type {User} from '@/lib/types';
@@ -56,9 +57,7 @@ export function MobileFriends({viewer, view, requests, suggestions: initial, fri
     <div className={`${styles.mobileBlock} ${styles.friendsPage}`}>
       <header className={`${styles.titleBar} ${styles.mobileOnly}`} style={{background: 'var(--fb-card)'}}>
         <h1>Friends</h1>
-        <Link href="/friends?view=suggestions" className={styles.titleBtn} aria-label="Search">
-          <SearchIcon size={22} />
-        </Link>
+        <PeopleSearchButton className={styles.titleBtn} />
       </header>
       <div className={styles.pills}>
         <Link href="/friends?view=suggestions" className={`${styles.pill} ${tab === 'suggestions' ? styles.pillActive : ''}`} style={{display: 'inline-flex', alignItems: 'center'}}>

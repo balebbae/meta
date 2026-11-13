@@ -27,7 +27,7 @@ export function StravaConnection({children}: {children?: ReactNode}) {
         : connected == null ? <span className={styles.status} role="status">Checking Strava…</span>
         : connected ? <span className={styles.status} role="status"><StravaIcon size={20} /> Strava connected</span>
         : <Link href={panelHref({panel: 'settings', tab: 'sources', source: 'strava'})} className={styles.connect}>
-          <StravaIcon size={20} /> Connect Strava
+          <StravaIcon size={16} /> Connect Strava
         </Link>}
       {connected && !error && children}
     </div>

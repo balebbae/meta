@@ -1,11 +1,14 @@
 /* Rally dashboard: everything is Astryx components; only the boss arena backdrop is custom. */
 .arenaStage {
+  position: relative;
+  overflow: hidden;
   border-radius: var(--radius-container);
+  min-height: clamp(480px, 62vw, 640px);
   background: radial-gradient(ellipse at 50% 100%, var(--color-background-orange) 0%, var(--color-background-blue) 75%);
 }
 .arenaCanvas {
-  width: 100%;
-  height: clamp(200px, 34vw, 300px);
+  position: absolute;
+  inset: 0;
 }
 .arenaCanvas canvas {
   display: block;

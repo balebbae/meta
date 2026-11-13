@@ -5,13 +5,14 @@ import {Dialog} from '@/components/ui/Dialog';
 import {PeoplePicker} from '@/components/messages/PeoplePicker';
 import {chatApi} from '@/components/messages/api';
 import type {ChatUser, Conversation} from '@/lib/messaging-types';
+import {reelGameByText} from '@/lib/rally/reel-kind';
 import type {Reel} from '@/lib/reels';
 import styles from './reels.module.css';
 
 type Props = {
   reel: Reel;
   onClose: () => void;
-  /** game: what Muse made of the Reel ('quest' boss fight, 'mirror' dance/yoga, 'swim' crossing). */
+  /** game: what Muse made of the Reel ('quest' boss fight, 'mirror' dance/yoga, 'swim' crossing, 'turf' paced run). */
   onSent: (groupName: string, conversationId: number, game: string) => void;
   onError: (text: string) => void;
 };
@@ -46,10 +47,15 @@ export default function ChallengeDialog({reel, onClose, onSent, onError}: Props)
 
   const send = async (conversationId: number, name: string) => {
     setError(null);
+    // A running Reel becomes a territory game around where you are, so only then is a rough position asked for (the profile city is the fallback).
+    const near =
+      reelGameByText(`${reel.caption ?? ''} ${(reel.slug ?? '').replace(/-/g, ' ')}`) === 'run' && navigator.geolocation
+        ? await new Promise<{lat: number; lng: number} | null>(done => navigator.geolocation.getCurrentPosition(p => done({lat: p.coords.latitude, lng: p.coords.longitude}), () => done(null), {timeout: 5000, maximumAge: 600_000}))
+        : null;
     const res = await fetch('/api/games/from-reel', {
       method: 'POST',
       headers: {'content-type': 'application/json'},
-      body: JSON.stringify({reelId: reel.id, conversationId}),
+      body: JSON.stringify({reelId: reel.id, conversationId, ...(near ? {near} : {})}),
     });
     if (res.status === 501) {
       onError('Rally is not wired up yet, so the quest could not be created. The group is ready for it.');

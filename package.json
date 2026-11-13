@@ -9,6 +9,7 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:setup": "node scripts/db-setup.mjs",
+    "db:seed-judge": "node --env-file-if-exists=.env.local --no-warnings scripts/seed-judge.mjs",
     "test": "node --test \"lib/**/*.test.ts\"",
     "test:kingdom": "node --test \"lib/kingdom/**/*.test.ts\""
   },

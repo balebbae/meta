@@ -3,14 +3,16 @@
  * Anything about a member that other members can see comes from ask() (Answers) or from quest_moves
  * (public game facts: who moved, damage). vault_events are never read here.
  */
+import {after} from 'next/server';
 import {sql} from '@/lib/db';
 import {ask} from '@/lib/activities/answers';
 import type {GameSpec, QuestCardPayload, RallyGamePayload, Trust} from '@/lib/activities/types';
+import {parseHero, type HeroPick} from '@/lib/kingdom/cast';
 import {insertXpEvent} from '@/lib/closeness-queries';
 import {sendMessage} from '@/lib/messaging-queries';
 import {sendPushToUser} from '@/lib/push';
 import {narrate, recapText} from '@/lib/rally/narration';
-import {verifyProofImage} from '@/lib/rally/proof';
+import {glimmerConfigured, verifyProofImage} from '@/lib/rally/proof';
 import {fuseClipProof, type PoseVerdict} from '@/lib/rally/proof-fusion';
 import {POSE_SUPPORTED} from '@/lib/rally/pose-classify';
 import {CONFIDENT, EXERCISE_LABEL, countReps, type ClipExercise} from '@/lib/rally/repcount';
@@ -229,6 +231,7 @@ export async function logMove(questId: number, user: {id: number; name: string},
   let proof: {status: 'pending' | 'approved' | 'rejected'; verdict: string; museUsed: boolean} | undefined;
   let clip: {reps: number} | null = null;
   let clipLine = '';
+  let deferred: ClipCheck | null = null;
   if (input.clip && !dare) {
     // the server's recount is what scores; the phone's number was only a preview
     const c = countReps(input.clip.signal, input.clip.fps, input.clip.exercise);
@@ -236,7 +239,12 @@ export async function logMove(questId: number, user: {id: number; name: string},
     if (c.reps === 0) return {ok: false, error: `No full ${label} counted in that clip. Film from the side with your whole body in frame.`, status: 422};
     const {frames, pose} = input.clip;
     // the server decides which exercises the pose model may vouch for, not the phone
-    const r = await fuseClipProof(label, pose ? {...pose, supported: POSE_SUPPORTED} : null, () => verifyProofImage({image: frames[0], frames, task: `${label}, about ${c.reps} reps`}));
+    const fusePose = pose ? {...pose, supported: POSE_SUPPORTED} : null;
+    const task = `${label}, about ${c.reps} reps`;
+    // Self-hosted fine-tuned Glimmer takes ~10 s: don't make the player wait. Pose may still reject right away; otherwise
+    // the move is saved pending (no damage) and settleClipProof() applies the damage once Glimmer approves.
+    if (glimmerConfigured()) deferred = {label, pose: fusePose, frames, task};
+    const r = await fuseClipProof(label, fusePose, deferred ? async () => ({approved: false, verdict: CHECKING, status: 'pending', museUsed: false}) : () => verifyProofImage({image: frames[0], frames, task}, {glimmer: true, timeoutMs: 15_000}));
     if (r.status === 'rejected') return {ok: false, error: `Clip not accepted: ${r.verdict}`, status: 422};
     const confident = c.confidence >= CONFIDENT;
     if (confident) clip = {reps: c.reps};
@@ -276,6 +284,10 @@ export async function logMove(questId: number, user: {id: number; name: string},
     values (${questId}, ${user.id}, ${input.vaultEventId ?? null}, ${dare ? 'dare' : 'move'}, ${dare?.id ?? null}, ${damage}, ${input.note?.slice(0, 200) ?? null}, ${input.image ?? null}, ${proof?.status ?? null}, ${proof?.verdict ?? null})
     returning id, quest_id, user_id, kind, dare_id, damage, proof_status, proof_verdict, proof_image_url is not null as has_proof, created_at`;
   const move = mapMove(moveRow);
+  if (deferred && proof?.status === 'pending') {
+    const check = {...deferred, moveId: Number(move.id), questId, user, damage: result.damage, verdictPrefix: clipLine};
+    after(() => settleClipProof(check).catch(err => console.error('[rally] background clip check failed', err instanceof Error ? err.message : err)));
+  }
   await sql`update quest_progress set progress = coalesce(progress, '{}'::jsonb) || ${JSON.stringify({lastMoveAt: move.createdAt, level: levelDay})}::jsonb, updated_at = now() where quest_id = ${questId} and user_id = ${user.id}`;
 
   const bossName = quest.spec.boss?.name ?? quest.title;
@@ -309,6 +321,48 @@ export async function logMove(questId: number, user: {id: number; name: string},
   return {ok: true, move, event, damage, critical, hpLeft: hpAfter, narration: text, museUsed: museUsed && (proof ? proof.museUsed : true), ...(proof ? {proof: {status: proof.status, verdict: proof.verdict}} : {}), completed};
 }
 
+const CHECKING = 'Checking privately on our own GPU, damage lands when verified.';
+type ClipCheck = {label: string; pose: PoseVerdict | null; frames: string[]; task: string};
+
+/**
+ * Background half of a clip move when the fine-tuned Glimmer is on: run the vision check (Glimmer, Ember fallback),
+ * then settle the pending move. Approved -> the move gets its damage, the boss loses HP, XP and a chat card follow.
+ * Only a move still 'pending' is settled, so a retry or race can't apply damage twice.
+ */
+async function settleClipProof(c: ClipCheck & {moveId: number; questId: number; user: {id: number; name: string}; damage: number; verdictPrefix: string}) {
+  const r = await fuseClipProof(c.label, c.pose, () => verifyProofImage({image: c.frames[0], frames: c.frames, task: c.task}, {glimmer: true, timeoutMs: 40_000}));
+  const verdict = `${c.verdictPrefix}. ${r.verdict}`.slice(0, 200);
+  if (r.status !== 'approved' || c.damage <= 0) {
+    await sql`update quest_moves set proof_status = ${r.status}, proof_verdict = ${verdict} where id = ${c.moveId} and proof_status = 'pending'`;
+    return;
+  }
+  const [claimed] = await sql`update quest_moves set proof_status = 'approved', proof_verdict = ${verdict} where id = ${c.moveId} and proof_status = 'pending' returning id`;
+  if (!claimed) return;
+  const quest = await getQuest(c.questId);
+  if (!quest || quest.status !== 'active') return;
+  let damage = c.damage;
+  let hpAfter = quest.bossHpLeft;
+  let hpBefore = hpAfter;
+  if (quest.template === 'boss') {
+    const [hp] = await sql`update quests set boss_hp_left = greatest(0, boss_hp_left - ${damage}) where id = ${c.questId} and boss_hp_left > 0 returning boss_hp_left`;
+    if (!hp) damage = 0;
+    else {
+      hpAfter = Number(hp.boss_hp_left);
+      hpBefore = hpAfter + damage;
+    }
+  }
+  if (damage <= 0) return;
+  await sql`update quest_moves set damage = ${damage} where id = ${c.moveId}`;
+  await insertXpEvent({userId: c.user.id, sourceType: 'rally_move', sourceId: c.moveId, xp: damage, reason: `${quest.spec.boss?.name ?? quest.title}: verified move for ${damage}`});
+  const event: BossEvent = quest.template === 'boss' ? classifyMoveEvent({critical: false, hpBefore, hpAfter, hpMax: quest.bossHp, levelFinished: false}) : 'move';
+  const text = `${c.user.name}'s ${c.label} verified: ${damage} damage${quest.template === 'boss' ? `, ${hpAfter} HP left` : ''}.`;
+  if (quest.conversationId) {
+    const payload: RallyGamePayload = {questId: c.questId, event, userId: c.user.id, text, damage, hpLeft: hpAfter};
+    await sendMessage(quest.conversationId, c.user, text, null, {kind: 'rally_game', payload});
+  }
+  if (event === 'boss_down') await completeQuest(quest, await questMembers(c.questId));
+}
+
 /** §15.3: behind schedule -> comeback dare appended to the spec; far ahead -> boss gets +10% HP once. */
 async function maybeAdapt(quest: QuestRow) {
   if (quest.template !== 'boss') return;
@@ -325,11 +379,11 @@ async function maybeAdapt(quest: QuestRow) {
   }
 }
 
-export type QuestMember = {id: number; name: string; avatarUrl: string};
+export type QuestMember = {id: number; name: string; avatarUrl: string; hero: HeroPick | null};
 
 async function questMembers(questId: number): Promise<QuestMember[]> {
-  const rows = await sql`select u.id, u.name, u.avatar_url from quest_progress p join users u on u.id = p.user_id where p.quest_id = ${questId} order by u.id`;
-  return rows.map(r => ({id: r.id as number, name: r.name as string, avatarUrl: r.avatar_url as string}));
+  const rows = await sql`select u.id, u.name, u.avatar_url, u.hero from quest_progress p join users u on u.id = p.user_id where p.quest_id = ${questId} order by u.id`;
+  return rows.map(r => ({id: r.id as number, name: r.name as string, avatarUrl: r.avatar_url as string, hero: parseHero(r.hero)}));
 }
 
 async function userBrief(id: number): Promise<{id: number; name: string} | null> {

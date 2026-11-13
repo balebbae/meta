@@ -1,13 +1,11 @@
 'use client';
 import {createContext, useContext, useEffect, useState, type ReactNode} from 'react';
+import {IconX} from '@tabler/icons-react';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Heading} from '@astryxdesign/core/Heading';
 import {HStack} from '@astryxdesign/core/HStack';
-import {Switch} from '@astryxdesign/core/Switch';
 import {Text} from '@astryxdesign/core/Text';
-import {Theme} from '@astryxdesign/core/theme';
 import {VStack} from '@astryxdesign/core/VStack';
-import {neutralTheme} from '@astryxdesign/theme-neutral/built';
 import type {CoachState} from '@/lib/activities/coach';
 import {CoachPanel} from './CoachPanel';
 import s from './coach.module.css';
@@ -23,7 +21,7 @@ async function post(body: {action: string; deleteHistory?: boolean}): Promise<Co
 
 /**
  * Coach mode is a mode of /activities, not a page: the Coach mode button on the goal card swaps the Activities page (children)
- * for the Coach view, drawn in a nested dark theme with a lime accent. The page always opens with it off; switching on
+ * for the Coach view; the X at the top leaves it. The page always opens with it off; switching on
  * records the opt-in (activity_profiles.coach_mode), which the Coach report needs.
  */
 export function CoachMode({initialOn, children}: {initialOn: boolean; children: ReactNode}) {
@@ -66,22 +64,18 @@ export function CoachMode({initialOn, children}: {initialOn: boolean; children: 
   return (
     <CoachCtx.Provider value={{on, busy, toggle: (next, del) => void toggle(next, del)}}>
       {on ? (
-        <Theme theme={neutralTheme} mode="dark">
-          <div className={s.surface}>
-            <VStack gap={4}>
-              <HStack gap={3} vAlign="start" justify="between">
-                <VStack gap={1}>
-                  <Heading level={1} color="accent">
-                    Coach mode
-                  </Heading>
-                  <Text color="secondary">This week vs last week, what improved, the gaps, and how to bridge them.</Text>
-                </VStack>
-                <CoachToggle compact />
-              </HStack>
-              <CoachPanel state={state} onState={setState} error={error} onTurnOff={del => void toggle(false, del)} />
-            </VStack>
-          </div>
-        </Theme>
+        <div className={s.surface}>
+          <VStack gap={4}>
+            <HStack gap={3} vAlign="start" justify="between">
+              <VStack gap={1}>
+                <Heading level={1}>Coach mode</Heading>
+                <Text color="secondary">Where you stand against your goal, a bridge for every gap, then this week vs last week.</Text>
+              </VStack>
+              <CoachClose />
+            </HStack>
+            <CoachPanel state={state} onState={setState} error={error} onTurnOff={del => void toggle(false, del)} />
+          </VStack>
+        </div>
       ) : (
         <>
           {error && <Banner status="error" title={error} />}
@@ -103,10 +97,13 @@ export function CoachButton({className, children}: {className?: string; children
   );
 }
 
-/** The on/off switch inside the Coach view's header. Renders nothing outside a CoachMode. */
-export function CoachToggle({compact = false}: {compact?: boolean}) {
+/** The X inside the Coach view's header that exits Coach mode. Renders nothing outside a CoachMode. */
+export function CoachClose() {
   const ctx = useContext(CoachCtx);
   if (!ctx) return null;
-  // compact = inside the Coach view, whose title already says "Coach mode" (label stays for screen readers)
-  return <Switch label="Coach mode" isLabelHidden={compact} labelPosition="start" value={ctx.on} isLoading={ctx.busy} onChange={next => ctx.toggle(next)} />;
+  return (
+    <button type="button" className={s.close} aria-label="Leave Coach mode" title="Leave Coach mode" disabled={ctx.busy} onClick={() => ctx.toggle(false)}>
+      <IconX size={20} aria-hidden />
+    </button>
+  );
 }

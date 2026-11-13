@@ -52,12 +52,21 @@ test('GLIMMER_PROOF_URL unset and Muse offline: pending, no network', async () =
   assert.equal(calls.length, 0);
 });
 
+test('GLIMMER_PROOF_URL set but glimmer not requested (photo proof): Ember only', async () => {
+  process.env.GLIMMER_PROOF_URL = 'https://glimmer.test/v1';
+  ember = emberSays(true, 'Run screen shown.');
+  assert.equal((await verifyProofImage({image: IMG, task: 'run 5 km'})).status, 'approved');
+  assert.deepEqual(calls.map(c => c.url), ['https://api.meta.ai/v1/responses']);
+});
+
+const G = {glimmer: true};
+
 test('Glimmer answers: request shape and ok/rejected/unclear mapping', async () => {
   process.env.GLIMMER_PROOF_URL = 'https://glimmer.test/v1/';
   process.env.GLIMMER_PROOF_KEY = 'gk';
   glimmer = glimmerSays(check({}));
   const frames = [IMG, IMG + 'B', IMG + 'C'];
-  assert.deepEqual(await verifyProofImage({image: IMG, frames, task: 'push-ups × 10'}), {approved: true, verdict: 'Push-ups visible across the frames.', status: 'approved', museUsed: true});
+  assert.deepEqual(await verifyProofImage({image: IMG, frames, task: 'push-ups × 10'}, G), {approved: true, verdict: 'Push-ups visible across the frames.', status: 'approved', museUsed: true});
   assert.equal(calls.length, 1);
   const {url, body, headers} = calls[0];
   assert.equal(url, 'https://glimmer.test/v1/chat/completions');
@@ -71,11 +80,11 @@ test('Glimmer answers: request shape and ok/rejected/unclear mapping', async () 
   assert.deepEqual(content.slice(1).map(c => c.image_url!.url), frames);
 
   glimmer = glimmerSays(check({ex: 'squat', match: false, ok: false, why: 'Squats, not push-ups.'}));
-  assert.deepEqual(await verifyProofImage({image: IMG, task: 'push-ups'}), {approved: false, verdict: 'Squats, not push-ups.', status: 'rejected', museUsed: true});
+  assert.deepEqual(await verifyProofImage({image: IMG, task: 'push-ups'}, G), {approved: false, verdict: 'Squats, not push-ups.', status: 'rejected', museUsed: true});
   glimmer = glimmerSays(check({shows: 'unclear', ex: 'none', match: false, ok: false, why: 'Too dark to tell.'}));
-  assert.deepEqual(await verifyProofImage({image: IMG, task: 'push-ups'}), {approved: false, verdict: 'Too dark to tell.', status: 'pending', museUsed: true});
+  assert.deepEqual(await verifyProofImage({image: IMG, task: 'push-ups'}, G), {approved: false, verdict: 'Too dark to tell.', status: 'pending', museUsed: true});
   glimmer = glimmerSays(check({shows: 'not_a_workout', ok: true}));
-  assert.equal((await verifyProofImage({image: IMG, task: 'push-ups'})).status, 'rejected', 'inconsistent ok never approves');
+  assert.equal((await verifyProofImage({image: IMG, task: 'push-ups'}, G)).status, 'rejected', 'inconsistent ok never approves');
   assert.ok(calls.every(c => c.url.startsWith('https://glimmer.test/')), 'Ember not called when Glimmer answers');
 });
 
@@ -84,7 +93,7 @@ test('Glimmer timeout falls back to Ember', async () => {
   process.env.GLIMMER_PROOF_TIMEOUT_MS = '30';
   glimmer = init => new Promise((_, reject) => init.signal!.addEventListener('abort', () => reject(init.signal!.reason)));
   ember = emberSays(false, 'No push-ups visible.');
-  const r = await verifyProofImage({image: IMG, task: 'push-ups'});
+  const r = await verifyProofImage({image: IMG, task: 'push-ups'}, G);
   assert.deepEqual(r, {approved: false, verdict: 'No push-ups visible.', status: 'rejected', museUsed: true});
   assert.deepEqual(calls.map(c => c.url), ['https://glimmer.test/v1/chat/completions', 'https://api.meta.ai/v1/responses']);
 });
@@ -92,7 +101,7 @@ test('Glimmer timeout falls back to Ember', async () => {
 test('Glimmer invalid JSON falls back to Ember', async () => {
   process.env.GLIMMER_PROOF_URL = 'https://glimmer.test/v1';
   glimmer = () => Promise.resolve(json({choices: [{message: {content: 'not json'}}]}));
-  assert.equal((await verifyProofImage({image: IMG, task: 'push-ups'})).status, 'approved');
+  assert.equal((await verifyProofImage({image: IMG, task: 'push-ups'}, G)).status, 'approved');
   assert.equal(calls.length, 2);
 });
 
@@ -100,7 +109,7 @@ test('Glimmer and Ember both fail: pending (fail closed)', async () => {
   process.env.GLIMMER_PROOF_URL = 'https://glimmer.test/v1';
   glimmer = () => Promise.resolve(json({error: 'boom'}, 502));
   ember = () => Promise.resolve(json({error: {message: 'bad request'}}, 400)); // 400: the SDK does not retry
-  const r = await verifyProofImage({image: IMG, task: 'push-ups'});
+  const r = await verifyProofImage({image: IMG, task: 'push-ups'}, G);
   assert.equal(r.status, 'pending');
   assert.equal(r.approved, false);
   assert.equal(r.museUsed, false);

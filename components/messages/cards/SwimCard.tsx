@@ -1,6 +1,16 @@
 'use client';
-import {useEffect, useRef, useState} from 'react';
-import {Dialog} from '@/components/ui/Dialog';
+import {useEffect, useState} from 'react';
+import {Banner} from '@astryxdesign/core/Banner';
+import {Button} from '@astryxdesign/core/Button';
+import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
+import {FileInput} from '@astryxdesign/core/FileInput';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Layout, LayoutContent, LayoutFooter} from '@astryxdesign/core/Layout';
+import {NumberInput} from '@astryxdesign/core/NumberInput';
+import {Text} from '@astryxdesign/core/Text';
+import {Thumbnail} from '@astryxdesign/core/Thumbnail';
+import {VStack} from '@astryxdesign/core/VStack';
 import {fileToDataUrl} from '@/components/rally/api';
 import {RallyAvatar} from '@/components/rally/Avatar';
 import type {SwimCardPayload} from '@/lib/activities/types';
@@ -54,7 +64,7 @@ export default function SwimCard({message}: CardProps) {
           ))}
           {lead && (
             <span className={m.swimBoat} style={{left: `${pct}%`}} aria-hidden>
-              <RallyAvatar src="" name={lead.name} state="run" size={30} />
+              <RallyAvatar src="" name={lead.name} state="run" size={34} />
             </span>
           )}
         </div>
@@ -83,23 +93,23 @@ export default function SwimCard({message}: CardProps) {
   );
 }
 
+/** Log a swim: same sheet as Rally's "Log a move" (metres or a watch photo Ember reads). */
 function SwimLogSheet({journeyId, onClose, onDone}: {journeyId: number; onClose: () => void; onDone: () => void}) {
-  const [meters, setMeters] = useState('');
+  const [meters, setMeters] = useState<number | null>(null);
   const [image, setImage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<SwimLogResult | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const submit = async () => {
-    if (!image && !(Number(meters) >= 25)) {
+    if (!image && !((meters ?? 0) >= 25)) {
       setError('At least 25 m, or add a photo.');
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch(`/api/swim/${journeyId}/log`, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(image ? {image} : {meters: Number(meters)})});
+      const res = await fetch(`/api/swim/${journeyId}/log`, {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(image ? {image} : {meters})});
       const data = (await res.json().catch(() => ({}))) as SwimLogResult & {error?: string};
       if (!res.ok) throw new Error(data.error ?? 'Could not log the swim');
       setResult(data);
@@ -110,50 +120,65 @@ function SwimLogSheet({journeyId, onClose, onDone}: {journeyId: number; onClose:
       setBusy(false);
     }
   };
+  const pickPhoto = (files: File | File[] | null) => {
+    const file = Array.isArray(files) ? files[0] : files;
+    if (file) fileToDataUrl(file).then(setImage).catch(() => setError('Could not read that image'));
+  };
 
   return (
-    <Dialog open onClose={onClose} title="Log a swim" width={420}>
-      {result ? (
-        <div className={s.sheetResult}>
-          <div className={s.sheetDamage}>+{result.meters + result.bonus} m</div>
-          <p className={s.sheetNarration}>
-            {Math.round((result.progressM / result.totalM) * 100)}% across
-            {result.bonus ? ` · +${result.bonus} m buddy bonus` : ''}
-            {result.checkpoints.length ? ` · 📍 ${result.checkpoints.join(', ')}` : ''}
-            {result.finished ? ' · 🎉 Crossed' : ''}
-          </p>
-          <button type="button" className="fb-btn-primary" onClick={onClose} style={{marginTop: 12}}>
-            Done
-          </button>
-        </div>
-      ) : (
-        <div className={s.sheetForm}>
-          <p className={s.sheetLead}>Type metres or add a watch photo.</p>
-          <label className={s.field}>
-            Metres
-            <input type="number" inputMode="numeric" min={25} max={10000} step={25} value={meters} disabled={!!image} onChange={e => setMeters(e.target.value)} placeholder="1000" />
-          </label>
-          <div className={m.actions}>
-            <button type="button" className="fb-btn-secondary" onClick={() => fileRef.current?.click()}>
-              {image ? 'Photo ✓' : 'Watch photo'}
-            </button>
-            {image && (
-              <button type="button" className="fb-btn-secondary" onClick={() => setImage(null)}>
-                Remove
-              </button>
+    <Dialog isOpen onOpenChange={o => !o && onClose()} purpose="form" width={440}>
+      <Layout
+        header={<DialogHeader title="Log a swim" onOpenChange={() => onClose()} />}
+        content={
+          <LayoutContent>
+            {result ? (
+              <VStack gap={2}>
+                <Heading level={2}>+{result.meters + result.bonus} m</Heading>
+                <Text>
+                  {Math.round((result.progressM / result.totalM) * 100)}% across
+                  {result.bonus ? ` · +${result.bonus} m buddy bonus` : ''}
+                  {result.checkpoints.length ? ` · 📍 ${result.checkpoints.join(', ')}` : ''}
+                  {result.finished ? ' · 🎉 Crossed' : ''}
+                </Text>
+                {result.proof === 'photo' && (
+                  <Text type="supporting" color="secondary">
+                    Read from your photo
+                  </Text>
+                )}
+              </VStack>
+            ) : (
+              <VStack gap={4}>
+                <NumberInput label="Metres" description="At least 25 m" value={meters} onChange={setMeters} min={25} max={10000} placeholder="1000" isDisabled={!!image} />
+                {image ? (
+                  <HStack gap={2} vAlign="center">
+                    <Thumbnail src={image} alt="Watch photo" label="Watch photo" onRemove={() => setImage(null)} />
+                    <Text type="supporting" color="secondary">
+                      Muse reads the distance
+                    </Text>
+                  </HStack>
+                ) : (
+                  <FileInput label="Watch photo" description="Instead of typing" isOptional accept="image/*" value={null} onChange={pickPhoto} />
+                )}
+                {error && <Banner status="error" title={error} />}
+              </VStack>
             )}
-          </div>
-          <input ref={fileRef} type="file" accept="image/*" hidden onChange={async e => {
-            const f = e.target.files?.[0];
-            e.target.value = '';
-            if (f) setImage(await fileToDataUrl(f));
-          }} />
-          {error && <p className={s.error}>{error}</p>}
-          <button type="button" className="fb-btn-primary" onClick={submit} disabled={busy}>
-            {busy ? 'Logging…' : 'Log'}
-          </button>
-        </div>
-      )}
+          </LayoutContent>
+        }
+        footer={
+          <LayoutFooter>
+            <HStack gap={2} hAlign="end">
+              {result ? (
+                <Button label="Done" variant="primary" onClick={onClose} />
+              ) : (
+                <>
+                  <Button label="Cancel" variant="secondary" onClick={onClose} />
+                  <Button label="Log" variant="primary" isLoading={busy} onClick={() => void submit()} />
+                </>
+              )}
+            </HStack>
+          </LayoutFooter>
+        }
+      />
     </Dialog>
   );
 }

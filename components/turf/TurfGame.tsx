@@ -1,9 +1,12 @@
 'use client';
+import {WORLDS, worldFor} from '@/lib/kingdom/scenes/worlds';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {AlertDialog} from '@astryxdesign/core/AlertDialog';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {ArrowLeftIcon} from '@/components/icons';
 import {NEUTRAL} from '@/lib/turf/colors';
+import {fmtPace} from '@/lib/turf/engine';
 import type {TurfState} from '@/lib/turf/types';
 import {ConsentCopy} from './ConsentSheet';
 import {HexMap} from './HexMap';
@@ -12,6 +15,8 @@ import {StravaConnection} from './StravaConnection';
 import {endsLabel, timeLeft, turfApi, useTurfState, type PointsResult} from './api';
 import styles from './turf.module.css';
 import {useTracker} from './useTracker';
+
+const KingdomView = dynamic(() => import('./KingdomView'), {ssr: false});
 
 const STATUS: Record<string, string> = {pending: 'Not started', live: 'Live', ended: 'Ended', cancelled: 'Cancelled'};
 const INVITE: Record<string, string> = {invited: 'Invited', declined: 'Passed', left: 'Left', expired: 'Expired'};
@@ -35,12 +40,18 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
   const [note, setNote] = useState<string | null>(null);
   const [myOuting, setMyOuting] = useState(state.me.outing);
   const fileRef = useRef<HTMLInputElement>(null);
+  // Kingdom is the game board; Map is the same cells on real streets, which is what you want while you run.
+  const [view, setView] = useState<'kingdom' | 'map'>('kingdom');
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches), []);
 
   useEffect(() => setMyOuting(state.me.outing), [state.me.outing]);
 
   const onResult = (r: PointsResult) => {
     setMyOuting(r.outing);
-    if (r.recap) setNote(r.recap);
+    const slow = r.outing.result.slow;
+    if (slow && r.gained === 0 && state.pace) setNote(`Too slow for this game: ${slow.secPerKm ? `${fmtPace(slow.secPerKm)} per km` : 'no pace could be read'} against ${fmtPace(state.pace.secPerKm)}. That loop claims nothing.`);
+    else if (r.recap) setNote(r.recap);
     else if (r.cut) setNote('Your trail was cut. This outing claims nothing.');
     else if (r.outing.status !== 'open' && r.gained === 0) setNote('Outing finished. No loop was closed, so no cells were claimed.');
     void refresh();
@@ -84,15 +95,41 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
             <div className={styles.sub}>
               {(state.arena.radiusKm * 2).toFixed(1)} km arena · {state.lengthDays} day{state.lengthDays === 1 ? '' : 's'}
               {state.endsAt && state.status !== 'ended' ? ` · ends ${endsLabel(state.endsAt)}` : ''}
+              {worldFor(state.conversationId) !== 'kingdom' ? ` · ${WORLDS[worldFor(state.conversationId)].name}` : ''}
             </div>
+            {(state.pace || state.reelId) && (
+              <div className={styles.sub}>
+                {state.pace ? `Paced: a loop only counts at ${fmtPace(state.pace.secPerKm)} per km or faster${state.pace.distanceKm ? ` · the Reel runs ${state.pace.distanceKm} km` : ''}${state.pace.assumed ? ' · the Reel names no pace, so this is an easy one' : ''}` : 'Any pace counts'}
+                {state.reelId ? (
+                  <>
+                    {' · '}
+                    <Link href={`/reels?feed=${state.reelId}`}>Watch the Reel</Link>
+                  </>
+                ) : null}
+              </div>
+            )}
           </div>
           <span className={live ? styles.pillLive : styles.pill} aria-live="polite">
             {live ? timeLeft(state.endsAt, now) : STATUS[state.status]}
           </span>
         </div>
-        <div className={styles.mapWrap}>
-          <HexMap arena={state.arena} cells={state.cells} colors={colors} trail={trail} trailColor={colors[me.id]} me={tracker.position} label={`Turf map of ${state.title}`} />
+        <div className={styles.viewTabs} role="group" aria-label="How to show the arena">
+          <button type="button" className={view === 'kingdom' ? styles.btnPrimary : styles.btn} aria-pressed={view === 'kingdom'} onClick={() => setView('kingdom')}>
+            Kingdom
+          </button>
+          <button type="button" className={view === 'map' ? styles.btnPrimary : styles.btn} aria-pressed={view === 'map'} onClick={() => setView('map')}>
+            Map
+          </button>
         </div>
+        {view === 'kingdom' ? (
+          <div className={styles.kingdomWrap} role="img" aria-label={`Kingdom board of ${state.title}: ${players.map(p => `${p.name.split(' ')[0]} ${cellsOf[p.id]?.cells ?? 0} cells`).join(', ')}`}>
+            <KingdomView arena={state.arena} players={state.players} cells={state.cells} trail={trail} viewerId={me.id} world={worldFor(state.conversationId)} reducedMotion={reducedMotion} onError={() => setView('map')} />
+          </div>
+        ) : (
+          <div className={styles.mapWrap}>
+            <HexMap arena={state.arena} cells={state.cells} colors={colors} trail={trail} trailColor={colors[me.id]} me={tracker.position} label={`Turf map of ${state.title}`} />
+          </div>
+        )}
         <p className={styles.muted} style={{padding: '8px 4px 0'}}>
           {accepted ? 'Everyone in this game sees cells and who owns them. Routes and live positions are never shown; the dashed cells are your own open trail and only you can see them.' : 'Cells appear here once you join. Players only ever see cells, never routes.'}
         </p>

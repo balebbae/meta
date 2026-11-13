@@ -19,7 +19,7 @@ import {ClipProof, type ClipPayload} from './ClipProof';
 type Dare = {id: string; text: string; bonus: number; needsProof: boolean};
 
 /** Manual log for a move or a dare. Only what the player types leaves this sheet; the server scores it and posts the public card. */
-export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises, target, onDone}: {questId: number; open: boolean; onClose: () => void; dare?: Dare | null; levelName?: string; exercises?: string[]; target?: number | null; onDone?: (r: OkMove) => void}) {
+export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises, target, onDone}: {questId: number; open: boolean; onClose: () => void; dare?: Dare | null; levelName?: string; exercises?: string[]; target?: number | null; onDone?: (r: OkMove, reps: number | null) => void}) {
   const [note, setNote] = useState('');
   const [amount, setAmount] = useState<number | null>(null);
   const [image, setImage] = useState<string | null>(null);
@@ -43,7 +43,7 @@ export function LogMoveSheet({questId, open, onClose, dare, levelName, exercises
     try {
       const r = dare ? await rallyApi.dare(questId, dare.id, {image, note}) : await rallyApi.move(questId, clip ? {source: 'clip', note, clip, amount} : {source: image ? 'photo' : 'manual', note, image, amount});
       setResult(r);
-      onDone?.(r);
+      onDone?.(r, dare ? null : (clip?.pose?.reps ?? amount)); // the arena plays one swing per rep
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not log the move');
     } finally {

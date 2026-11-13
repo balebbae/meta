@@ -300,6 +300,25 @@ export type LoopResult =
  * started (after having gone away from it). The trail starts at the first cell outside own territory.
  * Returns the cells of the first loop found; endIndex is the trail index that closed it.
  */
+/** A paced game lets a loop count when it was run at the target pace or up to 5% slower. */
+export const PACE_GRACE = 1.05;
+export const fmtPace = (secPerKm: number): string => `${Math.floor(secPerKm / 60)}:${String(Math.round(secPerKm % 60)).padStart(2, '0')}`;
+/**
+ * How fast the stretch between two moments was run: distance along the smoothed track (so standing still with GPS
+ * jitter adds time but no distance) over elapsed time. Null when there is too little to judge: under 150 m or 30 s.
+ */
+export function loopPace(points: GpsPoint[], fromT: number, toT: number): {km: number; secPerKm: number} | null {
+  const pts = points.filter(p => p.t >= fromT && p.t <= toT);
+  if (pts.length < 2) return null;
+  const path = smoothTrack(pts);
+  let m = 0;
+  for (let i = 1; i < path.length; i++) m += haversineM(path[i - 1], path[i]);
+  const sec = (pts[pts.length - 1].t - pts[0].t) / 1000;
+  if (m < 150 || sec < 30) return null;
+  return {km: m / 1000, secPerKm: sec / (m / 1000)};
+}
+export const paceOk = (secPerKm: number, target: number): boolean => secPerKm <= target * PACE_GRACE;
+
 export function detectLoop(trail: TrailCell[], owned: ReadonlySet<string>): LoopResult {
   const startIndex = trail.findIndex(c => !owned.has(c.cell));
   if (startIndex < 0) return {closed: false, reason: null, loop: [], startIndex: trail.length, endIndex: trail.length};

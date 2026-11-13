@@ -1,4 +1,5 @@
 'use client';
+import {WORLDS, worldFor} from '@/lib/kingdom/scenes/worlds';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {IconChevronLeft} from '@tabler/icons-react';
@@ -33,6 +34,7 @@ import s from './dashboard.module.css';
 
 // One live WebGL scene for the fight; every other character on the page is a cached sprite.
 const Arena = dynamic(() => import('@/components/kingdom/Arena'), {ssr: false});
+type ArenaStrike = import('@/components/kingdom/Arena').ArenaStrike;
 
 const POLL_MS = 3000;
 const exerciseLine = (e: {name: string; reps?: number | null; seconds?: number | null}) => `${e.name}${e.reps ? ` ×${e.reps}` : ''}${e.seconds ? ` ${e.seconds}s` : ''}`;
@@ -52,15 +54,23 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
   const [reducedMotion, setReducedMotion] = useState(false);
   useEffect(() => setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches), []);
   const bossCast = useMemo(() => castBoss(state.quest.bossKind), [state.quest.bossKind]);
-  const heroKey = state.members.map(m => `${m.id}:${m.name}:${m.gear.length}`).join('|');
-  const arenaHeroes = useMemo(() => state.members.map(m => ({id: m.id, cast: castHero(m.name, m.gear)})), [heroKey]); // eslint-disable-line react-hooks/exhaustive-deps -- state is replaced on every poll
+  const heroKey = state.members.map(m => `${m.id}:${m.name}:${m.gear.length}:${JSON.stringify(m.hero ?? null)}`).join('|');
+  const arenaHeroes = useMemo(() => state.members.map(m => ({id: m.id, name: m.name, cast: castHero(m.name, m.gear, m.hero)})), [heroKey]); // eslint-disable-line react-hooks/exhaustive-deps -- state is replaced on every poll
   const lastMoveId = useRef(initial.moves[initial.moves.length - 1]?.id ?? 0);
+  // Moves logged since this page opened, for the arena to play. My own carry the reps I typed; a teammate's set is shown at their personal target.
+  const [strikes, setStrikes] = useState<ArenaStrike[]>([]);
+  const mine = useRef(new Map<number, {reps: number | null; critical: boolean}>());
 
   const refresh = useCallback(async () => {
     try {
       const next = await rallyApi.state(initial.quest.id);
       const newest = next.moves[next.moves.length - 1];
       if (newest && newest.id > lastMoveId.current) {
+        const fresh = next.moves.filter(m => m.id > lastMoveId.current && m.damage > 0).map(m => {
+          const own = mine.current.get(m.id);
+          return {id: m.id, userId: m.userId, damage: m.damage, reps: own?.reps ?? next.members.find(x => x.id === m.userId)?.target ?? 6, critical: own?.critical ?? false};
+        });
+        if (fresh.length) setStrikes(prev => [...prev.slice(-20), ...fresh]);
         lastMoveId.current = newest.id;
         setAnim({userId: newest.userId, state: next.quest.status === 'completed' ? 'celebrate' : 'attack', hurt: true});
         setTimeout(() => setAnim(null), 1800);
@@ -76,7 +86,8 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
     return () => clearInterval(t);
   }, [refresh]);
 
-  const onMove = (res: OkMove) => {
+  const onMove = (res: OkMove, reps: number | null) => {
+    mine.current.set(res.move.id, {reps, critical: res.critical});
     showToast({body: `Game Master: ${res.narration}`, autoHideDuration: 5000});
     void refresh();
   };
@@ -116,7 +127,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
       <Link href="/activities#games" className={`${ah.pill} ${ah.pillSm} ${ah.pillIcon} ${ah.pillOutline} ${ah.phoneOnly}`} aria-label="Back to Activities" title="Back to Activities">
         <IconChevronLeft size={18} aria-hidden />
       </Link>
-      <Card aria-label="Boss arena">
+      <VStack aria-label="Boss arena">
         <VStack gap={4}>
           <HStack gap={3} vAlign="start" justify="between" wrap="wrap">
             <VStack gap={2} maxWidth={560}>
@@ -126,6 +137,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
                 <Token label={spec.template} size="sm" />
                 <Token label={`Day ${state.levelDay} of ${spec.levels.length}`} size="sm" color="blue" />
                 {q.buffed && <Token label="Boss buffed +10%" size="sm" color="orange" />}
+                {worldFor(q.conversationId) !== 'kingdom' && <Token label={`World: ${WORLDS[worldFor(q.conversationId)].name}`} size="sm" color="blue" />}
                 {!state.museUsed && <Token label="Muse offline · template quest" size="sm" color="gray" />}
                 {state.myReadiness && <Token label={state.myReadiness.fit === 'good' ? 'Good match for you' : 'A stretch for you'} size="sm" color={state.myReadiness.fit === 'good' ? 'green' : 'orange'} />}
               </HStack>
@@ -137,35 +149,38 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
           </HStack>
 
           {spec.boss && (
-            <VStack gap={4} hAlign="center" padding={4} className={s.arenaStage}>
-              <VStack gap={2} hAlign="center" width="100%" maxWidth={560}>
-                {arenaFailed ? (
-                  <BossArt kind={q.bossKind} name={spec.boss.name} size={150} hurt={Boolean(anim?.hurt)} down={done} />
-                ) : (
+            <VStack gap={4} hAlign="center">
+              {!arenaFailed && (
+                <VStack hAlign="center" width="100%" className={s.arenaStage}>
                   <div className={s.arenaCanvas} role="img" aria-label={`${spec.boss.name}${done ? ', defeated,' : ''} facing the squad: ${state.members.map(m => m.name.split(' ')[0]).join(', ')}`}>
-                    <Arena boss={bossCast} heroes={arenaHeroes} attackerId={anim?.userId ?? null} hurt={Boolean(anim?.hurt)} down={done} reducedMotion={reducedMotion} onError={() => setArenaFailed(true)} />
+                    <Arena boss={bossCast} bossName={spec.boss.name} hp={q.bossHp} hpLeft={done ? 0 : q.bossHpLeft} heroes={arenaHeroes} strikes={strikes} world={worldFor(q.conversationId)} reducedMotion={reducedMotion} onError={() => setArenaFailed(true)} />
                   </div>
-                )}
-                <Heading level={3}>{spec.boss.name}</Heading>
-                <ProgressBar
-                  label={done ? 'Defeated' : `Boss HP · ${Math.round(hpPct)}%`}
-                  value={q.bossHpLeft}
-                  max={q.bossHp || 1}
-                  variant="error"
-                  hasValueLabel
-                  formatValueLabel={(v, m) => `${v} / ${m} HP`}
-                />
+                </VStack>
+              )}
+              <VStack gap={4} hAlign="center" width="100%">
+                <VStack gap={2} hAlign="center" width="100%" maxWidth={560}>
+                  {arenaFailed && <BossArt kind={q.bossKind} name={spec.boss.name} size={150} hurt={Boolean(anim?.hurt)} down={done} />}
+                  <Heading level={3}>{spec.boss.name}</Heading>
+                  <ProgressBar
+                    label={done ? 'Defeated' : `Boss HP · ${Math.round(hpPct)}%`}
+                    value={q.bossHpLeft}
+                    max={q.bossHp || 1}
+                    variant="error"
+                    hasValueLabel
+                    formatValueLabel={(v, m) => `${v} / ${m} HP`}
+                  />
+                </VStack>
+                <HStack gap={4} hAlign="center" wrap="wrap" aria-label="Squad">
+                  {state.members.map(m => (
+                    <VStack key={m.id} gap={1} hAlign="center">
+                      <RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} hero={m.hero} size={64} mvp={state.mvp === m.id} state={anim?.userId === m.id ? anim.state : done ? 'celebrate' : 'idle'} />
+                      <Text type="supporting" weight="bold">
+                        {m.name.split(' ')[0]}
+                      </Text>
+                    </VStack>
+                  ))}
+                </HStack>
               </VStack>
-              <HStack gap={4} hAlign="center" wrap="wrap" aria-label="Squad">
-                {state.members.map(m => (
-                  <VStack key={m.id} gap={1} hAlign="center">
-                    <RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} size={64} mvp={state.mvp === m.id} state={anim?.userId === m.id ? anim.state : done ? 'celebrate' : 'idle'} />
-                    <Text type="supporting" weight="bold">
-                      {m.name.split(' ')[0]}
-                    </Text>
-                  </VStack>
-                ))}
-              </HStack>
             </VStack>
           )}
 
@@ -212,7 +227,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
             </HStack>
           </VStack>
         </VStack>
-      </Card>
+      </VStack>
 
       <Card aria-label="Quest map">
         <VStack gap={3}>
@@ -231,7 +246,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
                     here.length > 0 ? (
                       <HStack gap={1}>
                         {here.map(m => (
-                          <RallyAvatar key={m.id} src={m.avatarUrl} name={m.name} gear={m.gear} size={28} state={l.day === state.levelDay && !done ? 'run' : 'idle'} />
+                          <RallyAvatar key={m.id} src={m.avatarUrl} name={m.name} gear={m.gear} hero={m.hero} size={28} state={l.day === state.levelDay && !done ? 'run' : 'idle'} />
                         ))}
                       </HStack>
                     ) : undefined
@@ -253,7 +268,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
                 .map(m => (
                   <ListItem
                     key={m.id}
-                    startContent={<RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} size={32} />}
+                    startContent={<RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} hero={m.hero} size={32} />}
                     label={
                       <HStack gap={1.5} vAlign="center" wrap="wrap">
                         <Text weight="bold">{m.name}</Text>
@@ -302,7 +317,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
             <Heading level={2}>Locker</Heading>
             {me && (
               <HStack gap={3} vAlign="center">
-                <RallyAvatar src={me.avatarUrl} name={me.name} gear={me.gear} size={96} state={done ? 'celebrate' : 'idle'} />
+                <RallyAvatar src={me.avatarUrl} name={me.name} gear={me.gear} hero={me.hero} size={96} state={done ? 'celebrate' : 'idle'} />
                 <VStack gap={1.5}>
                   <Text weight="bold">Your gear</Text>
                   {myGear.length ? (
@@ -389,7 +404,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
                   return (
                     <ListItem
                       key={m.id}
-                      startContent={<RallyAvatar src={who?.avatarUrl ?? ''} name={who?.name ?? ''} gear={who?.gear ?? []} size={28} />}
+                      startContent={<RallyAvatar src={who?.avatarUrl ?? ''} name={who?.name ?? ''} gear={who?.gear ?? []} hero={who?.hero} size={28} />}
                       label={
                         <HStack gap={1.5} vAlign="center" wrap="wrap">
                           <Text>

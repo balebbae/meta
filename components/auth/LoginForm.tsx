@@ -7,10 +7,10 @@ import Link from 'next/link';
 import {MetaWordmark} from '@/components/auth/logos';
 import styles from '@/components/auth/auth.module.css';
 
-export function LoginForm() {
+export function LoginForm({judgeDemo = false}: {judgeDemo?: boolean}) {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(judgeDemo ? 'judge@demo.com' : '');
+  const [password, setPassword] = useState(judgeDemo ? 'judge123' : '');
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);

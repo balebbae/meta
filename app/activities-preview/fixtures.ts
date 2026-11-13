@@ -1,4 +1,7 @@
 import type {MuseActionsPayload} from '@/lib/activities/actions';
+import type {CoachState} from '@/lib/activities/coach';
+import {goalGaps} from '@/lib/activities/coach-gaps';
+import {compareWeeks} from '@/lib/activities/coach-math';
 import type {DiscoverPayload} from '@/lib/activities/discover';
 import type {Goal} from '@/lib/activities/goals';
 import type {HomeProgress, Nearby} from '@/lib/activities/home';
@@ -216,7 +219,7 @@ export const conversations = {
 };
 
 const level1 = {day: 1, name: 'Day 1: Easy miles', exercises: [{name: 'Easy run', seconds: 1200}, {name: 'Squats', reps: 20}]};
-const squadMember = (p: typeof me, damage: number, moves: number) => ({...p, damage, moves, level: 3, team: null, gear: moves > 2 ? ['cape'] : [], target: p.id === user.id ? 20 : null, handicapNote: ''});
+const squadMember = (p: typeof me, damage: number, moves: number) => ({...p, damage, moves, level: 3, team: null, gear: moves > 2 ? ['cape'] : [], target: p.id === user.id ? 20 : null, handicapNote: '', hero: null});
 
 /** GET /api/quests/1/state: what the quest card polls. */
 export const questState: QuestState = {
@@ -280,6 +283,8 @@ export const turfState: TurfState = {
   hostId: 4,
   arena,
   lengthDays: 7,
+  pace: null,
+  reelId: null,
   startsAt: at(-1, 12),
   endsAt: at(3, 23),
   now: at(0, 12),
@@ -296,4 +301,31 @@ export const turfState: TurfState = {
   ],
   winnerId: null,
   me: {id: 1, status: 'invited', isHost: false, onboarded: true, canAccept: true, canStart: false, canResend: false, outing: null},
+};
+
+/** Coach mode on four weeks of made-up sessions, with the numbers from the real math (coach-math.ts, coach-gaps.ts). */
+const session = (daysAgo: number, km?: number) => ({kind: km ? ('run' as const) : ('strength' as const), startedAt: at(-daysAgo, 12), durationMin: km ? Math.round(km * 6.5) : 40, ...(km ? {distanceKm: km} : {})});
+const coachEvents = [session(1, 4), session(3, 3.2), session(8, 3), session(10, 3.5), session(12), session(15, 2.5), session(18, 3), session(22, 2), session(25, 2.5)];
+const coachGaps = goalGaps(coachEvents, {dayTarget: progress.activeTarget, goal: {title: goal.title, kind: goal.eventKind, weeksLeft: 3, overdue: [{title: 'Strides after one easy run', week: 2}]}});
+const firstOpen = coachGaps.gaps.find(g => g.status !== 'closed');
+if (firstOpen) firstOpen.note = 'Keep it on a day you already run, at a pace you could chat at. If it feels like too much, walk a minute in the middle and finish anyway.';
+export const coachState: CoachState = {
+  enabled: true,
+  blocked: null,
+  report: {
+    ...compareWeeks(coachEvents, {tier: level.tier}),
+    day: at(0, 12).slice(0, 10),
+    headline: 'Your runs got longer this week, and strength is the gap to close.',
+    bridge: [
+      {kind: 'session', title: 'One 20-minute strength session', why: 'None in the last 7 days, one the week before.', when: 'Thursday', sessions: 1, minutes: 20, href: null},
+      {kind: 'rally', title: 'Start a run streak with the squad', why: 'Three people keep each other showing up.', when: '', sessions: 0, minutes: 0, href: '/activities#games'},
+    ],
+    easyWeek: false,
+    level: 'Building: about 2 runs a week',
+    goal: {id: goal.id, title: goal.title},
+    goalGaps: coachGaps,
+    phase: 'Sharpen: strides and a tune-up run',
+    museUsed: true,
+    generatedAt: at(0, 12),
+  },
 };

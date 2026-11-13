@@ -224,3 +224,141 @@
   font-size: 12px;
   word-break: break-all;
 }
+
+/* goals, mentors, devices: a titled view, thin progress, plain fields, Muse bubbles */
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.rowEnd {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+}
+.selected {
+  border-color: var(--fb-act-blue);
+}
+.bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--fb-act-ring-track);
+}
+.bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--fb-act-blue);
+}
+.bar.done > span {
+  background: var(--fb-act-green);
+}
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--fb-act-muted);
+}
+.stats b {
+  color: var(--fb-act-ink);
+  font-variant-numeric: tabular-nums;
+}
+.field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fb-act-muted);
+}
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--fb-act-line);
+  background: var(--fb-act-surface);
+  color: var(--fb-act-ink);
+  font: 400 14px var(--fb-font);
+  resize: vertical;
+}
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  outline: 2px solid var(--fb-act-blue);
+  outline-offset: 1px;
+}
+.fields {
+  display: flex;
+  gap: 8px;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.check input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--fb-act-blue);
+}
+.check small {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--fb-act-muted);
+  white-space: nowrap;
+}
+.wrap small {
+  white-space: normal;
+}
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.bubble {
+  align-self: flex-start;
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 16px;
+  background: var(--fb-act-surface-2);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.bubble small {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fb-act-muted);
+}
+.bubble.mine {
+  align-self: flex-end;
+  color: #fff;
+  background: var(--fb-act-blue);
+}
+.bubble.mine small {
+  color: inherit;
+  opacity: 0.8;
+}
+.send {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+a.rowMain,
+.actions a {
+  text-decoration: none;
+}

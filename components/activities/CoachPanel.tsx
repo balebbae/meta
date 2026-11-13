@@ -11,12 +11,15 @@ import {Heading} from '@astryxdesign/core/Heading';
 import {HStack} from '@astryxdesign/core/HStack';
 import {Icon} from '@astryxdesign/core/Icon';
 import {Layout, LayoutContent, LayoutFooter} from '@astryxdesign/core/Layout';
+import {ProgressBar} from '@astryxdesign/core/ProgressBar';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {Spinner} from '@astryxdesign/core/Spinner';
 import {Text} from '@astryxdesign/core/Text';
 import {Token} from '@astryxdesign/core/Token';
 import {VStack} from '@astryxdesign/core/VStack';
 import type {CoachState} from '@/lib/activities/coach';
+import type {GapStatus} from '@/lib/activities/coach-gaps';
+import {panelHref} from '@/lib/activities/panel-href';
 import type {WeekStats} from '@/lib/activities/coach-math';
 
 const ROWS: {key: keyof WeekStats; label: string}[] = [
@@ -28,9 +31,10 @@ const ROWS: {key: keyof WeekStats; label: string}[] = [
   {key: 'stepsPerDay', label: 'Steps a day'},
 ];
 const fmt = (n: number | null) => (n == null ? '—' : n.toLocaleString());
+const STATUS: Record<GapStatus, {label: string; color: 'green' | 'blue' | 'purple' | 'red'}> = {closed: {label: 'Closed', color: 'green'}, on_track: {label: 'On track', color: 'blue'}, tight: {label: 'Tight', color: 'purple'}, behind: {label: 'Behind', color: 'red'}};
 const COL = {display: 'inline-block', minWidth: 76, textAlign: 'end'} as const;
 
-/** The Coach view inside Coach mode (CoachMode owns on/off): this week vs last week, improvements, gaps, bridge plan. */
+/** The Coach view inside Coach mode (CoachMode owns on/off): where you are against your goal with a bridge for every gap, then this week vs last week and the 7-day plan. */
 export function CoachPanel({state, onState, error: outerError, onTurnOff}: {state: CoachState | null; onState: (s: CoachState) => void; error: string | null; onTurnOff: (deleteHistory: boolean) => void}) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +60,75 @@ export function CoachPanel({state, onState, error: outerError, onTurnOff}: {stat
   return (
     <>
       {state.blocked && <Banner status="warning" title={state.blocked} />}
+      {r?.goalGaps && (
+        <Card>
+          <VStack gap={4}>
+            <VStack gap={1}>
+              <HStack gap={2} justify="between" vAlign="center" wrap="wrap">
+                <Heading level={2}>{r.goal ? r.goal.title : 'Your base'}</Heading>
+                <HStack gap={2} vAlign="center">
+                  {r.goalGaps.weeksLeft != null && <Token label={`${r.goalGaps.weeksLeft} ${r.goalGaps.weeksLeft === 1 ? 'week' : 'weeks'} left`} size="sm" color="gray" />}
+                  <Token label={`${r.goalGaps.readiness}% ready`} size="sm" color={r.goalGaps.readiness >= 95 ? 'green' : 'blue'} />
+                </HStack>
+              </HStack>
+              <Text type="supporting" color="secondary">
+                Your last four weeks against {r.goalGaps.measuredAgainst}.{r.phase ? ` You are in ${r.phase}.` : ''}
+              </Text>
+              <Text weight="bold">{r.goalGaps.verdict}</Text>
+            </VStack>
+            <List hasDividers>
+              {r.goalGaps.gaps.map(g => (
+                <ListItem
+                  key={g.id}
+                  align="start"
+                  label={
+                    <VStack gap={2}>
+                      <HStack gap={2} justify="between" vAlign="center" wrap="wrap">
+                        <Text weight="bold">{g.label}</Text>
+                        <HStack gap={2} vAlign="center">
+                          <Text hasTabularNumbers>{g.now > g.need ? `${g.now} ${g.unit} (needs ${g.need})` : `${g.now} of ${g.need} ${g.unit}`}</Text>
+                          <Token label={STATUS[g.status].label} size="sm" color={STATUS[g.status].color} />
+                        </HStack>
+                      </HStack>
+                      <ProgressBar label={`${g.label}: ${g.pct}% of what the goal needs`} isLabelHidden value={g.pct} max={100} />
+                    </VStack>
+                  }
+                  description={
+                    <VStack gap={2}>
+                      <Text type="supporting" color="secondary">
+                        {g.why}
+                      </Text>
+                      <Text>
+                        <Text weight="bold">This week: </Text>
+                        {g.next}
+                      </Text>
+                      {g.note && (
+                        <Text type="supporting" color="secondary">
+                          {g.note}
+                        </Text>
+                      )}
+                      {g.ramp.length > 1 && (
+                        <Text type="supporting" color="secondary" hasTabularNumbers>
+                          Then {g.ramp.slice(1).map(w => `week ${w.week}: ${w.target}`).join(' · ')} {g.unit}
+                          {g.weeksToClose != null ? `. Closed in about ${g.weeksToClose} ${g.weeksToClose === 1 ? 'week' : 'weeks'} at a safe rate.` : ''}
+                        </Text>
+                      )}
+                    </VStack>
+                  }
+                />
+              ))}
+            </List>
+            {r.goalGaps.overdue.length > 0 && (
+              <HStack gap={2} justify="between" vAlign="center" wrap="wrap">
+                <Text type="supporting" color="secondary">
+                  Overdue in your plan: {r.goalGaps.overdue.map(m => `${m.title} (week ${m.week})`).join(', ')}.
+                </Text>
+                {r.goal && <Button label="Open goal" size="sm" href={panelHref({panel: 'goals', goal: r.goal.id})} />}
+              </HStack>
+            )}
+          </VStack>
+        </Card>
+      )}
       {r && (
         <>
           <Card>
@@ -102,7 +175,7 @@ export function CoachPanel({state, onState, error: outerError, onTurnOff}: {stat
               ) : (
                 <Text color="secondary">Nothing went up this week. That&apos;s fine; the plan below starts small.</Text>
               )}
-              <Heading level={2}>Gaps</Heading>
+              <Heading level={2}>Slipped since last week</Heading>
               {r.gaps.length ? (
                 <List density="compact">
                   {r.gaps.map(g => (
@@ -110,7 +183,7 @@ export function CoachPanel({state, onState, error: outerError, onTurnOff}: {stat
                   ))}
                 </List>
               ) : (
-                <Text color="secondary">No gaps: you matched or beat last week everywhere.</Text>
+                <Text color="secondary">Nothing slipped: you matched or beat last week everywhere.</Text>
               )}
             </VStack>
           </Card>
@@ -118,7 +191,7 @@ export function CoachPanel({state, onState, error: outerError, onTurnOff}: {stat
           <Card>
             <VStack gap={3}>
               <VStack gap={1}>
-                <Heading level={2}>Bridge the gaps</Heading>
+                <Heading level={2}>The next 7 days</Heading>
                 <Text type="supporting" color="secondary">
                   {r.museUsed ? 'Planned by your Muse' : 'Planned from your numbers (Muse offline)'} within safe limits: at most {r.cap.sessions} workouts and about {r.cap.minutes} minutes over the next 7 days.
                 </Text>
@@ -167,7 +240,7 @@ export function CoachPanel({state, onState, error: outerError, onTurnOff}: {stat
           }
           content={
             <LayoutContent>
-              <Text>Coach mode turns off and your past weekly reports are deleted. To just leave Coach mode and keep them, use the switch at the top.</Text>
+              <Text>Coach mode turns off and your past weekly reports are deleted. To just leave Coach mode and keep them, use the X at the top.</Text>
             </LayoutContent>
           }
         />

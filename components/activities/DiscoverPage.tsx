@@ -27,6 +27,7 @@ import {useToast} from '@astryxdesign/core/Toast';
 import {Token} from '@astryxdesign/core/Token';
 import {VStack} from '@astryxdesign/core/VStack';
 import {BossArt} from '@/components/rally/BossArt';
+import {RallyAvatar} from '@/components/rally/Avatar';
 import {StravaConnection} from '@/components/turf/StravaConnection';
 import type {DiscoverCard, DiscoverPayload, DiscoverSection} from '@/lib/activities/discover';
 import type {Goal} from '@/lib/activities/goals';
@@ -38,13 +39,17 @@ import {ActivityLeaderboard} from './ActivityLeaderboard';
 import {CoachToggle} from './CoachMode';
 import {LevelCard} from './LevelCard';
 import {MuseActions} from './MuseActions';
+import {StartReelGame, type ReelGameMode} from './StartReelGame';
 import b from './reels-bento.module.css';
 
 type Viewer = {id: number; name: string; avatarUrl: string};
-export type MyGame = {key: string; href: string; title: string; subtitle: string; boss: {kind: string; name: string} | null};
+/** boss = Rally boss art; hero = the viewer's Kingdom hero (Mirror Yoga/Dance idle, Castle Crossing running); neither = Turf pin. */
+export type MyGame = {key: string; href: string; title: string; subtitle: string; boss: {kind: string; name: string} | null; hero?: 'idle' | 'run'};
 type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; listings: ListingBrief[]; start: string | null; eventId: number | null; goal?: Goal | null; games?: MyGame[]; level?: FitnessLevel | null};
 type Chat = {id: number; title: string; isGroup: boolean};
 
+const CHAT_MODES = ['sentence', 'yoga', 'dance', 'swim'];
+const REEL_GAMES: string[] = ['yoga', 'dance', 'swim'];
 const json = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
 const TurfSetup = dynamic(() => import('@/components/turf/TurfSetup').then(m => m.TurfSetup), {loading: () => <Text>Loading Turf setup…</Text>});
 
@@ -88,7 +93,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
   }, [data]);
 
   useEffect(() => {
-    if (startMode !== 'sentence' || chats.length) return;
+    if (!startMode || !CHAT_MODES.includes(startMode) || chats.length) return;
     fetch('/api/conversations')
       .then(r => (r.ok ? r.json() : {conversations: []}))
       .then((d: {conversations?: Chat[]}) => {
@@ -165,6 +170,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
     }
   };
 
+  const startCard = (template: string) => (template === 'reel' ? void startGame('reel') : setStartMode(template === 'sentence' || REEL_GAMES.includes(template) ? template : 'turf'));
   const byId = (id: DiscoverSection['id']) => sections.find(s => s.id === id);
   const renderSection = (s: DiscoverSection) => (
     <VStack key={s.id} gap={3} as="section" aria-label={s.title}>
@@ -177,7 +183,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
             hero={s.id === 'first_move'}
             onNotInterested={() => notInterested(c)}
             onOpen={() => logEvents([c], 'click')}
-            onStart={c.kind === 'start' ? () => (c.meta?.template === 'reel' ? startGame('reel') : setStartMode(c.meta?.template === 'sentence' ? 'sentence' : 'turf')) : undefined}
+            onStart={c.kind === 'start' ? () => startCard(String(c.meta?.template ?? 'turf')) : undefined}
             busy={busy === c.meta?.template}
           />
         ))}
@@ -215,7 +221,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
             {games.map(g => (
               <ClickableCard key={g.key} href={g.href} label={g.title}>
                 <VStack gap={2} hAlign="center">
-                  {g.boss ? <BossArt kind={g.boss.kind} name={g.boss.name} size={72} /> : <Icon icon={MapPin} size="lg" color="accent" />}
+                  {g.boss ? <BossArt kind={g.boss.kind} name={g.boss.name} size={72} /> : g.hero ? <RallyAvatar src={viewer.avatarUrl} name={viewer.name} state={g.hero} size={72} /> : <Icon icon={MapPin} size="lg" color="accent" />}
                   <VStack gap={0.5} hAlign="center">
                     <Text weight="bold" justify="center">
                       {g.title}
@@ -298,6 +304,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
           }
         />
       </Dialog>
+      <StartReelGame mode={startMode && REEL_GAMES.includes(startMode) ? (startMode as ReelGameMode) : null} viewer={viewer} chatPicker={chatPicker} chatId={chatId} onClose={() => setStartMode(null)} say={say} />
       <Dialog isOpen={startMode === 'sentence'} onOpenChange={o => !o && setStartMode(null)} purpose="form" width={480}>
         <Layout
           header={<DialogHeader title="Quest from a sentence" subtitle="Describe the game in one line and Muse builds the rules, the boss and the weekly drop." onOpenChange={() => setStartMode(null)} />}

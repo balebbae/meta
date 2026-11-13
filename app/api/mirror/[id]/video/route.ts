@@ -1,50 +1,19 @@
 import {notFound, withUser} from '@/lib/api';
 import {sql} from '@/lib/db';
 import {memberOfGame} from '@/lib/rally/game-access';
+import {loadClip, reelVideoUrl} from '@/lib/rally/reel-video';
 
-/**
- * Same-origin copy of the Reel video. Pixabay's CDN sends no CORS headers, and the pose model can only read
- * frames from a video the page may read. Only Pixabay video URLs are fetched (no SSRF). Each clip is downloaded
- * once and kept in memory (they're a few MB), so the player's many Range requests don't each go back to Pixabay.
- */
-const MAX_BYTES = 15_000_000;
-const MAX_CLIPS = 8;
-const cache = new Map<string, Promise<{bytes: Uint8Array; type: string}>>();
-
-function load(url: URL) {
-  const key = url.toString();
-  let hit = cache.get(key);
-  if (!hit) {
-    hit = (async () => {
-      const res = await fetch(url, {signal: AbortSignal.timeout(30_000)});
-      if (!res.ok) throw new Error(`upstream ${res.status}`);
-      const bytes = new Uint8Array(await res.arrayBuffer());
-      if (bytes.length > MAX_BYTES) throw new Error('clip too large');
-      return {bytes, type: res.headers.get('content-type') ?? 'video/mp4'};
-    })();
-    cache.set(key, hit);
-    hit.catch(() => cache.delete(key));
-    // shortcut: oldest-first eviction, fine for a handful of active matches per instance
-    if (cache.size > MAX_CLIPS) cache.delete(cache.keys().next().value!);
-  }
-  return hit;
-}
-
+/** Same-origin, Range-capable copy of the match's Reel video (see lib/rally/reel-video.ts). */
 export async function GET(req: Request, {params}: {params: Promise<{id: string}>}) {
   return withUser(async user => {
     const id = Number((await params).id);
     if (!(await memberOfGame('mirror_matches', id, user.id))) return notFound();
     const [row] = await sql`select r.video_url from mirror_matches m join reels r on r.id = m.reel_id where m.id = ${id}`;
-    let url: URL;
-    try {
-      url = new URL(String(row?.video_url ?? ''));
-    } catch {
-      return notFound();
-    }
-    if (url.protocol !== 'https:' || url.hostname !== 'cdn.pixabay.com') return notFound();
+    const url = reelVideoUrl(row?.video_url);
+    if (!url) return notFound();
     let clip: {bytes: Uint8Array; type: string};
     try {
-      clip = await load(url);
+      clip = await loadClip(url);
     } catch {
       return new Response('Reel video unavailable right now', {status: 502});
     }

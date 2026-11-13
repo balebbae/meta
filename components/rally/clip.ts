@@ -124,24 +124,46 @@ export async function recordLive(v: HTMLVideoElement, onFrame: (landmarks: (Land
  * Mirror Match: a same-origin video URL (the Reel via /api/mirror/[id]/video) -> one pose per frame between
  * start and end seconds at `fps`. Runs once per match, on the first player's phone.
  */
+const blobs = new Map<string, Promise<string>>();
+
+/**
+ * Downloads a same-origin video once per page and hands out a blob: URL, so reading poses and grabbing stills
+ * seek in memory instead of making a Range request per frame (and the Reel isn't downloaded twice).
+ */
+export function localVideo(url: string): Promise<string> {
+  let p = blobs.get(url);
+  if (!p) {
+    p = fetch(url)
+      .then(r => {
+        if (!r.ok) throw new Error('This Reel can’t be loaded right now.');
+        return r.blob();
+      })
+      .then(b => URL.createObjectURL(b));
+    blobs.set(url, p);
+    p.catch(() => blobs.delete(url));
+  }
+  return p;
+}
+
 export async function analyzeVideoUrl(url: string, start: number, end: number, fps: number, onProgress: (p: number) => void): Promise<(Landmark[] | null)[]> {
-  const det = await getDetector();
+  const canPlayScan = 'requestVideoFrameCallback' in HTMLVideoElement.prototype;
+  // Playing streams, so it starts on the first bytes; seeking needs the whole file in memory. Either way the
+  // in-memory copy (for the pose pictures) downloads alongside, and the pose model loads in parallel.
+  const local = localVideo(url);
+  const [det, src] = await Promise.all([getDetector(), canPlayScan ? url : local]);
   const v = document.createElement('video');
   v.muted = true;
   v.playsInline = true;
   v.preload = 'auto';
-  v.src = url;
+  v.src = src;
   await once(v, 'loadeddata');
-  // iOS Safari only decodes frames for seeking after a play()
-  await v.play().catch(() => {});
-  v.pause();
   const stop = Math.min(end, Number.isFinite(v.duration) ? v.duration : end);
-  const out: (Landmark[] | null)[] = [];
   const n = Math.max(1, Math.floor((stop - start) * fps));
-  for (let i = 0; i < n; i++) {
-    await seek(v, start + i / fps);
-    out.push(pose(det, v));
-    if (i % 4 === 0) onProgress(i / n);
+  let out = canPlayScan ? await scanByPlaying(v, det, start, stop, fps, onProgress) : null;
+  if (!out) {
+    v.src = await local;
+    await once(v, 'loadeddata');
+    out = await scanBySeeking(v, det, start, n, fps, onProgress);
   }
   onProgress(1);
   v.removeAttribute('src');
@@ -149,13 +171,76 @@ export async function analyzeVideoUrl(url: string, start: number, end: number, f
   return out;
 }
 
+const SCAN_RATE = 1.5;
+
+/**
+ * Plays the clip at 1.5x and runs the pose model on frames as they arrive (at most `fps` a second), then lines
+ * the samples up on the fps grid. Seeking costs a keyframe decode per frame, so this is ~3x faster than seeking.
+ * Returns null if the browser wouldn't play it (the caller then seeks frame by frame).
+ */
+async function scanByPlaying(v: HTMLVideoElement, det: Detector, start: number, stop: number, fps: number, onProgress: (p: number) => void): Promise<(Landmark[] | null)[] | null> {
+  const samples: {t: number; lm: Landmark[] | null}[] = [];
+  if (start > 0) await seek(v, start);
+  v.playbackRate = SCAN_RATE;
+  await new Promise<void>(resolve => {
+    let done = false;
+    let last = -Infinity;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      v.pause();
+      resolve();
+    };
+    const tick = (_now: number, meta: {mediaTime: number}) => {
+      if (done) return;
+      const t = meta.mediaTime;
+      // the last frame can sit just short of the end, so stop one sample early instead of waiting for 'ended'
+      if (t >= stop - 1 / fps) return finish();
+      if (t - last >= 1 / fps - 0.02) {
+        samples.push({t, lm: pose(det, v)});
+        last = t;
+        onProgress(Math.min(0.99, (t - start) / Math.max(0.1, stop - start)));
+      }
+      v.requestVideoFrameCallback(tick);
+    };
+    v.requestVideoFrameCallback(tick);
+    v.addEventListener('ended', finish, {once: true});
+    v.play().catch(finish);
+    // safety net: a stalled decoder never ends the scan
+    setTimeout(finish, ((stop - start) / SCAN_RATE) * 1000 + 4_000);
+  });
+  if (samples.length < 2) return null;
+  // nearest sample to each grid slot (within half a second), so the Reference stays a plain fps grid
+  const n = Math.max(1, Math.floor((stop - start) * fps));
+  return Array.from({length: n}, (_, i) => {
+    const t = start + i / fps;
+    let best: (typeof samples)[number] | null = null;
+    for (const s of samples) if (!best || Math.abs(s.t - t) < Math.abs(best.t - t)) best = s;
+    return best && Math.abs(best.t - t) <= 0.5 ? best.lm : null;
+  });
+}
+
+async function scanBySeeking(v: HTMLVideoElement, det: Detector, start: number, n: number, fps: number, onProgress: (p: number) => void): Promise<(Landmark[] | null)[]> {
+  // iOS Safari only decodes frames for seeking after a play()
+  await v.play().catch(() => {});
+  v.pause();
+  const out: (Landmark[] | null)[] = [];
+  for (let i = 0; i < n; i++) {
+    await seek(v, start + i / fps);
+    out.push(pose(det, v));
+    if (i % 4 === 0) onProgress(i / n);
+  }
+  return out;
+}
+
 /** Mirror Match: stills of a same-origin video at the given seconds, plus its width/height ratio. */
 export async function stillsFromUrl(url: string, times: number[]): Promise<{urls: string[]; aspect: number}> {
+  const src = await localVideo(url);
   const v = document.createElement('video');
   v.muted = true;
   v.playsInline = true;
   v.preload = 'auto';
-  v.src = url;
+  v.src = src;
   await once(v, 'loadeddata');
   await v.play().catch(() => {});
   v.pause();

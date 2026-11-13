@@ -30,6 +30,9 @@ export const POINT_IDS = [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
 /** Skeleton edges as indexes into POINT_IDS. */
 export const BONES: [number, number][] = [[1, 2], [1, 3], [3, 5], [2, 4], [4, 6], [1, 7], [2, 8], [7, 8], [7, 9], [9, 11], [8, 10], [10, 12]];
 export const MAX_FRAMES = 360;
+/** Two games share the engine: Mirror Yoga (hold the poses) and Mirror Dance (hit the moves). */
+export type MirrorMode = 'dance' | 'yoga';
+export const mirrorTitle = (mode: MirrorMode) => (mode === 'yoga' ? 'Mirror Yoga' : 'Mirror Dance');
 /** A pose counts as matched at this score (the routine moves on). */
 export const MATCH_AT = 75;
 const MIN_COMMON = 4;
@@ -76,22 +79,40 @@ export function validPoses(poses: unknown, steps: number): poses is AngleFrame[]
   return Array.isArray(poses) && poses.length === steps && poses.every(validAngles);
 }
 
+/** Average angle gap between two poses, as-is or with left/right swapped (90 when too few joints are seen). */
+function gap(target: AngleFrame, pose: AngleFrame, swap: boolean): number {
+  let sum = 0;
+  let n = 0;
+  for (let i = 0; i < target.length; i++) {
+    const x = target[i];
+    const y = pose[swap ? SWAP[i] : i];
+    if (x == null || y == null) continue;
+    sum += Math.abs(x - y);
+    n++;
+  }
+  return n >= MIN_COMMON ? sum / n : 90;
+}
+
 /** 1..100 for how close one pose is to another (the better of as-is and mirrored). About 8° average gap = 100. */
 export function poseScore(target: AngleFrame, pose: AngleFrame): number {
-  const cost = (swap: boolean) => {
-    let sum = 0;
-    let n = 0;
-    for (let i = 0; i < target.length; i++) {
-      const x = target[i];
-      const y = pose[swap ? SWAP[i] : i];
-      if (x == null || y == null) continue;
-      sum += Math.abs(x - y);
-      n++;
-    }
-    return n >= MIN_COMMON ? sum / n : 90;
-  };
-  const avg = Math.min(cost(false), cost(true));
+  const avg = Math.min(gap(target, pose, false), gap(target, pose, true));
   return Math.round(Math.max(1, Math.min(100, 100 * (1 - (avg - 8) / 52))));
+}
+
+/** Where each of the 8 angles sits in the overlay's points (its vertex: elbow, shoulder, hip, knee). */
+export const JOINT_POINTS = [3, 4, 1, 2, 7, 8, 9, 10];
+const JOINT_OK = 25;
+
+/**
+ * Per target joint: is the player within 25° of it? Same as-is/mirrored choice as poseScore, so the overlay can
+ * light up the joints that are already right. null = that joint isn't seen on one side.
+ */
+export function jointHits(target: AngleFrame, pose: AngleFrame): (boolean | null)[] {
+  const swap = gap(target, pose, true) < gap(target, pose, false);
+  return target.map((x, i) => {
+    const y = pose[swap ? SWAP[i] : i];
+    return x == null || y == null ? null : Math.abs(x - y) <= JOINT_OK;
+  });
 }
 
 /** The pose to hold for a step: the clearest frame in the middle half of its window. */

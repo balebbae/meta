@@ -1,13 +1,18 @@
 'use client';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {useEffect, useState} from 'react';
+import {useEffect, useState, type CSSProperties} from 'react';
+import {Bell, House, SquarePlay, Store, type LucideIcon} from 'lucide-react';
+import {ActivitiesIcon} from '@/components/icons';
 import {Avatar} from '@/components/ui/Avatar';
-import {ActivitiesIcon, BellIcon, FriendsIcon, HomeIcon, MarketplaceIcon, VideoIcon} from '@/components/icons';
 import type {User} from '@/lib/types';
 import styles from './mobile.module.css';
 
-/** Floating pill tab bar from the Facebook iOS app (Nov 2026). */
+// liquid-glass-react reads `navigator` while rendering, so it can only render in the browser.
+const LiquidGlass = dynamic(() => import('liquid-glass-react'), {ssr: false});
+
+/** Floating dark liquid-glass tab bar, Instagram style: a wide lighter pill marks the current tab, red dots mark news. */
 export function MobileTabBar({user}: {user?: Pick<User, 'id' | 'avatarUrl' | 'name'>}) {
   const pathname = usePathname();
   const [notif, setNotif] = useState(0);
@@ -18,35 +23,58 @@ export function MobileTabBar({user}: {user?: Pick<User, 'id' | 'avatarUrl' | 'na
       .catch(() => {});
   }, [pathname]);
 
-  const tabs = [
-    {href: '/', label: 'Home', Icon: HomeIcon},
-    {href: '/reels', label: 'Reels', Icon: VideoIcon},
-    {href: '/activities', label: 'Activities', Icon: ActivitiesIcon},
-    {href: '/marketplace', label: 'Marketplace', Icon: MarketplaceIcon},
-    {href: '/notifications', label: 'Notifications', Icon: (p: {size?: number; active?: boolean}) => <BellIcon size={p.size} />, badge: notif},
-  ];
-  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/'));
+  // The tapped tab lights up at once; the route catches up when the next page has loaded.
+  const [pending, setPending] = useState<string | null>(null);
+  useEffect(() => setPending(null), [pathname]);
+  const matches = (href: string) => (href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/'));
+  const isActive = (href: string) => (pending ? pending === href : matches(href));
   const profileHref = user ? `/profile/${user.id}` : '/profile';
+  const glyph = (Icon: LucideIcon, active: boolean, filled = false) => <Icon size={23} strokeWidth={active ? 2.3 : 1.9} fill={active && filled ? 'currentColor' : 'none'} aria-hidden />;
+  const tabs = [
+    {href: '/', label: 'Home', icon: (a: boolean) => glyph(House, a, true)},
+    {href: '/reels', label: 'Reels', icon: (a: boolean) => glyph(SquarePlay, a)},
+    {href: '/activities', label: 'Activities', icon: (a: boolean) => <ActivitiesIcon size={23} active={a} />},
+    {href: '/marketplace', label: 'Marketplace', icon: (a: boolean) => glyph(Store, a)},
+    {href: '/notifications', label: 'Notifications', icon: (a: boolean) => glyph(Bell, a, true), dot: notif > 0},
+    {
+      href: profileHref,
+      label: 'Profile',
+      icon: (a: boolean) => (
+        <span className={`${styles.glassAvatar} ${a ? styles.glassAvatarOn : ''}`}>
+          <Avatar src={user?.avatarUrl ?? ''} alt="" size={24} />
+        </span>
+      ),
+    },
+  ];
+
+  const activeIndex = tabs.findIndex(t => isActive(t.href));
+
   return (
-    <nav className={`${styles.mobileOnly} ${styles.tabBar}`} aria-label="Mobile navigation">
-      {tabs.map(({href, label, Icon, badge = 0}) => {
-        const active = isActive(href);
-        return (
-          <Link key={href} href={href} className={`${styles.tab} ${active ? styles.tabActive : ''}`} aria-label={label} aria-current={active ? 'page' : undefined}>
-            <Icon size={28} active={active} />
-            {badge > 0 && <span className={styles.tabBadge}>{badge > 9 ? '9+' : badge}</span>}
-          </Link>
-        );
-      })}
-      <Link href={profileHref} className={`${styles.tab} ${isActive(profileHref) ? styles.tabActive : ''}`} aria-label="Profile">
-        {user ? (
-          <span style={{borderRadius: '50%', outline: isActive(profileHref) ? '2px solid var(--fb-blue)' : 'none', outlineOffset: 2, display: 'flex'}}>
-            <Avatar src={user.avatarUrl} alt={user.name} size={32} />
-          </span>
-        ) : (
-          <FriendsIcon size={28} />
-        )}
-      </Link>
-    </nav>
+    <div className={`${styles.mobileOnly} ${styles.glassDock}`}>
+      <LiquidGlass
+        mode="standard"
+        overLight
+        cornerRadius={33}
+        padding="0"
+        blurAmount={0.7}
+        saturation={150}
+        displacementScale={70}
+        aberrationIntensity={1}
+        elasticity={0}
+        style={{position: 'fixed', left: '50%', top: 'calc(100% - 45px - env(safe-area-inset-bottom))', zIndex: 50}}>
+        <nav className={styles.glassBar} aria-label="Mobile navigation" style={{'--tabs': tabs.length} as CSSProperties}>
+          <span className={styles.glassIndicator} style={{'--i': Math.max(0, activeIndex), opacity: activeIndex < 0 ? 0 : 1} as CSSProperties} aria-hidden />
+          {tabs.map(({href, label, icon, dot}) => {
+            const active = isActive(href);
+            return (
+              <Link key={label} href={href} onClick={() => !matches(href) && setPending(href)} className={`${styles.glassTab} ${active ? styles.glassTabOn : ''}`} aria-label={dot ? `${label}, ${notif} unread` : label} aria-current={active ? 'page' : undefined}>
+                {icon(active)}
+                {dot && <span className={styles.glassDot} aria-hidden />}
+              </Link>
+            );
+          })}
+        </nav>
+      </LiquidGlass>
+    </div>
   );
 }

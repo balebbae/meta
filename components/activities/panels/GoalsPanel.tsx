@@ -1,65 +1,57 @@
 'use client';
 
-import {IconFlag} from '@tabler/icons-react';
-import {Card} from '@astryxdesign/core/Card';
-import {List, ListItem} from '@astryxdesign/core/List';
-import {ProgressBar} from '@astryxdesign/core/ProgressBar';
-import {Text} from '@astryxdesign/core/Text';
-import {Token} from '@astryxdesign/core/Token';
-import {VStack} from '@astryxdesign/core/VStack';
 import type {Goal, GoalMatches} from '@/lib/activities/goals';
 import {GoalComposer} from '../goals/GoalComposer';
 import {GoalRoadmap} from '../goals/GoalRoadmap';
 import {useJson, usePanelNav} from './nav';
+import p from './panels.module.css';
 
 /** Goals panel: new goal + your goals, or one goal's roadmap. Replaces /activities/goals and /activities/goals/[id]. */
 export function GoalsPanel({goalId}: {goalId: string | null}) {
   return goalId ? <GoalDetail id={goalId} /> : <GoalList />;
 }
 
+function Loading({error}: {error: string | null}) {
+  return error ? <p className={p.error}>{error}</p> : <p className={p.note}>Loading…</p>;
+}
+
 function GoalList() {
   const {open} = usePanelNav();
   const {data, error} = useJson<{goals: Goal[]}>('/api/goals');
   return (
-    <VStack gap={4}>
-      <Text color="secondary">Pick something to train for. Your Muse plans the weeks, checks in, and turns each week into a game.</Text>
+    <div className={p.stack}>
       <GoalComposer />
       {!data ? (
-        <Text color="secondary">{error ?? 'Loading your goals…'}</Text>
+        <Loading error={error} />
       ) : (
         data.goals.length > 0 && (
-          <Card>
-            <List hasDividers>
-              {data.goals.map(goal => {
-                const phase = goal.plan.phases.find(p => goal.week >= p.startWeek && goal.week <= p.endWeek) ?? goal.plan.phases[0];
-                return (
-                  <ListItem
-                    key={goal.id}
-                    onClick={() => open({panel: 'goals', goal: goal.id})}
-                    align="start"
-                    startContent={<IconFlag size={24} color="var(--color-icon-accent)" aria-hidden />}
-                    label={<Text weight="bold">{goal.title}</Text>}
-                    description={
-                      <VStack gap={1.5}>
-                        <ProgressBar label={`${goal.title} milestones done`} isLabelHidden value={goal.progress.pct} max={100} variant={goal.status === 'done' ? 'success' : 'accent'} />
-                        <Text type="supporting" color="secondary">
-                          {goal.progress.done} of {goal.progress.total} milestones
-                        </Text>
-                      </VStack>
-                    }
-                    endContent={goal.status === 'done' ? <Token label="Reached" size="sm" color="green" /> : <Text type="supporting" color="secondary">Week {goal.week} of {goal.plan.weeks}{phase ? ` · ${phase.name}` : ''}</Text>}
-                  />
-                );
-              })}
-            </List>
-          </Card>
+          <ul className={p.list}>
+            {data.goals.map(goal => (
+              <li key={goal.id} className={p.row}>
+                <button type="button" className={p.rowMain} onClick={() => open({panel: 'goals', goal: goal.id})}>
+                  <span className={p.rowText}>
+                    <strong>
+                      {goal.title}
+                      {goal.status === 'done' ? <span className={`${p.badge} ${p.green}`}>Reached</span> : <span className={p.metric}>Week {goal.week}/{goal.plan.weeks}</span>}
+                    </strong>
+                    <span className={`${p.bar} ${goal.status === 'done' ? p.done : ''}`} role="progressbar" aria-label={`${goal.title} milestones done`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={goal.progress.pct}>
+                      <span style={{width: `${goal.progress.pct}%`}} />
+                    </span>
+                    <small>
+                      {goal.progress.done} of {goal.progress.total} milestones
+                    </small>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
         )
       )}
-    </VStack>
+    </div>
   );
 }
 
 function GoalDetail({id}: {id: string}) {
   const {data, error} = useJson<{goal: Goal; matches: GoalMatches}>(`/api/goals/${encodeURIComponent(id)}`);
-  return data ? <GoalRoadmap key={id} goal={data.goal} matches={data.matches} /> : <Text color="secondary">{error ?? 'Loading roadmap…'}</Text>;
+  return data ? <GoalRoadmap key={id} goal={data.goal} matches={data.matches} /> : <Loading error={error} />;
 }

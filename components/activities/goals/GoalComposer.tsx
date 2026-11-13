@@ -3,14 +3,8 @@
 import {useRouter} from 'next/navigation';
 import {useState} from 'react';
 import {usePanelNav} from '../panels/nav';
-import {Banner} from '@astryxdesign/core/Banner';
-import {Button} from '@astryxdesign/core/Button';
-import {Card} from '@astryxdesign/core/Card';
-import {HStack} from '@astryxdesign/core/HStack';
-import {Text} from '@astryxdesign/core/Text';
-import {TextArea} from '@astryxdesign/core/TextArea';
-import {Token} from '@astryxdesign/core/Token';
-import {VStack} from '@astryxdesign/core/VStack';
+import h from '../home/home.module.css';
+import p from '../panels/panels.module.css';
 
 const EXAMPLES = ['Compete in a HYROX in March', 'Run my first 5K', 'Half marathon this spring', 'Do 10 pull-ups in a row'];
 
@@ -40,31 +34,24 @@ export function GoalComposer() {
   };
 
   return (
-    <Card aria-busy={busy}>
-      <VStack gap={3}>
-        <TextArea
-          label="What are you training for?"
-          description="Say it like you would to a friend. Your Muse builds a week-by-week roadmap from where you are now."
-          value={text}
-          onChange={setText}
-          placeholder="I want to compete in a HYROX in March"
-          maxLength={300}
-          rows={3}
-          isDisabled={busy}
-        />
-        <HStack gap={1.5} wrap="wrap" aria-label="Examples">
-          {EXAMPLES.map(x => (
-            <Token key={x} label={x} size="sm" isDisabled={busy} onClick={() => setText(x)} />
-          ))}
-        </HStack>
-        <HStack gap={2} vAlign="center" justify="between" wrap="wrap">
-          <Text type="supporting" color="secondary">
-            Planning help, not medical advice.
-          </Text>
-          <Button label={busy ? 'Planning your weeks…' : 'Build my roadmap'} variant="primary" isLoading={busy} isDisabled={text.trim().length < 3} onClick={() => void submit()} />
-        </HStack>
-        {error && <Banner status="error" title={error} />}
-      </VStack>
-    </Card>
+    <div className={p.stack} aria-busy={busy}>
+      <label className={p.field}>
+        What are you training for?
+        <textarea value={text} onChange={e => setText(e.target.value)} placeholder="I want to compete in a HYROX in March" maxLength={300} rows={2} disabled={busy} />
+      </label>
+      <div className={p.pills} role="group" aria-label="Examples">
+        {EXAMPLES.map(x => (
+          <button key={x} type="button" className={`${h.pill} ${h.pillSm} ${h.pillOutline}`} disabled={busy} onClick={() => setText(x)}>
+            {x}
+          </button>
+        ))}
+      </div>
+      <div className={p.actions}>
+        <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillBlue}`} disabled={busy || text.trim().length < 3} onClick={() => void submit()}>
+          {busy ? 'Planning…' : 'Build roadmap'}
+        </button>
+      </div>
+      {error && <p className={p.error} role="alert">{error}</p>}
+    </div>
   );
 }

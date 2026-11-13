@@ -4,38 +4,21 @@ import {useState} from 'react';
 import {usePanelNav} from './panels/nav';
 import type {MentorConsent, MentorRequestView} from '@/lib/activities/mentor';
 import type {MentorMatch} from '@/lib/activities/discover';
-// Tabler icons, aliased to the names this file already uses
-import {IconUser as UserRound} from '@tabler/icons-react';
-import {Banner} from '@astryxdesign/core/Banner';
-import {Button} from '@astryxdesign/core/Button';
-import {Card} from '@astryxdesign/core/Card';
-import {CheckboxInput} from '@astryxdesign/core/CheckboxInput';
-import {EmptyState} from '@astryxdesign/core/EmptyState';
-import {Grid} from '@astryxdesign/core/Grid';
-import {Heading} from '@astryxdesign/core/Heading';
-import {HStack} from '@astryxdesign/core/HStack';
-import {Icon} from '@astryxdesign/core/Icon';
-import {List, ListItem} from '@astryxdesign/core/List';
-import {NumberInput} from '@astryxdesign/core/NumberInput';
-import {Selector} from '@astryxdesign/core/Selector';
-import {Text} from '@astryxdesign/core/Text';
-import {TextArea} from '@astryxdesign/core/TextArea';
-import {TextInput} from '@astryxdesign/core/TextInput';
-import {Token} from '@astryxdesign/core/Token';
-import {VStack} from '@astryxdesign/core/VStack';
+import {IconUser} from '@tabler/icons-react';
+import h from './home/home.module.css';
+import p from './panels/panels.module.css';
 
-const person = <Icon icon={UserRound} size="md" color="secondary" />;
-const statusToken = (r: MentorRequestView) => <Token label={statusLabel(r)} size="sm" color={r.connect === 'requested' ? 'orange' : 'blue'} />;
+const statusBadge = (r: MentorRequestView) => <span className={`${p.badge} ${r.status === 'revoked' ? '' : r.connect === 'requested' ? p.ember : r.connect === 'connected' ? p.green : p.blue}`}>{statusLabel(r)}</span>;
 
 type Offer = {metric: string; fromValue: string; toValue: string; weeks: number; consent: MentorConsent; anonymous: boolean};
 const METRICS = ['5k time', 'Weekly distance', 'Workouts per week', 'Active days', 'Bench press'];
 const json = (method: string, body?: unknown) => ({method, headers: {'content-type': 'application/json'}, body: body ? JSON.stringify(body) : undefined});
 
 function statusLabel(r: MentorRequestView): string {
-  if (r.status === 'revoked') return 'stopped';
-  if (r.connect === 'connected') return 'connected';
-  if (r.connect === 'requested') return r.role === 'mentor' ? 'wants to connect' : 'connect sent';
-  return r.plan ? 'advice ready' : 'asking…';
+  if (r.status === 'revoked') return 'Stopped';
+  if (r.connect === 'connected') return 'Connected';
+  if (r.connect === 'requested') return r.role === 'mentor' ? 'Wants to connect' : 'Sent';
+  return r.plan ? 'Advice ready' : 'Asking…';
 }
 
 /** Mentors panel: people a few months ahead, conversations through your Muse, and opting in to help. */
@@ -87,137 +70,152 @@ export function MentorPage({offer: initialOffer, matches, requests, adult, highl
   const setConsent = (k: keyof MentorConsent, v: boolean | string) => setForm(f => ({...f, consent: {...f.consent, [k]: v}}));
   const showForm = editing || !offer;
 
+  const pill = `${h.pill} ${h.pillSm}`;
+  const USE = [['workouts', 'Workouts'], ['steps', 'Steps'], ['heart', 'Heart rate'], ['sleep', 'Sleep']] as const;
+  const threads = (label: string, rows: MentorRequestView[], name: (r: MentorRequestView) => string) =>
+    rows.length > 0 && (
+      <>
+        <p className={p.label}>{label}</p>
+        <ul className={p.list}>
+          {rows.map(r => (
+            <li key={r.id} className={p.row}>
+              <button type="button" className={p.rowMain} onClick={() => thread(r.id)}>
+                <IconUser size={22} aria-hidden />
+                <span className={p.rowText}>
+                  <strong>{name(r)}</strong>
+                </span>
+              </button>
+              {statusBadge(r)}
+            </li>
+          ))}
+        </ul>
+      </>
+    );
+
   return (
-    <VStack gap={4}>
-      <VStack gap={1} hAlign="start">
-        <Text color="secondary">
-          People who are where you want to be in about 3 months. Ask their Muse what to do, or connect and keep talking. You only ever talk through your Muses, and names stay hidden unless you both choose to share. 18+ only.
-        </Text>
-      </VStack>
+    <div className={p.stack}>
+      <p className={p.note}>People about 3 months ahead. You talk through your Muses. 18+.</p>
+      {!adult && <p className={p.error}>18+ only: read-only for you.</p>}
+      {error && <p className={p.error} role="alert">{error}</p>}
 
-      {!adult && <Banner status="warning" title="This is 18+" description="Your profile birthday says you're under 18, so this page is read-only." />}
-      {error && <Banner status="error" title={error} isDismissable onDismiss={() => setError(null)} />}
+      {threads('Helping', incoming, r => r.seeker?.name ?? 'Someone behind you')}
 
-      {incoming.length > 0 && (
-        <Card aria-label="People your Muse is helping">
-          <VStack gap={2}>
-            <Heading level={2}>Your Muse is helping</Heading>
-            <List hasDividers>
-              {incoming.map(r => (
-                <ListItem
-                  key={r.id}
-                  onClick={() => thread(r.id)}
-                  startContent={person}
-                  label={r.seeker?.name ?? 'Someone a few months behind you'}
-                  description={r.connect === 'requested' ? 'Wants to keep talking through your Muses' : r.connect === 'connected' ? 'Connected through your Muses' : 'Your Muse answered their questions'}
-                  endContent={statusToken(r)}
-                />
-              ))}
-            </List>
-          </VStack>
-        </Card>
+      <p className={p.label}>Suggested</p>
+      {matches.length === 0 ? (
+        <p className={p.note}>Nobody yet. Log a few workouts.</p>
+      ) : (
+        <ul className={p.list}>
+          {matches.map(m => {
+            const existing = outgoing.find(r => r.id === m.requestId);
+            const opened = m.requestId && m.status !== 'revoked';
+            return (
+              <li key={m.mentorId} className={`${p.row} ${p.wrap} ${highlight === m.mentorId ? p.selected : ''}`}>
+                <IconUser size={22} aria-hidden />
+                <span className={p.rowText}>
+                  <strong>{m.title}</strong>
+                  <small>{m.subtitle}</small>
+                </span>
+                <span className={p.rowEnd}>
+                  {opened ? (
+                    <button type="button" className={`${pill} ${h.pillOutline}`} onClick={() => thread(m.requestId ?? undefined)}>
+                      {existing ? statusLabel(existing) : 'Open'}
+                    </button>
+                  ) : (
+                    <>
+                      <button type="button" className={`${pill} ${h.pillBlue}`} disabled={!adult || !!busy} onClick={() => void start(m.mentorId, false)}>
+                        {busy === `ask-${m.mentorId}` ? '…' : 'Ask'}
+                      </button>
+                      <button type="button" className={`${pill} ${h.pillOutline}`} disabled={!adult || !!busy} onClick={() => void start(m.mentorId, true)}>
+                        {busy === `con-${m.mentorId}` ? '…' : 'Connect'}
+                      </button>
+                    </>
+                  )}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
       )}
 
-      <Card aria-label="Suggested mentors">
-        <VStack gap={3}>
-          <VStack gap={1}>
-            <Heading level={2}>Suggested mentors</Heading>
-            <Text type="supporting" color="secondary">
-              Matched on rounded activity from the last 7 days (and progress records people chose to share), never raw data.
-            </Text>
-          </VStack>
-          {matches.length === 0 ? (
-            <EmptyState title="Nobody matches yet" description="Log a few workouts or add goal tags and check back." isCompact />
-          ) : (
-            <List hasDividers>
-              {matches.map(m => {
-                const existing = outgoing.find(r => r.id === m.requestId);
-                return (
-                  <ListItem
-                    key={m.mentorId}
-                    isSelected={highlight === m.mentorId}
-                    startContent={person}
-                    label={<Text weight="bold">{m.title}</Text>}
-                    description={`${m.subtitle} · ${m.why}`}
-                    endContent={
-                      m.requestId && m.status !== 'revoked' ? (
-                        <Button label={existing ? statusLabel(existing) : 'Open'} size="sm" onClick={() => thread(m.requestId ?? undefined)} />
-                      ) : (
-                        <HStack gap={1.5} wrap="wrap">
-                          <Button label="Ask their Muse" variant="primary" size="sm" isLoading={busy === `ask-${m.mentorId}`} isDisabled={!adult || (!!busy && busy !== `ask-${m.mentorId}`)} onClick={() => void start(m.mentorId, false)} />
-                          <Button label="Connect" size="sm" isLoading={busy === `con-${m.mentorId}`} isDisabled={!adult || (!!busy && busy !== `con-${m.mentorId}`)} onClick={() => void start(m.mentorId, true)} />
-                        </HStack>
-                      )
-                    }
-                  />
-                );
-              })}
-            </List>
-          )}
-        </VStack>
-      </Card>
+      {threads('Conversations', outgoing, r => (r.mentor?.name ?? (r.offer.metric ? `${r.offer.metric}: ${r.offer.fromValue} → ${r.offer.toValue}` : 'Someone ahead of you')))}
 
-      {outgoing.length > 0 && (
-        <Card aria-label="Your conversations">
-          <VStack gap={2}>
-            <Heading level={2}>Your conversations</Heading>
-            <List hasDividers>
-              {outgoing.map(r => (
-                <ListItem key={r.id} onClick={() => thread(r.id)} startContent={person} label={r.mentor?.name ?? 'Someone a few months ahead'} description={r.plan ? r.plan.title : 'Their Muse is answering'} endContent={statusToken(r)} />
+      <p className={p.label}>Help others {offer && !showForm && <span className={`${p.badge} ${p.green}`}>On</span>}</p>
+      {!showForm && offer ? (
+        <>
+          <ul className={p.list}>
+            <li className={`${p.row} ${p.wrap}`}>
+              <span className={p.rowText}>
+                <strong>{offer.metric ? `${offer.metric}: ${offer.fromValue} → ${offer.toValue} in ${offer.weeks} wk` : 'Matched on your activity'}</strong>
+                <small>Uses {USE.filter(([k]) => offer.consent[k]).map(([, l]) => l.toLowerCase()).join(', ') || 'only your note'}</small>
+              </span>
+            </li>
+          </ul>
+          <div className={p.actions}>
+            <button type="button" className={`${pill} ${h.pillOutline}`} onClick={() => setEditing(true)}>
+              Edit
+            </button>
+            <button type="button" className={`${p.textBtn} ${p.danger}`} disabled={busy === 'remove'} onClick={() => void remove()}>
+              Stop helping
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <label className={p.field}>
+            What worked for you
+            <textarea rows={2} value={form.consent.offerText ?? ''} onChange={e => setConsent('offerText', e.target.value)} placeholder="Two easy runs and one long run a week." />
+          </label>
+          <label className={p.field}>
+            Progress record (optional)
+            <select value={form.metric} onChange={e => set('metric', e.target.value)}>
+              <option value="">None, match on my activity</option>
+              {METRICS.map(m => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
               ))}
-            </List>
-          </VStack>
-        </Card>
-      )}
-
-      <Card aria-label="Help people a few months behind you">
-        <VStack gap={4}>
-          <VStack gap={1}>
-            <Heading level={2}>Help people a few months behind you</Heading>
-            <Text type="supporting" color="secondary">
-              Opt in and your Muse answers beginners straight away from your rounded activity and your note. You get a summary of everything it said. Anyone who wants to keep talking asks first, and you choose whether to share your name.
-            </Text>
-          </VStack>
-          {offer && !showForm ? (
-            <VStack gap={3}>
-              <List>
-                <ListItem
-                  label={<Text weight="bold">{offer.metric ? `${offer.metric}: ${offer.fromValue} → ${offer.toValue} in ${offer.weeks} weeks` : 'Matched on your activity'}</Text>}
-                  description={`Your Muse may use: ${(['workouts', 'steps', 'heart', 'sleep'] as const).filter(k => offer.consent[k]).join(', ') || 'only your note'}`}
-                  endContent={<Token label="On" size="sm" color="green" />}
-                />
-              </List>
-              <HStack gap={2}>
-                <Button label="Edit" onClick={() => setEditing(true)} />
-                <Button label="Stop helping" variant="destructive" isLoading={busy === 'remove'} onClick={() => void remove()} />
-              </HStack>
-            </VStack>
-          ) : (
-            <VStack gap={3}>
-              <TextArea label="What worked for you" description="Your Muse uses this in its answers" rows={3} value={form.consent.offerText ?? ''} onChange={v => setConsent('offerText', v)} placeholder="Two easy runs, one longer run a week, and never skipping two weeks in a row." />
-              <Selector label="Progress record" isOptional options={[{value: '', label: 'None, match on my activity'}, ...METRICS.map(m => ({value: m, label: m}))]} value={form.metric} onChange={v => set('metric', v)} />
-              {form.metric && (
-                <Grid columns={{minWidth: 140}} gap={3}>
-                  <NumberInput label="Weeks it took" min={1} max={104} isIntegerOnly value={form.weeks} onChange={v => set('weeks', v)} />
-                  <TextInput label="From" value={form.fromValue} onChange={v => set('fromValue', v)} placeholder="29:10" />
-                  <TextInput label="To" value={form.toValue} onChange={v => set('toValue', v)} placeholder="24:40" />
-                </Grid>
-              )}
-              <VStack gap={2}>
-                <Text type="label">Your Muse may use (rounded, never exact)</Text>
-                {(['workouts', 'steps', 'heart', 'sleep'] as const).map(k => (
-                  <CheckboxInput key={k} label={k === 'workouts' ? 'Workouts & distance (needed to match you)' : k === 'steps' ? 'Steps' : k === 'heart' ? 'Heart rate (Muse only)' : 'Sleep (Muse only)'} value={!!form.consent[k]} onChange={v => setConsent(k, v)} />
-                ))}
-              </VStack>
-              <CheckboxInput label="I confirm I'm 18 or older" value={form.confirm18} onChange={v => set('confirm18', v)} />
-              <HStack gap={2}>
-                <Button label={offer ? 'Save changes' : 'Let people find me'} variant="primary" isLoading={busy === 'save'} isDisabled={!adult || !form.confirm18} onClick={() => void save()} />
-                {offer && <Button label="Cancel" onClick={() => setEditing(false)} />}
-              </HStack>
-            </VStack>
+            </select>
+          </label>
+          {form.metric && (
+            <div className={p.fields}>
+              <label className={p.field}>
+                Weeks
+                <input type="number" min={1} max={104} step={1} value={form.weeks} onChange={e => set('weeks', Math.round(Number(e.target.value)) || 1)} />
+              </label>
+              <label className={p.field}>
+                From
+                <input value={form.fromValue} onChange={e => set('fromValue', e.target.value)} placeholder="29:10" />
+              </label>
+              <label className={p.field}>
+                To
+                <input value={form.toValue} onChange={e => set('toValue', e.target.value)} placeholder="24:40" />
+              </label>
+            </div>
           )}
-        </VStack>
-      </Card>
-    </VStack>
+          <p className={p.label}>Your Muse may use (rounded)</p>
+          <div className={p.pills}>
+            {USE.map(([k, label]) => (
+              <button key={k} type="button" aria-pressed={!!form.consent[k]} className={`${pill} ${form.consent[k] ? h.pillBlue : h.pillOutline}`} onClick={() => setConsent(k, !form.consent[k])}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <label className={p.check}>
+            <input type="checkbox" checked={form.confirm18} onChange={e => set('confirm18', e.target.checked)} />
+            I&apos;m 18 or older
+          </label>
+          <div className={p.actions}>
+            <button type="button" className={`${pill} ${h.pillBlue}`} disabled={!adult || !form.confirm18 || busy === 'save'} onClick={() => void save()}>
+              {busy === 'save' ? '…' : offer ? 'Save' : 'Let people find me'}
+            </button>
+            {offer && (
+              <button type="button" className={`${pill} ${h.pillOutline}`} onClick={() => setEditing(false)}>
+                Cancel
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   );
 }

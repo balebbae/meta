@@ -44,7 +44,7 @@ export function OnboardingPanel({step, invite, viewerName}: {step: string | null
     case 'questions':
       return <QuestionsStep profile={data.profile} invite={invite} />;
     case 'connect':
-      return <ConnectStep platform={conn.data!.platform} cards={conn.data!.cards} connections={conn.data!.connections} invite={invite} />;
+      return <ConnectStep cards={conn.data!.cards} connections={conn.data!.connections} invite={invite} onChanged={conn.reload} />;
     case 'privacy':
       return <PrivacyStep policies={data.policies} invite={invite} />;
     case 'muse':

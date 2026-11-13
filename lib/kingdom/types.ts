@@ -1,7 +1,7 @@
 /**
  * Beta Kingdom: shared types for assets, rigs, themes and games.
  *
- * World units: 1 unit = 1 metre; terrain cells are CELL = 0.96 m (factories/world.ts).
+ * World units: 1 unit = 1 metre; terrain cells are CELL = 1 m (16 px) (factories/world.ts).
  * Every asset's origin is at ground level (y = 0) under the centre of its footprint.
  * +y is up, +z faces the viewer (a character's face points to +z), +x is the character's left on screen.
  */

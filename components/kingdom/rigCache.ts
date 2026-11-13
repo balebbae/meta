@@ -2,8 +2,6 @@
  * Owns every Rig the UI builds. The gallery asks for (asset, options) and gets a cached Rig; the ten most recent stay
  * alive, older ones are disposed. Games clone cached rigs: clones share geometry, so disposing a clone is a no-op.
  */
-import {Group, Object3D} from 'three';
-import {makeRig} from '@/lib/kingdom/rig';
 import {disposeSoftResources} from '@/lib/kingdom/factories/soft';
 import type {AssetDef, BuildOptions, Rig} from '@/lib/kingdom/types';
 
@@ -21,16 +19,7 @@ export function getRig(def: AssetDef, options: BuildOptions): Rig {
   return rig;
 }
 
-/** A second instance of a rig that shares its geometry. Pivots are re-found by name so it animates independently. */
-export function cloneRig(src: Rig): Rig {
-  const group = src.group.clone(true) as Group;
-  const pivots: Record<string, Object3D> = {};
-  group.traverse((o) => { if (o.name && o !== group && !(o as {isMesh?: boolean}).isMesh) pivots[o.name] = o; });
-  const rig = makeRig(group, src.species, pivots, src.height, [...src.states], src.rest);
-  rig.scratch = {...src.scratch};
-  rig.dispose = () => { group.removeFromParent(); };
-  return rig;
-}
+export {cloneRig} from '@/lib/kingdom/rig';
 
 export function releaseAllRigs(): void {
   for (const rig of cache.values()) { rig.group.removeFromParent(); rig.dispose(); }

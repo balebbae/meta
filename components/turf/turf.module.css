@@ -42,6 +42,22 @@
   max-width: 500px;
   margin: 0 auto;
 }
+.viewTabs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  padding: 0 4px 12px;
+}
+.kingdomWrap {
+  max-width: 640px;
+  margin: 0 auto;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--fb-radius);
+  overflow: hidden;
+}
+.kingdomWrap canvas {
+  display: block;
+}
 .head {
   display: flex;
   align-items: center;

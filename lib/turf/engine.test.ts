@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {latLngToCell} from 'h3-js';
 import {
-  applyClaim, arenaCells, cellCenter, detectCut, detectLoop, fastPoints, fillLoop, haversineM, inArena, MAX_STEP_MS, obfuscateZone, outingTrimM,
+  applyClaim, arenaCells, cellCenter, detectCut, detectLoop, fastPoints, fillLoop, fmtPace, haversineM, inArena, loopPace, MAX_STEP_MS, obfuscateZone, outingTrimM, paceOk,
   pointsToCells, releasePlayer, score, smoothTrack, TRIM_M, TRIM_MAX_M, TRIM_MIN_M, TURF_RES, type LatLng, type Zone, type Arena, type GpsPoint, type TrailCell,
   type TurfGame,
 } from './engine.ts';
@@ -411,4 +411,18 @@ test('smoothing never moves a visible cell into a privacy zone or toward a hidde
       }
     }
   }
+});
+
+test('loopPace: a paced game judges a loop by distance over time, and paceOk allows 5% slack', () => {
+  // 1 km due north in a straight line, one point every 5 s
+  const line = (secPerKm: number): GpsPoint[] => Array.from({length: 41}, (_, i) => ({lat: KATY_TRAIL.lat + (i * 25) / 111_320, lng: KATY_TRAIL.lng, t: Math.round(i * 25 * secPerKm)}));
+  const quick = loopPace(line(300), 0, Infinity)!;
+  assert.ok(Math.abs(quick.km - 1) < 0.03, `km ${quick.km}`);
+  assert.ok(Math.abs(quick.secPerKm - 300) < 12, `pace ${quick.secPerKm}`);
+  assert.equal(paceOk(quick.secPerKm, 330), true); // a 5:30 game, run at 5:00
+  assert.equal(paceOk(loopPace(line(714), 0, Infinity)!.secPerKm, 330), false); // walked: does not count
+  assert.equal(paceOk(340, 330), true); assert.equal(paceOk(350, 330), false); // 3% slow passes, 6% does not
+  assert.equal(loopPace(line(300).slice(0, 3), 0, Infinity), null); // 50 m is too little to judge
+  assert.equal(loopPace(line(300), 0, 20_000), null); // so is 20 s
+  assert.equal(fmtPace(330), '5:30'); assert.equal(fmtPace(298), '4:58');
 });

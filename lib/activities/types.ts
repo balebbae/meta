@@ -171,7 +171,7 @@ export type MirrorCardPayload = {matchId: number; title: string; mode: 'dance' |
 /** A swimming Reel sent to a chat (lib/rally/swim-store.ts). */
 export type SwimCardPayload = {journeyId: number; title: string; route: string; totalM: number};
 
-export type RallyInvitePayload = {gameId: number; gameType: 'turf'; title: string; arenaLabel: string; endsAt: string};
+export type RallyInvitePayload = {gameId: number; gameType: 'turf'; title: string; arenaLabel: string; endsAt: string; paceSecPerKm?: number | null; reelId?: number | null};
 export type QuestCardPayload = {questId: number; title: string; template: GameTemplate; bossName?: string; bossHp?: number; reelId?: number};
 export type RallyGamePayload = {questId: number; event: 'move' | 'dare' | 'level' | 'boss_low' | 'boss_down' | 'critical'; userId?: number; text: string; damage?: number; hpLeft?: number};
 export type TurfRecapPayload = {

@@ -1,6 +1,6 @@
 /**
  * "Challenge the GC" router: Muse Ember looks at the Reel (caption, tags, exercises) and decides which game it
- * becomes. dance / yoga -> Mirror Match, swim -> swim journey, anything else -> the Rally boss fight.
+ * becomes. dance / yoga -> Mirror Match, swim -> swim journey, run -> a paced Turf game, anything else -> the Rally boss fight.
  * Keyword rules (reel-kind.ts) decide when Muse is offline or unsure.
  */
 import {sql} from '@/lib/db';
@@ -37,7 +37,7 @@ const describe = (r: ReelInfo) => `${r.caption} ${r.slug.replace(/-/g, ' ')} ${r
 
 const SCHEMA = {
   type: 'object',
-  properties: {game: {type: 'string', enum: ['dance', 'yoga', 'swim', 'workout']}},
+  properties: {game: {type: 'string', enum: ['dance', 'yoga', 'swim', 'run', 'workout']}},
   required: ['game'],
   additionalProperties: false,
 };
@@ -53,10 +53,10 @@ export async function classifyReel(r: ReelInfo): Promise<{game: ReelGame; museUs
       schema: SCHEMA,
       effort: 'minimal',
       input: `A friend sent this fitness Reel to their group chat. Decide which game it should become.
-dance = choreography or a dance trend people copy move by move. yoga = yoga, stretching or a mobility flow of poses. swim = swimming. workout = anything else (strength, HIIT, running, core).
+dance = choreography or a dance trend people copy move by move. yoga = yoga, stretching or a mobility flow of poses. swim = swimming. run = running or jogging outside (easy runs, tempo, intervals, a 5k). workout = anything else (strength, HIIT, core, treadmill circuits).
 Reel caption: "${r.caption.slice(0, 300)}". Tags: ${r.tags.join(', ') || 'none'}. Exercises: ${r.exercises.map(e => e.name).join(', ') || 'none'}.`,
     });
-    const game = (['dance', 'yoga', 'swim', 'workout'] as const).includes(out.game) ? out.game : backup;
+    const game = (['dance', 'yoga', 'swim', 'run', 'workout'] as const).includes(out.game) ? out.game : backup;
     return {game, museUsed: true};
   } catch {
     return {game: backup, museUsed: false};

@@ -1,7 +1,8 @@
 import type {LatLng} from './engine';
 import type {HeroPick} from '@/lib/kingdom/cast';
 
-export type TurfSettings = {center: LatLng; radiusKm: number; lengthDays: number; arenaLabel: string; startsAt?: string | null};
+/** `pace`: a paced game (from a running Reel): a loop only claims land if it was run at this pace or faster. `reelId`: the Reel it came from. */
+export type TurfSettings = {center: LatLng; radiusKm: number; lengthDays: number; arenaLabel: string; startsAt?: string | null; pace?: {secPerKm: number; distanceKm?: number | null} | null; reelId?: number | null};
 export type GameStatus = 'pending' | 'live' | 'ended' | 'cancelled';
 export type InviteStatus = 'invited' | 'accepted' | 'declined' | 'expired' | 'left';
 export type OutingStatus = 'open' | 'claimed' | 'cut' | 'discarded';
@@ -18,6 +19,8 @@ export type OutingResult = {
   /** players whose open trail this outing cut. */
   cutVictims: number[];
   cutBy: number | null;
+  /** Paced games: loops this outing closed too slowly to count, and the pace of the last one. */
+  slow?: {loops: number; secPerKm: number | null};
 };
 
 export type MyOuting = {
@@ -44,6 +47,10 @@ export type TurfState = {
   hostId: number | null;
   arena: {center: LatLng; radiusKm: number};
   lengthDays: number;
+  /** Paced game: runs only count at this pace or faster. */
+  pace: {secPerKm: number; distanceKm?: number | null} | null;
+  /** The Reel this game was made from, to watch again. */
+  reelId: number | null;
   startsAt: string | null;
   endsAt: string | null;
   now: string;

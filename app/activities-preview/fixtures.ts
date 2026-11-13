@@ -280,6 +280,8 @@ export const turfState: TurfState = {
   hostId: 4,
   arena,
   lengthDays: 7,
+  pace: null,
+  reelId: null,
   startsAt: at(-1, 12),
   endsAt: at(3, 23),
   now: at(0, 12),

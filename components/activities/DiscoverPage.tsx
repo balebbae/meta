@@ -298,7 +298,7 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
             <li>You choose what friends, games and mentors can see. Nothing is on by default.</li>
           </ul>
           <div className={styles.actions}>
-            <Link href="/activities/setup" className={styles.primary} onClick={() => setIntro(false)}>
+            <Link href="/activities/onboarding/tags" className={styles.primary} onClick={() => setIntro(false)}>
               Set up Activities
             </Link>
             <button

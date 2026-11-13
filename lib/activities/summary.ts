@@ -23,7 +23,7 @@ export const AUDIENCE_LABEL: Record<Audience, string> = {
   only_me: 'Only me',
   game_participants: 'Games I join',
   friends: 'Friends',
-  mentor_match: 'Mentor match',
+  mentor_match: 'A few months ahead',
   public: 'Public',
 };
 
@@ -43,7 +43,7 @@ export const LEVEL_HELP: Record<ShareLevel, string> = {
   none: 'not shared at all',
 };
 
-const AUD_SHORT: Record<Audience, string> = {only_me: 'you', game_participants: 'games', friends: 'friends', mentor_match: 'mentors', public: 'public'};
+const AUD_SHORT: Record<Audience, string> = {only_me: 'you', game_participants: 'games', friends: 'friends', mentor_match: 'people a few months ahead', public: 'public'};
 
 /** One deterministic line per category for the privacy step / Muse page (§4 step 4). */
 export function categorySummary(matrix: PolicyMatrix, category: Category): string {

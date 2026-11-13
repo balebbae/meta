@@ -1,10 +1,21 @@
 'use client';
 import {useRouter} from 'next/navigation';
-import {useRef, useState} from 'react';
+import {useState} from 'react';
+import {AlertDialog} from '@astryxdesign/core/AlertDialog';
+import {Banner} from '@astryxdesign/core/Banner';
+import {Button} from '@astryxdesign/core/Button';
+import {Card} from '@astryxdesign/core/Card';
+import {FileInput} from '@astryxdesign/core/FileInput';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Icon} from '@astryxdesign/core/Icon';
+import {List, ListItem} from '@astryxdesign/core/List';
+import {Text} from '@astryxdesign/core/Text';
+import {Token} from '@astryxdesign/core/Token';
+import {VStack} from '@astryxdesign/core/VStack';
 import {SOURCE_ICON, type PublicConnection} from './ConnectorHub';
 import type {ConnectorCard} from '@/lib/activities/connectors';
 import type {ConnectResult} from '@/lib/activities/types';
-import styles from './activities.module.css';
 
 type Props = {card: ConnectorCard; connection: PublicConnection | null; eventCount: number; initialResult?: ConnectResult | null; flash?: string | null};
 
@@ -14,7 +25,7 @@ export function ConnectSourcePanel({card, connection, eventCount, initialResult 
   const [result, setResult] = useState<ConnectResult | null>(initialResult);
   const [busy, setBusy] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(flash ?? null);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [confirmDelete, setConfirmDelete] = useState<boolean | null>(null);
   const connected = connection?.status === 'connected';
 
   async function post(url: string, body?: unknown) {
@@ -40,10 +51,10 @@ export function ConnectSourcePanel({card, connection, eventCount, initialResult 
   }
 
   async function disconnect(deleteData: boolean) {
-    if (!confirm(deleteData ? `Disconnect ${card.label} and delete its vault data?` : `Disconnect ${card.label}? Vault data is kept.`)) return;
     setBusy('disconnect');
     await post(`/api/connect/${card.id}/disconnect`, {deleteData});
     setBusy(null);
+    setConfirmDelete(null);
     setResult(null);
     setMsg(deleteData ? 'Disconnected and vault data deleted.' : 'Disconnected. Vault data kept.');
     router.refresh();
@@ -57,7 +68,8 @@ export function ConnectSourcePanel({card, connection, eventCount, initialResult 
     router.refresh();
   }
 
-  async function upload(file: File | undefined) {
+  async function upload(files: File | File[] | null) {
+    const file = Array.isArray(files) ? files[0] : files;
     if (!file) return;
     setBusy('upload');
     const fd = new FormData();
@@ -69,92 +81,75 @@ export function ConnectSourcePanel({card, connection, eventCount, initialResult 
     router.refresh();
   }
 
+  const primaryLabel = card.mode === 'demo' ? 'Seed a demo week' : card.mode === 'shortcut' ? 'Get my Shortcut token' : `Connect ${card.label}`;
   return (
-    <>
-      <div className={styles.card}>
-        <div className={styles.row} style={{marginBottom: 8}}>
-          <span className={styles.iconBox} aria-hidden>
-            {SOURCE_ICON[card.id]}
-          </span>
-          <div className={styles.grow}>
-            <div className={styles.row} style={{gap: 6}}>
-              <span className={styles.title}>{card.label}</span>
-              {connected ? <span className={styles.badgeGreen}>Connected</span> : card.availability === 'not_configured' ? <span className={styles.badgeAmber}>Not configured for this demo</span> : card.availability === 'needs_native' ? <span className={styles.badge}>Needs the native app</span> : null}
-              {card.trust === 'verified' && <span className={styles.badgeBlue}>Verified trust</span>}
-              {card.ownerOnly && <span className={styles.badge}>Shown only to you</span>}
-            </div>
-            <div className={styles.small}>{card.tagline}</div>
-          </div>
-        </div>
-        {msg && (
-          <div className={styles.answerBox} role="status">
-            {msg}
-          </div>
-        )}
-        {card.availability !== 'ready' && !connected && card.mode !== 'shortcut' && (
-          <p className={styles.sub} style={{marginTop: 10}}>
-            {card.otherRoute}
-          </p>
-        )}
-        {result?.type === 'unavailable' && <p className={styles.sub}>{result.reason}</p>}
+    <Card>
+      <VStack gap={4}>
+        <HStack gap={3} vAlign="center">
+          <Icon icon={SOURCE_ICON[card.id]} size="lg" color="accent" />
+          <VStack gap={1}>
+            <HStack gap={1.5} vAlign="center" wrap="wrap">
+              <Heading level={2}>{card.label}</Heading>
+              {connected ? <Token label="Connected" size="sm" color="green" /> : card.availability === 'not_configured' ? <Token label="Not configured for this demo" size="sm" color="orange" /> : card.availability === 'needs_native' ? <Token label="Needs the native app" size="sm" /> : null}
+              {card.trust === 'verified' && <Token label="Verified trust" size="sm" color="blue" />}
+              {card.ownerOnly && <Token label="Shown only to you" size="sm" />}
+            </HStack>
+            <Text type="supporting" color="secondary">
+              {card.tagline}
+            </Text>
+          </VStack>
+        </HStack>
+        {msg && <Banner status="info" title={msg} isDismissable onDismiss={() => setMsg(null)} />}
+        {card.availability !== 'ready' && !connected && card.mode !== 'shortcut' && <Text color="secondary">{card.otherRoute}</Text>}
+        {result?.type === 'unavailable' && <Text color="secondary">{result.reason}</Text>}
         {result?.type === 'instructions' && (
-          <div style={{marginTop: 10}}>
-            <div className={styles.title}>{result.title}</div>
-            <ol className={styles.steps}>
+          <VStack gap={2}>
+            <Heading level={3}>{result.title}</Heading>
+            <List listStyle="decimal" density="compact">
               {result.steps.map((s, i) => (
-                <li key={i}>{s.includes('Bearer') ? <span className={styles.code}>{s}</span> : s}</li>
+                <ListItem key={i} label={s.includes('Bearer') ? <Text type="code">{s}</Text> : s} />
               ))}
-            </ol>
-          </div>
+            </List>
+          </VStack>
         )}
-        <div className={styles.row} style={{marginTop: 12}}>
-          {!connected && (card.availability === 'ready' || card.mode === 'shortcut') && card.mode !== 'builtin' && (
-            <button className={card.mode === 'demo' ? styles.btnGreen : styles.btnPrimary} disabled={busy != null} onClick={() => void connect()}>
-              {busy === 'connect' ? '…' : card.mode === 'demo' ? 'Seed a demo week' : card.mode === 'shortcut' ? 'Get my Shortcut token' : `Connect ${card.label}`}
-            </button>
-          )}
-          {connected && card.mode === 'demo' && (
-            <button className={styles.btnGreen} disabled={busy != null} onClick={() => void connect()}>
-              {busy === 'connect' ? '…' : 'Re-seed the week'}
-            </button>
-          )}
-          {connected && card.mode === 'shortcut' && (
-            <button className={styles.btn} disabled={busy != null} onClick={() => void connect()}>
-              Show Shortcut instructions
-            </button>
-          )}
-          {card.id === 'whoop' && (
-            <button className={styles.btn} disabled={busy != null} onClick={() => void replay()} title="Replays a recorded workout.updated webhook through the real mapper">
-              {busy === 'replay' ? '…' : 'Replay recorded webhook'}
-            </button>
-          )}
+        <HStack gap={2} wrap="wrap">
+          {!connected && (card.availability === 'ready' || card.mode === 'shortcut') && card.mode !== 'builtin' && <Button label={primaryLabel} variant="primary" isLoading={busy === 'connect'} isDisabled={busy != null && busy !== 'connect'} onClick={() => void connect()} />}
+          {connected && card.mode === 'demo' && <Button label="Re-seed the week" variant="primary" isLoading={busy === 'connect'} isDisabled={busy != null && busy !== 'connect'} onClick={() => void connect()} />}
+          {connected && card.mode === 'shortcut' && <Button label="Show Shortcut instructions" isDisabled={busy != null} onClick={() => void connect()} />}
+          {card.id === 'whoop' && <Button label="Replay recorded webhook" tooltip="Replays a recorded workout.updated webhook through the real mapper" isLoading={busy === 'replay'} isDisabled={busy != null && busy !== 'replay'} onClick={() => void replay()} />}
           {connected && (
             <>
-              <button className={styles.btn} disabled={busy != null} onClick={() => void disconnect(false)}>
-                Disconnect
-              </button>
-              <button className={styles.btnDanger} disabled={busy != null} onClick={() => void disconnect(true)}>
-                Disconnect and delete data
-              </button>
+              <Button label="Disconnect" isDisabled={busy != null} onClick={() => setConfirmDelete(false)} />
+              <Button label="Disconnect and delete data" variant="destructive" isDisabled={busy != null} onClick={() => setConfirmDelete(true)} />
             </>
           )}
-        </div>
+        </HStack>
         {card.id === 'apple_health' && (
-          <div style={{marginTop: 14}}>
-            <div className={styles.title}>Or upload export.zip</div>
-            <p className={styles.small}>Health app → your picture → Export All Health Data. We read Workout and StepCount records only; 5 MB cap, nothing is kept but the normalized events.</p>
-            <input ref={fileRef} type="file" accept=".zip,.xml,application/zip,text/xml" hidden onChange={e => void upload(e.target.files?.[0])} />
-            <button className={styles.btn} disabled={busy != null} onClick={() => fileRef.current?.click()}>
-              {busy === 'upload' ? 'Importing…' : 'Choose export.zip / export.xml'}
-            </button>
-          </div>
+          <FileInput
+            label="Or upload export.zip"
+            description="Health app → your picture → Export All Health Data. We read Workout and StepCount records only; 5 MB cap, nothing is kept but the normalized events."
+            accept=".zip,.xml,application/zip,text/xml"
+            value={null}
+            isLoading={busy === 'upload'}
+            isDisabled={busy != null && busy !== 'upload'}
+            onChange={files => void upload(files)}
+          />
         )}
-        <p className={styles.small} style={{marginTop: 12}}>
+        <Text type="supporting" color="secondary">
           {eventCount} event{eventCount === 1 ? '' : 's'} from {card.label} in your vault.
           {card.id === 'whoop' && ' WHOOP heart rate and strain are never shared or sent to any model; workouts count as verified.'}
-          {card.id === 'strava' && ' Strava activities are shown only to you, per Strava\u2019s API terms; they still count toward your own goals.'}
-        </p>
-      </div>
-    </>
+          {card.id === 'strava' && ' Strava activities are shown only to you, per Strava’s API terms; they still count toward your own goals.'}
+        </Text>
+      </VStack>
+      <AlertDialog
+        isOpen={confirmDelete != null}
+        onOpenChange={open => !open && busy !== 'disconnect' && setConfirmDelete(null)}
+        title={confirmDelete ? `Disconnect ${card.label} and delete its data?` : `Disconnect ${card.label}?`}
+        description={confirmDelete ? 'Everything it put in your vault is deleted too.' : 'Vault data is kept until you delete it.'}
+        actionLabel={confirmDelete ? 'Disconnect and delete' : 'Disconnect'}
+        onAction={() => void disconnect(Boolean(confirmDelete))}
+        isActionLoading={busy === 'disconnect'}
+      />
+    </Card>
   );
 }

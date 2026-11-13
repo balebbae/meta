@@ -14,10 +14,11 @@ export type OkMove = Extract<LogMoveResult, {ok: true}>;
 export const rallyApi = {
   state: (id: number) => fetch(`/api/quests/${id}/state`, {cache: 'no-store'}).then(r => json<QuestState>(r)),
   list: (conversationId?: number) => fetch(conversationId ? `/api/quests?conversationId=${conversationId}` : '/api/quests', {cache: 'no-store'}).then(r => json<{quests: QuestRow[]}>(r)),
-  move: (id: number, body: {source: 'manual' | 'photo' | 'voice' | 'vault'; note?: string; image?: string | null; amount?: number | null}) => post(`/api/quests/${id}/moves`, body).then(r => json<OkMove>(r)),
+  move: (id: number, body: {source: 'manual' | 'photo' | 'voice' | 'vault' | 'clip'; note?: string; image?: string | null; amount?: number | null; clip?: {exercise: string; fps: number; signal: (number | null)[]; frames: string[]}}) => post(`/api/quests/${id}/moves`, body).then(r => json<OkMove>(r)),
   dare: (id: number, dareId: string, body: {image?: string | null; note?: string}) => post(`/api/quests/${id}/dares/${dareId}`, body).then(r => json<OkMove>(r)),
   fromSentence: (text: string, conversationId: number) => post('/api/games/from-sentence', {text, conversationId}).then(r => json<{quest: QuestRow; museUsed: boolean}>(r)),
   fromReel: (reelId: number, conversationId: number) => post('/api/games/from-reel', {reelId, conversationId}).then(r => json<{quest: QuestRow; museUsed: boolean}>(r)),
+  leave: (id: number) => post(`/api/quests/${id}/leave`).then(r => json<{ok: boolean}>(r)),
   claim: (rewardId: number) => post(`/api/rewards/${rewardId}/claim`).then(r => json<{reward: {id: number; status: string; code: string | null}}>(r)),
 };
 

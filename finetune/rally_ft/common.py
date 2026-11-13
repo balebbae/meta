@@ -19,9 +19,11 @@ def example(task: str, ex_id: str, system: str, user, target: dict, **extra) -> 
     }
 
 
-def with_answer(row: dict) -> list[dict]:
-    """Messages including the assistant turn, for supervised fine-tuning."""
-    return row["messages"] + [{"role": "assistant", "content": json.dumps(row["target"], sort_keys=True)}]
+def with_answer(row: dict, sort_keys: bool = True) -> list[dict]:
+    """Messages including the assistant turn, for supervised fine-tuning.
+
+    sort_keys=False keeps the target's own key order (exercise_check puts the decision after the evidence)."""
+    return row["messages"] + [{"role": "assistant", "content": json.dumps(row["target"], sort_keys=sort_keys)}]
 
 
 def split_channels(text: str | None) -> tuple[str, str]:

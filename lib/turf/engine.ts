@@ -7,7 +7,12 @@ import {cellToLatLng, gridDisk, gridPathCells, latLngToCell, polygonToCells} fro
 
 export const TURF_RES = 11;
 export const TRIM_M = 200;
+/** Per-outing trim range; see outingTrimM. */
+export const TRIM_MIN_M = 150;
+export const TRIM_MAX_M = 400;
 export const MAX_KMH = 25;
+/** Speed change per second (m/s^2) above which a stretch is treated like a speed violation (plan 5b). */
+export const MAX_ACCEL_MS2 = 5;
 export const CLOSE_M = 50;
 const AWAY_M = 120;
 const MAX_GAP_CELLS = 8;
@@ -17,7 +22,7 @@ export type LatLng = {lat: number; lng: number};
 export type GpsPoint = LatLng & {t: number};
 export type Arena = {center: LatLng; radiusKm: number};
 export type Zone = LatLng & {radiusM: number};
-/** hidden = inside the first/last 200 m of the outing: usable for closing a loop, never claimed or shown. */
+/** hidden = within the trim distance of the outing's ends or a privacy zone: usable for closing a loop, never claimed or shown. */
 export type TrailCell = {cell: string; t: number; hidden?: boolean};
 
 export type TrailOptions = {
@@ -57,27 +62,82 @@ export function arenaCells(arena: Arena, res = TURF_RES): string[] {
 }
 
 /**
+ * Stable per-outing trim in [150, 400) m. A fixed trim makes every visible start sit exactly trim + r from the
+ * zone centre, so N outings trilaterate it; a per-outing value blurs that ring. Seeded so replays are stable.
+ * shortcut: seed is only the outing id (guessable), mix in a server secret if outing ids become visible to other players.
+ */
+export function outingTrimM(seed: number | string): number {
+  let h = 2166136261;
+  for (const ch of String(seed)) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  h = Math.imul(h ^ (h >>> 15), 2246822507);
+  h = Math.imul(h ^ (h >>> 13), 3266489909);
+  return TRIM_MIN_M + (((h ^ (h >>> 16)) >>> 0) / 2 ** 32) * (TRIM_MAX_M - TRIM_MIN_M);
+}
+
+/**
+ * Obfuscate a privacy zone once, at creation (u1, u2 uniform in [0, 1)).
+ * The stored centre c' is the true point c moved by d = 0.5 r * sqrt(u1) at angle 2 pi u2 (uniform over a disk of
+ * radius r/2), and the stored radius is r' = 1.5 r. Every point p of the original circle stays hidden:
+ * |p - c'| <= |p - c| + |c - c'| <= r + r/2 = r'. r' is the same for every offset, so it leaks nothing about d.
+ * An attacker who fits a circle to visible exit points recovers c', which is d from home (mean r/3, up to r/2).
+ */
+export function obfuscateZone(z: Zone, u1: number, u2: number): Zone {
+  const d = 0.5 * z.radiusM * Math.sqrt(u1);
+  const a = 2 * Math.PI * u2;
+  return {
+    lat: z.lat + (d * Math.sin(a)) / 111_320,
+    lng: z.lng + (d * Math.cos(a)) / (111_320 * Math.cos(rad(z.lat))),
+    radiusM: Math.round(z.radiusM * 1.5),
+  };
+}
+
+/**
+ * Per point (sorted by t): true when the stretch arriving at it is faster than maxKmh, or its speed changed
+ * faster than MAX_ACCEL_MS2 since the previous stretch (a jump no runner makes = spoofed or vehicle point).
+ */
+export function fastPoints(pts: GpsPoint[], maxKmh = MAX_KMH): boolean[] {
+  const maxMs = maxKmh / 3.6;
+  const fast: boolean[] = [false];
+  let prevV: number | null = null;
+  for (let i = 1; i < pts.length; i++) {
+    const d = haversineM(pts[i - 1], pts[i]);
+    const dt = (pts[i].t - pts[i - 1].t) / 1000;
+    const v = dt > 0 ? d / dt : null;
+    const jump = v != null && prevV != null && Math.abs(v - prevV) / dt > MAX_ACCEL_MS2;
+    fast.push(d > 0 && (dt <= 0 || d / dt > maxMs || jump));
+    if (v != null) prevV = v;
+  }
+  return fast;
+}
+
+/**
  * GPS points -> ordered trail cells.
- * Drops: points outside the arena circle, points inside a privacy zone, stretches faster than 25 km/h
- * (bikes, cars, GPS jumps). Hides the first and last 200 m of path. Consecutive kept points are joined
+ * Drops: points outside the arena circle, points inside a privacy zone, stretches faster than 25 km/h or
+ * that accelerate implausibly (bikes, cars, GPS jumps; see fastPoints). Hides the path within trimM of the outing's
+ * start/end and of every privacy-zone exit/entry, so a zone's edge is never drawn. Consecutive kept points are joined
  * with the H3 grid path so sparse GPX tracks still leave a continuous trail.
  */
 export function pointsToCells(points: GpsPoint[], arena: Arena, opts: TrailOptions = {}): TrailCell[] {
   const trimM = opts.trimM ?? TRIM_M;
-  const maxMs = ((opts.maxKmh ?? MAX_KMH) * 1000) / 3600;
   const zones = opts.zones ?? [];
   const pts = points.filter(p => Number.isFinite(p.lat) && Number.isFinite(p.lng) && Number.isFinite(p.t)).sort((a, b) => a.t - b.t);
   if (!pts.length) return [];
 
   const cum: number[] = [0];
-  const fast: boolean[] = [false];
-  for (let i = 1; i < pts.length; i++) {
-    const d = haversineM(pts[i - 1], pts[i]);
-    const dt = (pts[i].t - pts[i - 1].t) / 1000;
-    cum.push(cum[i - 1] + d);
-    fast.push(d > 0 && (dt <= 0 || d / dt > maxMs));
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + haversineM(pts[i - 1], pts[i]));
+  const fast = fastPoints(pts, opts.maxKmh ?? MAX_KMH);
+  // path distance since the previous / until the next zone point (or the outing's start / end)
+  const inZone = pts.map(p => zones.some(z => haversineM(p, z) <= z.radiusM));
+  const since: number[] = [];
+  const until: number[] = [];
+  for (let i = 0, edge = 0; i < pts.length; i++) {
+    if (inZone[i]) edge = cum[i];
+    since.push(cum[i] - edge);
   }
-  const total = cum[cum.length - 1];
+  for (let i = pts.length - 1, edge = cum[pts.length - 1]; i >= 0; i--) {
+    if (inZone[i]) edge = cum[i];
+    until[i] = edge - cum[i];
+  }
 
   const out: TrailCell[] = [];
   const push = (cell: string, t: number, hidden: boolean) => {
@@ -92,12 +152,12 @@ export function pointsToCells(points: GpsPoint[], arena: Arena, opts: TrailOptio
   let prev: {cell: string; t: number; hidden: boolean} | null = null;
   for (let i = 0; i < pts.length; i++) {
     const p = pts[i];
-    const ok = !fast[i] && inArena(p, arena) && !zones.some(z => haversineM(p, z) <= z.radiusM);
+    const ok = !fast[i] && inArena(p, arena) && !inZone[i];
     if (!ok) {
       prev = null;
       continue;
     }
-    const hidden = cum[i] < trimM || total - cum[i] < trimM;
+    const hidden = since[i] < trimM || until[i] < trimM;
     const cell = latLngToCell(p.lat, p.lng, TURF_RES);
     if (prev && prev.cell !== cell) {
       let path: string[] = [];

@@ -1,6 +1,23 @@
 'use client';
-import Link from 'next/link';
+import {useRouter} from 'next/navigation';
 import {useCallback, useEffect, useRef, useState} from 'react';
+import {AlertDialog} from '@astryxdesign/core/AlertDialog';
+import {AspectRatio} from '@astryxdesign/core/AspectRatio';
+import {Button} from '@astryxdesign/core/Button';
+import {Card} from '@astryxdesign/core/Card';
+import {ClickableCard} from '@astryxdesign/core/ClickableCard';
+import {EmptyState} from '@astryxdesign/core/EmptyState';
+import {Grid} from '@astryxdesign/core/Grid';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {List} from '@astryxdesign/core/List';
+import {ListItem} from '@astryxdesign/core/List';
+import {ProgressBar} from '@astryxdesign/core/ProgressBar';
+import {Step, Stepper} from '@astryxdesign/core/Stepper';
+import {Text} from '@astryxdesign/core/Text';
+import {Token} from '@astryxdesign/core/Token';
+import {useToast} from '@astryxdesign/core/Toast';
+import {VStack} from '@astryxdesign/core/VStack';
 import type {QuestState} from '@/lib/rally/queries';
 import {RallyAvatar, type AvatarState} from './Avatar';
 import {BossArt} from './BossArt';
@@ -8,18 +25,21 @@ import {LogMoveSheet} from './LogMoveSheet';
 import {ShareToGroupsDialog} from './ShareToGroupsDialog';
 import {rallyApi, type OkMove} from './api';
 import s from './dashboard.module.css';
-import r from './rally.module.css';
 
 const POLL_MS = 3000;
+const exerciseLine = (e: {name: string; reps?: number | null; seconds?: number | null}) => `${e.name}${e.reps ? ` ×${e.reps}` : ''}${e.seconds ? ` ${e.seconds}s` : ''}`;
 
-/** §17.2 dashboard: Quest map, Boss arena (polls state every 3s), Locker, Squad stats, Log a move / Do a dare. */
+/** §17.2 dashboard: Boss arena (polls state every 3s), Quest map, Squad, Locker, recent moves. */
 export function QuestDashboard({initial}: {initial: QuestState}) {
+  const router = useRouter();
+  const showToast = useToast();
   const [state, setState] = useState<QuestState>(initial);
   const [logOpen, setLogOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [leaving, setLeaving] = useState(false);
   const [dare, setDare] = useState<QuestState['dares'][number] | null>(null);
   const [anim, setAnim] = useState<{userId: number; state: AvatarState; hurt: boolean} | null>(null);
-  const [banner, setBanner] = useState<string | null>(null);
   const lastMoveId = useRef(initial.moves[initial.moves.length - 1]?.id ?? 0);
 
   const refresh = useCallback(async () => {
@@ -43,8 +63,7 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
   }, [refresh]);
 
   const onMove = (res: OkMove) => {
-    setBanner(res.narration);
-    setTimeout(() => setBanner(null), 5000);
+    showToast({body: `Game Master: ${res.narration}`, autoHideDuration: 5000});
     void refresh();
   };
 
@@ -55,274 +74,331 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
   const me = state.members.find(m => m.id === state.viewerId);
   const level = spec.levels[state.levelDay - 1];
   const myRewards = state.rewards.filter(x => x.userId === state.viewerId);
+  const maxDamage = state.members.reduce((mx, x) => Math.max(mx, x.damage), 0);
+  const myGear = me ? state.gear.filter(g => g.userId === me.id) : [];
+
+  const leave = async () => {
+    setLeaving(true);
+    try {
+      await rallyApi.leave(q.id);
+      router.push('/activities');
+    } catch (err) {
+      setLeaving(false);
+      setLeaveOpen(false);
+      showToast({body: err instanceof Error ? err.message : 'Could not leave the game', type: 'error'});
+    }
+  };
   const claim = async (id: number) => {
     try {
       await rallyApi.claim(id);
       void refresh();
     } catch {
-      /* ignore */
+      showToast({body: 'Could not claim that reward', type: 'error'});
     }
   };
 
   return (
-    <div className={s.page}>
-      {banner && (
-        <div className={s.banner} role="status">
-          <strong>Game Master:</strong> {banner}
-        </div>
-      )}
+    <VStack gap={3} paddingBlock={3}>
+      <Card aria-label="Boss arena">
+        <VStack gap={4}>
+          <HStack gap={3} vAlign="start" justify="between" wrap="wrap">
+            <VStack gap={2} maxWidth={560}>
+              <Heading level={1}>{q.title}</Heading>
+              <Text color="secondary">{spec.story}</Text>
+              <HStack gap={1.5} wrap="wrap">
+                <Token label={spec.template} size="sm" />
+                <Token label={`Day ${state.levelDay} of ${spec.levels.length}`} size="sm" color="blue" />
+                {q.buffed && <Token label="Boss buffed +10%" size="sm" color="orange" />}
+                {!state.museUsed && <Token label="Muse offline · template quest" size="sm" color="gray" />}
+              </HStack>
+            </VStack>
+            <HStack gap={2} wrap="wrap">
+              <Button label="Post to groups" variant="primary" isDisabled={done} onClick={() => setShareOpen(true)} />
+              {q.conversationId && <Button label="Open chat" href={`/messages/${q.conversationId}`} />}
+            </HStack>
+          </HStack>
 
-      {/* Boss arena */}
-      <section className={`${s.card} ${s.arena}`} aria-label="Boss arena">
-        <div className={s.arenaHead}>
-          <div>
-            <h1 className={s.h1}>{q.title}</h1>
-            <p className={s.muted}>{spec.story}</p>
-            <div className={s.tags}>
-              <span className={s.tag}>{spec.template}</span>
-              <span className={s.tag}>Day {state.levelDay} of {spec.levels.length}</span>
-              {q.buffed && <span className={s.tag}>Boss buffed +10%</span>}
-              {!state.museUsed && <span className={r.offline}>Muse offline · template quest</span>}
-            </div>
-          </div>
-          <div style={{display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end'}}>
-            <button type="button" className="fb-btn-primary" style={{whiteSpace: 'nowrap'}} disabled={done} onClick={() => setShareOpen(true)}>
-              Post to groups
-            </button>
-            {q.conversationId && (
-              <Link href={`/messages/${q.conversationId}`} className="fb-btn-secondary" style={{whiteSpace: 'nowrap'}}>
-                Open chat
-              </Link>
-            )}
-          </div>
-        </div>
-        {spec.boss && (
-          <div className={s.arenaStage}>
-            <div className={s.bossSlot}>
-              <BossArt kind={q.bossKind} imageUrl={q.bossImageUrl} name={spec.boss.name} size={150} hurt={Boolean(anim?.hurt)} down={done} />
-              <div className={s.bossName}>{spec.boss.name}</div>
-              <div className={`${r.hp} ${hpPct < 10 && !done ? r.hpLow : ''}`} role="progressbar" aria-valuenow={q.bossHpLeft} aria-valuemin={0} aria-valuemax={q.bossHp} aria-label="Boss HP">
-                <div className={r.hpFill} style={{width: `${hpPct}%`}} />
-              </div>
-              <div className={r.hpLabel}>
-                <span>{done ? 'Defeated' : `${Math.round(hpPct)}%`}</span>
-                <span>
-                  {q.bossHpLeft} / {q.bossHp} HP
-                </span>
-              </div>
-            </div>
-            <div className={s.squad} aria-label="Squad">
-              {state.members.map(m => (
-                <div key={m.id} className={s.squadMember}>
-                  <RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} size={64} mvp={state.mvp === m.id} state={anim?.userId === m.id ? anim.state : done ? 'celebrate' : 'idle'} />
-                  <span className={s.squadName}>{m.name.split(' ')[0]}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {q.template === 'relay' && (
-          <div className={s.relay}>
-            {(['A', 'B'] as const).map(t => (
-              <div key={t} className={s.relayLane}>
-                <span>Team {t}</span>
-                <div className={r.hp}>
-                  <div className={r.hpFill} style={{width: `${(state.relay.legs[t] / state.relay.totalLegs) * 100}%`, background: t === 'A' ? 'var(--fb-blue)' : 'var(--fb-green)'}} />
-                </div>
-                <span className={s.muted}>
-                  {state.relay.legs[t]}/{state.relay.totalLegs} legs
-                </span>
-              </div>
-            ))}
-            {state.relay.winner && <p className={s.muted}>Winner: {state.relay.winner === 'tie' ? 'tie' : `Team ${state.relay.winner}`}</p>}
-          </div>
-        )}
-        <div className={s.actions}>
-          <button type="button" className="fb-btn-primary" disabled={done} onClick={() => setLogOpen(true)}>
-            Log a move
-          </button>
-          <button type="button" className="fb-btn-secondary" disabled={done || !state.dares.length} onClick={() => setDare(state.dares.find(d => !d.doneBy.includes(state.viewerId)) ?? state.dares[0])}>
-            Do a dare
-          </button>
-        </div>
-        {me && level && !done && (
-          <p className={s.muted} style={{marginTop: 8}}>
-            Today: {level.name} · {level.exercises.map(e => `${e.name}${e.reps ? ` ×${e.reps}` : ''}${e.seconds ? ` ${e.seconds}s` : ''}`).join(', ')}
-            {me.target != null && <> · your target {me.target} ({me.handicapNote})</>}
-          </p>
-        )}
-      </section>
-
-      {/* Quest map */}
-      <section className={s.card} aria-label="Quest map">
-        <h2 className={s.h2}>Quest map</h2>
-        <ol className={s.map}>
-          {spec.levels.map((l, i) => {
-            const here = state.members.filter(m => m.level === l.day);
-            const reached = l.day <= state.levelDay;
-            return (
-              <li key={l.day} className={`${s.node} ${reached ? s.nodeReached : ''} ${l.day === state.levelDay ? s.nodeNow : ''}`}>
-                {i < spec.levels.length - 1 && <span className={s.path} aria-hidden />}
-                <div className={s.nodeAvatars}>
-                  {here.map(m => (
-                    <RallyAvatar key={m.id} src={m.avatarUrl} name={m.name} gear={m.gear} size={28} state={l.day === state.levelDay && !done ? 'run' : 'idle'} />
-                  ))}
-                </div>
-                <span className={s.nodeDot}>{l.day}</span>
-                <div className={s.nodeText}>
-                  <strong>{l.name}</strong>
-                  <small>{l.exercises.map(e => `${e.name}${e.reps ? ` ×${e.reps}` : ''}${e.seconds ? ` ${e.seconds}s` : ''}`).join(' · ')}</small>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
-
-      <div className={s.twoCol}>
-        {/* Squad stats */}
-        <section className={s.card} aria-label="Squad stats">
-          <h2 className={s.h2}>Squad</h2>
-          <ul className={s.stats}>
-            {[...state.members].sort((a, b) => b.damage - a.damage).map(m => (
-              <li key={m.id} className={s.statRow}>
-                <RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} size={32} />
-                <div style={{flex: 1, minWidth: 0}}>
-                  <div className={s.statName}>
-                    {m.name}
-                    {state.mvp === m.id && <span className={s.mvp}>MVP</span>}
-                    {m.team && <span className={s.tag}>Team {m.team}</span>}
-                  </div>
-                  <div className={s.muted}>
-                    {m.moves} {m.moves === 1 ? 'move' : 'moves'} · {m.damage} dmg
-                    {state.streak[m.id] && <> · streak {state.streak[m.id].streak} · {state.streak[m.id].livesLeft} lives</>}
-                  </div>
-                </div>
-                <div className={s.statBar}>
-                  <div style={{width: `${state.members.reduce((mx, x) => Math.max(mx, x.damage), 0) ? (m.damage / state.members.reduce((mx, x) => Math.max(mx, x.damage), 1)) * 100 : 0}%`}} />
-                </div>
-              </li>
-            ))}
-          </ul>
-          <h3 className={s.h3}>Dares</h3>
-          <ul className={s.dares}>
-            {state.dares.map(d => (
-              <li key={d.id} className={s.dareRow}>
-                <div style={{flex: 1}}>
-                  <div>{d.text}</div>
-                  <div className={s.muted}>
-                    +{d.bonus} bonus{d.needsProof ? ' · photo' : ''}
-                    {d.doneBy.length > 0 && <> · done by {d.doneBy.map(id => state.members.find(m => m.id === id)?.name.split(' ')[0] ?? '?').join(', ')}</>}
-                  </div>
-                </div>
-                <button type="button" className="fb-btn-secondary" disabled={done || d.doneBy.includes(state.viewerId)} onClick={() => setDare(d)}>
-                  {d.doneBy.includes(state.viewerId) ? 'Done' : 'Do it'}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {/* Locker + rewards */}
-        <section className={s.card} aria-label="Locker">
-          <h2 className={s.h2}>Locker</h2>
-          {me && (
-            <div className={s.lockerHero}>
-              <RallyAvatar src={me.avatarUrl} name={me.name} gear={me.gear} size={96} state={done ? 'celebrate' : 'idle'} />
-              <div>
-                <div className={s.statName}>Your gear</div>
-                {state.gear.filter(g => g.userId === me.id).length ? (
-                  <div className={s.chips}>
-                    {state.gear.filter(g => g.userId === me.id).map(g => (
-                      <span key={g.slug} className={s.tag} title={g.description ?? ''}>
-                        {g.label}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className={s.muted}>Beat the boss to unlock gear for everyone.</p>
-                )}
-              </div>
-            </div>
-          )}
-          <h3 className={s.h3}>Rewards</h3>
-          {myRewards.length === 0 ? (
-            <ul className={s.rewards}>
-              {spec.rewards.map((rw, i) => (
-                <li key={i} className={`${s.reward} ${s.rewardLocked}`}>
-                  <span className={s.tag}>{rw.tier}</span>
-                  <span>{rw.label}</span>
-                  <span className={s.muted}>locked</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <ul className={s.rewards}>
-              {myRewards.map(rw => (
-                <li key={rw.id} className={s.reward}>
-                  <span className={s.tag}>{rw.tier}</span>
-                  <div style={{flex: 1}}>
-                    <div>{rw.label}</div>
-                    {rw.sponsor && (
-                      <div className={s.muted}>
-                        <span className={s.sponsored}>Sponsored</span> {rw.sponsor}
-                        {rw.tier === 'equipment' && ' · 18+ only, demo offer'}
-                      </div>
-                    )}
-                    {rw.status === 'claimed' && rw.code && <div className={s.code}>{rw.code}</div>}
-                  </div>
-                  <button type="button" className={rw.status === 'claimed' ? 'fb-btn-secondary' : 'fb-btn-primary'} disabled={rw.status === 'claimed'} onClick={() => void claim(rw.id)}>
-                    {rw.status === 'claimed' ? 'Claimed' : 'Claim'}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {state.listings.length > 0 && (
-            <>
-              <h3 className={s.h3}>Gear for your next quest</h3>
-              <div className={s.listings}>
-                {state.listings.map(l => (
-                  <Link key={l.id} href={`/marketplace/${l.id}`} className={s.listing}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={l.imageUrl} alt="" />
-                    <div className={s.listingTitle}>{l.title}</div>
-                    <div className={s.muted}>${(l.priceCents / 100).toFixed(0)} · {l.location}</div>
-                  </Link>
+          {spec.boss && (
+            <VStack gap={4} hAlign="center" padding={4} className={s.arenaStage}>
+              <VStack gap={2} hAlign="center" width="100%" maxWidth={320}>
+                <BossArt kind={q.bossKind} imageUrl={q.bossImageUrl} name={spec.boss.name} size={150} hurt={Boolean(anim?.hurt)} down={done} />
+                <Heading level={3}>{spec.boss.name}</Heading>
+                <ProgressBar
+                  label={done ? 'Defeated' : `Boss HP · ${Math.round(hpPct)}%`}
+                  value={q.bossHpLeft}
+                  max={q.bossHp || 1}
+                  variant={hpPct < 10 && !done ? 'error' : 'warning'}
+                  hasValueLabel
+                  formatValueLabel={(v, m) => `${v} / ${m} HP`}
+                />
+              </VStack>
+              <HStack gap={4} hAlign="center" wrap="wrap" aria-label="Squad">
+                {state.members.map(m => (
+                  <VStack key={m.id} gap={1} hAlign="center">
+                    <RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} size={64} mvp={state.mvp === m.id} state={anim?.userId === m.id ? anim.state : done ? 'celebrate' : 'idle'} />
+                    <Text type="supporting" weight="bold">
+                      {m.name.split(' ')[0]}
+                    </Text>
+                  </VStack>
                 ))}
-              </div>
-            </>
+              </HStack>
+            </VStack>
           )}
-        </section>
-      </div>
 
-      {/* Recent moves */}
-      <section className={s.card} aria-label="Recent moves">
-        <h2 className={s.h2}>Recent moves</h2>
-        {state.moves.length === 0 ? (
-          <p className={s.muted}>No moves yet. Be the first to hit the boss.</p>
-        ) : (
-          <ul className={s.moves}>
-            {[...state.moves].reverse().slice(0, 12).map(m => {
-              const who = state.members.find(x => x.id === m.userId);
+          {q.template === 'relay' && (
+            <VStack gap={2}>
+              {(['A', 'B'] as const).map(t => (
+                <ProgressBar key={t} label={`Team ${t}`} value={state.relay.legs[t]} max={state.relay.totalLegs} variant={t === 'A' ? 'accent' : 'success'} hasValueLabel formatValueLabel={(v, m) => `${v}/${m} legs`} />
+              ))}
+              {state.relay.winner && <Text color="secondary">Winner: {state.relay.winner === 'tie' ? 'tie' : `Team ${state.relay.winner}`}</Text>}
+            </VStack>
+          )}
+
+          {(state.fairness || state.myHandicap) && (
+            <Card variant="muted">
+              <VStack gap={2}>
+                <HStack gap={2} vAlign="center" justify="between" wrap="wrap">
+                  <Heading level={3}>Fair play</Heading>
+                  {state.fairness && <Token label={`Predicted finish: ${state.fairness.label}`} size="sm" color="green" />}
+                </HStack>
+                {state.fairness?.summary && <Text color="secondary">{state.fairness.summary}</Text>}
+                {state.myHandicap && (
+                  <Text color="secondary">
+                    <Text weight="bold">Only you see this:</Text> target ×{state.myHandicap.targetScale}, each move hits ×{state.myHandicap.damageScale}
+                    {state.myHandicap.why ? `. ${state.myHandicap.why}` : '.'}
+                  </Text>
+                )}
+              </VStack>
+            </Card>
+          )}
+
+          <VStack gap={2}>
+            {me && level && !done && (
+              <Text type="supporting" color="secondary">
+                Today: {level.name} · {level.exercises.map(exerciseLine).join(', ')}
+                {me.target != null && <> · your target {me.target}</>}
+              </Text>
+            )}
+            <HStack gap={2} vAlign="center" justify="between" wrap="wrap">
+              <HStack gap={2} wrap="wrap">
+                <Button label="Log a move" variant="primary" isDisabled={done} onClick={() => setLogOpen(true)} />
+                <Button label="Do a dare" isDisabled={done || !state.dares.length} onClick={() => setDare(state.dares.find(d => !d.doneBy.includes(state.viewerId)) ?? state.dares[0])} />
+              </HStack>
+              <Button label="Leave game" variant="destructive" onClick={() => setLeaveOpen(true)} />
+            </HStack>
+          </VStack>
+        </VStack>
+      </Card>
+
+      <Card aria-label="Quest map">
+        <VStack gap={3}>
+          <Heading level={2}>Quest map</Heading>
+          <Stepper activeStep={Math.max(0, state.levelDay - 1)} orientation="vertical" label="Quest map">
+            {spec.levels.map(l => {
+              const here = state.members.filter(m => m.level === l.day);
               return (
-                <li key={m.id} className={s.moveRow}>
-                  <RallyAvatar src={who?.avatarUrl ?? ''} name={who?.name ?? ''} gear={who?.gear ?? []} size={28} />
-                  <span style={{flex: 1}}>
-                    <strong>{who?.name.split(' ')[0] ?? 'Someone'}</strong> {m.kind === 'dare' ? 'completed a dare' : 'hit the boss'} for <strong>{m.damage}</strong>
-                    {m.hasProof && <span className={s.tag} style={{marginLeft: 6}}>{m.proofStatus === 'pending' ? 'proof pending' : m.proofStatus === 'approved' ? 'proof ✓' : 'photo'}</span>}
-                  </span>
-                  <span className={s.muted}>{new Date(m.createdAt).toLocaleDateString(undefined, {weekday: 'short', hour: 'numeric', minute: '2-digit'})}</span>
-                </li>
+                <Step
+                  key={l.day}
+                  step={l.day}
+                  label={l.name}
+                  description={l.exercises.map(exerciseLine).join(' · ')}
+                  status={l.day < state.levelDay || done ? 'success' : 'accent'}
+                  endContent={
+                    here.length > 0 ? (
+                      <HStack gap={1}>
+                        {here.map(m => (
+                          <RallyAvatar key={m.id} src={m.avatarUrl} name={m.name} gear={m.gear} size={28} state={l.day === state.levelDay && !done ? 'run' : 'idle'} />
+                        ))}
+                      </HStack>
+                    ) : undefined
+                  }
+                />
               );
             })}
-          </ul>
-        )}
-      </section>
+          </Stepper>
+        </VStack>
+      </Card>
 
-      <LogMoveSheet questId={q.id} open={logOpen} onClose={() => setLogOpen(false)} levelName={level?.name} exercises={level?.exercises.map(e => `${e.name}${e.reps ? ` ×${e.reps}` : ''}${e.seconds ? ` ${e.seconds}s` : ''}`)} target={me?.target ?? null} onDone={onMove} />
+      <Grid columns={{minWidth: 320, max: 2}} gap={3}>
+        <Card aria-label="Squad">
+          <VStack gap={3}>
+            <Heading level={2}>Squad</Heading>
+            <List hasDividers>
+              {[...state.members]
+                .sort((a, b) => b.damage - a.damage)
+                .map(m => (
+                  <ListItem
+                    key={m.id}
+                    startContent={<RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} size={32} />}
+                    label={
+                      <HStack gap={1.5} vAlign="center" wrap="wrap">
+                        <Text weight="bold">{m.name}</Text>
+                        {state.mvp === m.id && <Token label="MVP" size="sm" color="yellow" />}
+                        {m.team && <Token label={`Team ${m.team}`} size="sm" />}
+                      </HStack>
+                    }
+                    description={
+                      <>
+                        {m.moves} {m.moves === 1 ? 'move' : 'moves'} · {m.damage} dmg
+                        {state.streak[m.id] && ` · streak ${state.streak[m.id].streak} · ${state.streak[m.id].livesLeft} lives`}
+                      </>
+                    }
+                    endContent={
+                      <VStack width={88}>
+                        <ProgressBar label={`${m.name} damage share`} isLabelHidden value={m.damage} max={maxDamage || 1} />
+                      </VStack>
+                    }
+                  />
+                ))}
+            </List>
+            <Heading level={3}>Dares</Heading>
+            <List hasDividers>
+              {state.dares.map(d => {
+                const mine = d.doneBy.includes(state.viewerId);
+                return (
+                  <ListItem
+                    key={d.id}
+                    label={d.text}
+                    description={
+                      <>
+                        +{d.bonus} bonus{d.needsProof ? ' · photo' : ''}
+                        {d.doneBy.length > 0 && ` · done by ${d.doneBy.map(id => state.members.find(m => m.id === id)?.name.split(' ')[0] ?? '?').join(', ')}`}
+                      </>
+                    }
+                    endContent={<Button label={mine ? 'Done' : 'Do it'} size="sm" isDisabled={done || mine} onClick={() => setDare(d)} />}
+                  />
+                );
+              })}
+            </List>
+          </VStack>
+        </Card>
+
+        <Card aria-label="Locker">
+          <VStack gap={3}>
+            <Heading level={2}>Locker</Heading>
+            {me && (
+              <HStack gap={3} vAlign="center">
+                <RallyAvatar src={me.avatarUrl} name={me.name} gear={me.gear} size={96} state={done ? 'celebrate' : 'idle'} />
+                <VStack gap={1.5}>
+                  <Text weight="bold">Your gear</Text>
+                  {myGear.length ? (
+                    <HStack gap={1.5} wrap="wrap">
+                      {myGear.map(g => (
+                        <Token key={g.slug} label={g.label} description={g.description ?? undefined} size="sm" color="purple" />
+                      ))}
+                    </HStack>
+                  ) : (
+                    <Text type="supporting" color="secondary">
+                      Beat the boss to unlock gear for everyone.
+                    </Text>
+                  )}
+                </VStack>
+              </HStack>
+            )}
+            <Heading level={3}>Rewards</Heading>
+            <List hasDividers>
+              {myRewards.length === 0
+                ? spec.rewards.map((rw, i) => <ListItem key={i} startContent={<Token label={rw.tier} size="sm" />} label={rw.label} isDisabled endContent={<Text type="supporting" color="secondary">locked</Text>} />)
+                : myRewards.map(rw => (
+                    <ListItem
+                      key={rw.id}
+                      startContent={<Token label={rw.tier} size="sm" color="green" />}
+                      label={rw.label}
+                      description={
+                        rw.sponsor || (rw.status === 'claimed' && rw.code) ? (
+                          <VStack gap={1}>
+                            {rw.sponsor && (
+                              <Text type="supporting" color="secondary">
+                                Sponsored · {rw.sponsor}
+                                {rw.tier === 'equipment' && ' · 18+ only, demo offer'}
+                              </Text>
+                            )}
+                            {rw.status === 'claimed' && rw.code && <Text type="code">{rw.code}</Text>}
+                          </VStack>
+                        ) : undefined
+                      }
+                      endContent={<Button label={rw.status === 'claimed' ? 'Claimed' : 'Claim'} size="sm" variant={rw.status === 'claimed' ? 'secondary' : 'primary'} isDisabled={rw.status === 'claimed'} clickAction={() => claim(rw.id)} />}
+                    />
+                  ))}
+            </List>
+            {state.listings.length > 0 && (
+              <>
+                <Heading level={3}>Gear for your next quest</Heading>
+                <Grid columns={{minWidth: 120}} gap={2}>
+                  {state.listings.map(l => (
+                    <ClickableCard key={l.id} href={`/marketplace/${l.id}`} label={l.title} padding={0}>
+                      <VStack>
+                        <AspectRatio ratio={1}>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={l.imageUrl} alt="" />
+                        </AspectRatio>
+                        <VStack gap={0.5} padding={2}>
+                          <Text weight="bold" maxLines={1}>
+                            {l.title}
+                          </Text>
+                          <Text type="supporting" color="secondary" maxLines={1}>
+                            ${(l.priceCents / 100).toFixed(0)} · {l.location}
+                          </Text>
+                        </VStack>
+                      </VStack>
+                    </ClickableCard>
+                  ))}
+                </Grid>
+              </>
+            )}
+          </VStack>
+        </Card>
+      </Grid>
+
+      <Card aria-label="Recent moves">
+        <VStack gap={3}>
+          <Heading level={2}>Recent moves</Heading>
+          {state.moves.length === 0 ? (
+            <EmptyState title="No moves yet" description="Be the first to hit the boss." isCompact />
+          ) : (
+            <List hasDividers>
+              {[...state.moves]
+                .reverse()
+                .slice(0, 12)
+                .map(m => {
+                  const who = state.members.find(x => x.id === m.userId);
+                  return (
+                    <ListItem
+                      key={m.id}
+                      startContent={<RallyAvatar src={who?.avatarUrl ?? ''} name={who?.name ?? ''} gear={who?.gear ?? []} size={28} />}
+                      label={
+                        <HStack gap={1.5} vAlign="center" wrap="wrap">
+                          <Text>
+                            <Text weight="bold">{who?.name.split(' ')[0] ?? 'Someone'}</Text> {m.kind === 'dare' ? 'completed a dare' : 'hit the boss'} for <Text weight="bold">{m.damage}</Text>
+                          </Text>
+                          {m.hasProof && <Token label={m.proofStatus === 'pending' ? 'proof pending' : m.proofStatus === 'approved' ? 'proof ✓' : 'photo'} size="sm" color={m.proofStatus === 'approved' ? 'green' : 'default'} />}
+                        </HStack>
+                      }
+                      endContent={
+                        <Text type="supporting" color="secondary">
+                          {new Date(m.createdAt).toLocaleDateString(undefined, {weekday: 'short', hour: 'numeric', minute: '2-digit'})}
+                        </Text>
+                      }
+                    />
+                  );
+                })}
+            </List>
+          )}
+        </VStack>
+      </Card>
+
+      <LogMoveSheet questId={q.id} open={logOpen} onClose={() => setLogOpen(false)} levelName={level?.name} exercises={level?.exercises.map(exerciseLine)} target={me?.target ?? null} onDone={onMove} />
       <LogMoveSheet questId={q.id} open={Boolean(dare)} onClose={() => setDare(null)} dare={dare} onDone={onMove} />
       <ShareToGroupsDialog questId={q.id} open={shareOpen} onClose={() => setShareOpen(false)} />
-    </div>
+      <AlertDialog
+        isOpen={leaveOpen}
+        onOpenChange={open => !leaving && setLeaveOpen(open)}
+        title={`Leave ${q.title}?`}
+        description="Your moves stay in the log, but you can't rejoin unless someone shares the game again."
+        actionLabel="Leave game"
+        onAction={() => void leave()}
+        isActionLoading={leaving}
+      />
+    </VStack>
   );
 }

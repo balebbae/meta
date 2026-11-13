@@ -1,14 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import {useEffect, useState} from 'react';
+import {useEffect, useState, type ReactNode} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import styles from './closeness.module.css';
 
-type Row = {userId: number; name: string; avatarUrl: string; xp: number};
+/** xp is a band like "50–99" for everyone but the viewer. */
+type Row = {userId: number; name: string; avatarUrl: string; xp: number | string};
 
-export function Leaderboard({compact = false}: {compact?: boolean}) {
-  const [tab, setTab] = useState<'closeness' | 'fitness'>('closeness');
+export function Leaderboard({compact = false, defaultTab = 'closeness', action}: {compact?: boolean; defaultTab?: 'closeness' | 'fitness'; action?: ReactNode}) {
+  const [tab, setTab] = useState(defaultTab);
   const [rows, setRows] = useState<Row[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,17 +32,20 @@ export function Leaderboard({compact = false}: {compact?: boolean}) {
   }, [tab]);
 
   return (
-    <section className={styles.card} aria-label="Leaderboard">
+    <section className={styles.board} aria-label="Leaderboard">
       <div className={styles.heading}>
         <span>{tab === 'fitness' ? 'Fitness this week' : 'Closeness this week'}</span>
         {!compact && <Link href={tab === 'fitness' ? '/activities' : '/closeness'}>See all</Link>}
       </div>
-      <div className={styles.tabs} role="tablist" aria-label="Leaderboard type">
-        {(['closeness', 'fitness'] as const).map(t => (
-          <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? styles.tabOn : styles.tab} onClick={() => setTab(t)}>
-            {t === 'fitness' ? 'Fitness' : 'Closeness'}
-          </button>
-        ))}
+      <div className={styles.tabs}>
+        <div className={styles.segment} role="tablist" aria-label="Leaderboard type">
+          {(['closeness', 'fitness'] as const).map(t => (
+            <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? styles.segmentOn : styles.segmentItem} onClick={() => setTab(t)}>
+              {t === 'fitness' ? 'Fitness' : 'Closeness'}
+            </button>
+          ))}
+        </div>
+        {action && <span className={styles.tabsAction}>{action}</span>}
       </div>
       <div className={styles.sub}>{tab === 'fitness' ? 'Rally XP from real moves this week. Only who moved, never how far or how fast.' : 'XP for meaningful contact — comments, voice notes, check-ins.'}</div>
       {error && <div className={styles.error}>{error}</div>}

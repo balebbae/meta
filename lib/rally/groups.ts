@@ -15,16 +15,18 @@ async function goingCount(questId: number): Promise<number> {
   return Number(r.n);
 }
 
-/** The viewer's groups for the share dialog, relevant ones first, with where it's already posted. */
+/** Groups the viewer can post to (theirs + any public one), relevant first, with where it's already posted. */
 export async function shareTargets(questId: number, userId: number) {
   const quest = await getQuest(questId);
   if (!quest) return null;
   const rows = await sql`
     select g.id, g.name, g.description, g.icon_url, g.privacy,
       (select count(*)::int from group_members x where x.group_id = g.id) as member_count,
-      exists(select 1 from group_posts gp where gp.group_id = g.id and gp.quest_id = ${questId}) as posted
-    from group_members gm join groups g on g.id = gm.group_id
-    where gm.user_id = ${userId} order by g.name`;
+      exists(select 1 from group_posts gp where gp.group_id = g.id and gp.quest_id = ${questId}) as posted,
+      exists(select 1 from group_members gm where gm.group_id = g.id and gm.user_id = ${userId}) as member
+    from groups g
+    where g.privacy = 'public' or exists(select 1 from group_members gm where gm.group_id = g.id and gm.user_id = ${userId})
+    order by member desc, g.name`;
   const groups = rankGroups(`${quest.title} ${quest.spec.story}`, rows.map(r => ({
     id: r.id as number,
     name: r.name as string,
@@ -33,12 +35,13 @@ export async function shareTargets(questId: number, userId: number) {
     privacy: r.privacy as 'public' | 'private',
     memberCount: r.member_count as number,
     posted: Boolean(r.posted),
+    member: Boolean(r.member),
   })));
   const [q] = await sql`select capacity from quests where id = ${questId}`;
   return {groups, capacity: (q?.capacity as number | null) ?? null, going: await goingCount(questId)};
 }
 
-/** Posts into each listed group the user belongs to (skips groups it's already in). Capacity is quest-wide. */
+/** Posts into each listed group (joining public ones first, like posting on Facebook). Skips groups it's already in. Capacity is quest-wide. */
 export async function shareQuestToGroups(questId: number, user: {id: number; name: string}, groupIds: number[], spots: number, note: string): Promise<number[]> {
   const quest = await getQuest(questId);
   if (!quest) return [];
@@ -46,6 +49,10 @@ export async function shareQuestToGroups(questId: number, user: {id: number; nam
   const capacity = clampSpots(Math.max(spots, await goingCount(questId)));
   await sql`update quests set capacity = ${capacity} where id = ${questId}`;
   const content = note.trim() || `Who's in? ${quest.title}, ${capacity} spots.`;
+  await sql`
+    insert into group_members (group_id, user_id, role)
+    select g.id, ${user.id}, 'member' from groups g where g.id = any(${groupIds}::int[]) and g.privacy = 'public'
+    on conflict do nothing`;
   const rows = await sql`
     insert into group_posts (group_id, author_id, content, quest_id)
     select gm.group_id, ${user.id}, ${content}, ${questId} from group_members gm

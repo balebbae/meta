@@ -1,5 +1,8 @@
 import webpush, {WebPushError, type PushSubscription} from 'web-push';
 import {sql} from '@/lib/db';
+import {isPushEndpoint} from '@/lib/push-endpoint';
+
+export {isPushEndpoint};
 
 export type PushPayload = {
   title: string;
@@ -39,6 +42,7 @@ export async function listSubscriptions(userId: number): Promise<StoredSubscript
 /** Sends one notification; returns false when the subscription is gone (404/410) and was deleted. */
 export async function sendToSubscription(sub: StoredSubscription, payload: PushPayload): Promise<boolean> {
   if (!configure()) return false;
+  if (!isPushEndpoint(sub.endpoint)) return false;
   const target: PushSubscription = {endpoint: sub.endpoint, keys: {p256dh: sub.p256dh, auth: sub.auth}};
   const body = JSON.stringify({
     title: payload.title,

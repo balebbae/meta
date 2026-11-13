@@ -11,7 +11,7 @@ type Body = {text?: string; log?: ManualLog; parseOnly?: boolean};
 
 /**
  * Manual log (§5.2): {log} quick form, or {text} one sentence parsed by Spark (regex fallback).
- * {text, parseOnly: true} returns the parse for confirmation without saving. Always trust 'self_reported'.
+ * {text, parseOnly: true} returns the parse for confirmation without saving. Always trust 'self_reported'; implausible values come back as `flags` (lib/activities/integrity.ts).
  */
 export async function POST(req: Request) {
   return withUser(async user => {
@@ -30,12 +30,15 @@ export async function POST(req: Request) {
         startedAt: parsed.whenOffsetHours ? new Date(Date.now() + parsed.whenOffsetHours * 3_600_000).toISOString() : undefined,
         note: body.text.trim(),
       };
-      if (body.parseOnly) return NextResponse.json({parsed: log, usedMuse, saved: false});
+      if (body.parseOnly) {
+        const {activity, compendiumCode, metMinutes} = parsed;
+        return NextResponse.json({parsed: log, usedMuse, saved: false, ontology: activity ? {activity, compendiumCode, metMinutes} : null});
+      }
     }
     if (!log || !KINDS.includes(log.kind)) return badRequest('kind required');
     if (!log.distanceKm && !log.durationMin && !log.steps && log.kind !== 'other') return badRequest('Add a distance, a duration or steps');
     const event = manualEvent(user.id, log);
     const saved = await insertVaultEvent(event);
-    return NextResponse.json({saved: true, event: {...event, id: saved.id, duplicateOf: saved.duplicateOf}, usedMuse});
+    return NextResponse.json({saved: true, event: {...event, id: saved.id, duplicateOf: saved.duplicateOf, trust: saved.trust}, usedMuse, ...(saved.flags.length ? {flags: saved.flags} : {})});
   });
 }

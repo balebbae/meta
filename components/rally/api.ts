@@ -18,6 +18,7 @@ export const rallyApi = {
   dare: (id: number, dareId: string, body: {image?: string | null; note?: string}) => post(`/api/quests/${id}/dares/${dareId}`, body).then(r => json<OkMove>(r)),
   fromSentence: (text: string, conversationId: number) => post('/api/games/from-sentence', {text, conversationId}).then(r => json<{quest: QuestRow; museUsed: boolean}>(r)),
   fromReel: (reelId: number, conversationId: number) => post('/api/games/from-reel', {reelId, conversationId}).then(r => json<{quest: QuestRow; museUsed: boolean}>(r)),
+  leave: (id: number) => post(`/api/quests/${id}/leave`).then(r => json<{ok: boolean}>(r)),
   claim: (rewardId: number) => post(`/api/rewards/${rewardId}/claim`).then(r => json<{reward: {id: number; status: string; code: string | null}}>(r)),
 };
 

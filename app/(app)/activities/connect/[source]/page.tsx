@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import {headers} from 'next/headers';
 import {notFound, redirect} from 'next/navigation';
 import {ConnectSourcePanel} from '@/components/activities/ConnectSourcePanel';
@@ -8,7 +7,12 @@ import {sql} from '@/lib/db';
 import {getSessionUser} from '@/lib/auth';
 import {appOrigin} from '@/lib/activities/origin';
 import type {ConnectResult, ConnectorId} from '@/lib/activities/types';
-import styles from '@/components/activities/activities.module.css';
+import {Button} from '@astryxdesign/core/Button';
+import {Heading} from '@astryxdesign/core/Heading';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Icon} from '@astryxdesign/core/Icon';
+import {Text} from '@astryxdesign/core/Text';
+import {VStack} from '@astryxdesign/core/VStack';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,15 +33,15 @@ export default async function ConnectSourcePage({params, searchParams}: {params:
   }
   const flash = q.connected ? `Connected${q.imported ? `, imported ${q.imported} workouts` : ''}.` : q.error ? `Connection failed: ${q.error === 'state' ? 'state mismatch, try again' : q.error}` : null;
   return (
-    <main className={styles.page}>
-      <div className={styles.row} style={{marginBottom: 8}}>
-        <Link href="/activities/onboarding/connect" className={styles.btnText}>
-          ← All sources
-        </Link>
-      </div>
-      <h1 className={styles.h1}>{card.label}</h1>
-      <p className={styles.sub}>Data from this source lands in your private vault. Games and friends only ever get Answers at your chosen precision.</p>
+    <VStack gap={4} paddingBlock={4}>
+      <HStack>
+        <Button label="All sources" variant="ghost" size="sm" icon={<Icon icon="chevronLeft" />} href="/activities/onboarding/connect" />
+      </HStack>
+      <VStack gap={1}>
+        <Heading level={1}>{card.label}</Heading>
+        <Text color="secondary">Data from this source lands in your private vault. Games and friends only ever get Answers at your chosen precision.</Text>
+      </VStack>
       <ConnectSourcePanel card={card} connection={conn ? publicConnection(conn) : null} eventCount={Number(rows[0]?.n ?? 0)} initialResult={initialResult} flash={flash} />
-    </main>
+    </VStack>
   );
 }

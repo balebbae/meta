@@ -28,6 +28,8 @@ export type Reel = {
   /** Quests started from this Reel ("played by N squads"); shown only when > 0. */
   squads: number;
   attribution: string;
+  /** From the fitness library (`reels`), not `feed_reels`: shown with #activities and a Challenge button. */
+  fitness: boolean;
 };
 
 const SELECT = () => sql`
@@ -62,6 +64,7 @@ function mapReel(r: Record<string, unknown>): Reel {
     plays: Number(r.plays ?? 0),
     squads: Number(r.squads ?? 0),
     attribution: creator ? `Video by ${creator} on Pixabay` : 'Video on Pixabay',
+    fitness: true,
   };
 }
 
@@ -100,7 +103,7 @@ const FEED_SELECT = () => sql`
   from feed_reels`;
 
 function mapFeedReel(r: Record<string, unknown>): Reel {
-  return mapReel({...r, pexels_id: r.pixabay_id, slug: null, transcript: null, synthetic: false, exercises: [], difficulty: null, equipment: [], setting: null, confidence: null, squads: 0});
+  return {...mapReel({...r, pexels_id: r.pixabay_id, slug: null, transcript: null, synthetic: false, exercises: [], difficulty: null, equipment: [], setting: null, confidence: null, squads: 0}), fitness: false};
 }
 
 /** Newest-first page of general Reels; [] when the table isn't there yet so /reels still renders. */

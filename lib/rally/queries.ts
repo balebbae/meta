@@ -117,6 +117,12 @@ export async function isQuestMember(questId: number, userId: number): Promise<bo
   return Boolean(r);
 }
 
+/** Leaving drops your quest_progress row; your past moves stay in the log and keep their damage. */
+export async function leaveQuest(questId: number, userId: number): Promise<boolean> {
+  const rows = await sql`delete from quest_progress where quest_id = ${questId} and user_id = ${userId} returning id`;
+  return rows.length > 0;
+}
+
 async function conversationMembers(conversationId: number): Promise<Member[]> {
   const rows = await sql`select u.id, u.name from conversation_members cm join users u on u.id = cm.user_id where cm.conversation_id = ${conversationId} order by u.id`;
   return rows.map(r => ({id: r.id as number, name: r.name as string}));

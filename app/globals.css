@@ -89,50 +89,54 @@ html {
   --fb-shimmer-highlight: #4e4f50;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-}
+/* Element resets live in the lowest layer so Astryx component styles (layered) win over them;
+   Facebook CSS Modules are unlayered and still win over both. */
+@layer reset {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-}
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+  }
 
-body {
-  background: var(--fb-bg);
-  color: var(--fb-text);
-  font-family: var(--fb-font);
-  font-size: 15px;
-  line-height: 1.3333;
-  -webkit-font-smoothing: antialiased;
-}
+  body {
+    background: var(--fb-bg);
+    color: var(--fb-text);
+    font-family: var(--fb-font);
+    font-size: 15px;
+    line-height: 1.3333;
+    -webkit-font-smoothing: antialiased;
+  }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-button {
-  font: inherit;
-  color: inherit;
-  background: none;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-}
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
 
-input,
-textarea {
-  font: inherit;
-}
+  input,
+  textarea {
+    font: inherit;
+  }
 
-img {
-  display: block;
-  max-width: 100%;
+  img {
+    display: block;
+    max-width: 100%;
+  }
 }
 
 /* Shared primitives */
@@ -259,4 +263,46 @@ div:has(> main [data-layout='full']) > :not(main) {
   .maplibregl-ctrl-attrib-button {
     @apply bg-transparent! dark:invert;
   }
+}
+
+/* Astryx overrides (Activities): solid fills with light text, never pale tints with dark text.
+   Unlayered, so they win over Astryx's layered component styles. */
+.astryx-token[data-color] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border-color: transparent;
+}
+.astryx-token[data-color] * {
+  color: inherit;
+}
+.astryx-token[data-color='red'] { background: var(--color-icon-red); }
+.astryx-token[data-color='orange'] { background: var(--color-icon-orange); }
+.astryx-token[data-color='yellow'] { background: var(--color-icon-yellow); }
+.astryx-token[data-color='green'] { background: var(--color-icon-green); }
+.astryx-token[data-color='teal'] { background: var(--color-icon-teal); }
+.astryx-token[data-color='cyan'] { background: var(--color-icon-cyan); }
+.astryx-token[data-color='blue'] { background: var(--color-icon-blue); }
+.astryx-token[data-color='purple'] { background: var(--color-icon-purple); }
+.astryx-token[data-color='pink'] { background: var(--color-icon-pink); }
+.astryx-token[data-color='gray'] { background: var(--color-icon-gray); }
+.astryx-button[data-variant='secondary'] {
+  background: var(--color-icon-secondary);
+  color: var(--color-on-accent);
+}
+.astryx-button[data-variant='secondary'] * {
+  color: inherit;
+}
+.astryx-segmented-control-item[data-selected]:not([data-selected='false']) {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.astryx-segmented-control-item[data-selected]:not([data-selected='false']) * {
+  color: inherit;
+}
+.astryx-toggle-button[data-is-pressed='true'] {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.astryx-toggle-button[data-is-pressed='true'] * {
+  color: inherit;
 }

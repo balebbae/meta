@@ -1,6 +1,6 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import {Leaderboard} from '@/components/closeness/Leaderboard';
+import {WeeklyQuestsButton} from '@/components/closeness/WeeklyQuestsButton';
 import {Avatar} from '@/components/ui/Avatar';
 import {MoreHorizontalIcon, PlusIcon, SearchIcon, VideoCameraIcon} from '@/components/icons';
 import {FriendRequests, type FriendRequestItem} from '@/components/layout/FriendRequests';
@@ -9,26 +9,10 @@ import type {Contact} from '@/lib/queries';
 import type {User} from '@/lib/types';
 import styles from './layout.module.css';
 
-const ADS = [
-  {title: 'Build on Meta Model API', domain: 'dev.meta.ai', img: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=336&h=336&fit=crop'},
-  {title: 'The AI notepad for meetings', domain: 'granola.ai', img: 'https://images.unsplash.com/photo-1499750310107-5fef28a66643?w=336&h=336&fit=crop'},
-];
-
 export function RightSidebar({user, contacts = [], requests = []}: {user: User; contacts?: Contact[]; requests?: FriendRequestItem[]}) {
   return (
     <aside className={styles.rightRail} aria-label="Complementary">
-      <div className={styles.rrHeading}>Sponsored</div>
-      {ADS.map(ad => (
-        <a key={ad.domain} className={styles.ad} href={`https://${ad.domain}`} target="_blank" rel="noreferrer">
-          <Image src={ad.img} alt="" width={168} height={168} className={styles.adImg} />
-          <span>
-            <div className={styles.adTitle}>{ad.title}</div>
-            <div className={styles.adDomain}>{ad.domain}</div>
-          </span>
-        </a>
-      ))}
-      <div className={styles.rrDivider} />
-      <Leaderboard compact />
+      <Leaderboard compact action={<WeeklyQuestsButton />} />
       <FriendRequests initial={requests} />
       {contacts.length > 0 && (
         <>

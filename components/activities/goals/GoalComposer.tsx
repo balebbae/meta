@@ -2,7 +2,14 @@
 
 import {useRouter} from 'next/navigation';
 import {useState} from 'react';
-import g from './goals.module.css';
+import {Banner} from '@astryxdesign/core/Banner';
+import {Button} from '@astryxdesign/core/Button';
+import {Card} from '@astryxdesign/core/Card';
+import {HStack} from '@astryxdesign/core/HStack';
+import {Text} from '@astryxdesign/core/Text';
+import {TextArea} from '@astryxdesign/core/TextArea';
+import {Token} from '@astryxdesign/core/Token';
+import {VStack} from '@astryxdesign/core/VStack';
 
 const EXAMPLES = ['Compete in a HYROX in March', 'Run my first 5K', 'Half marathon this spring', 'Do 10 pull-ups in a row'];
 
@@ -12,8 +19,7 @@ export function GoalComposer() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const submit = async () => {
     if (text.trim().length < 3 || busy) return;
     setBusy(true);
     setError(null);
@@ -29,32 +35,31 @@ export function GoalComposer() {
   };
 
   return (
-    <form className={g.card} onSubmit={submit} aria-busy={busy}>
-      <label htmlFor="goal-text" className={g.h2}>
-        What are you training for?
-      </label>
-      <p className={g.muted} style={{margin: '4px 0 10px'}}>
-        Say it like you would to a friend. Your Muse builds a week-by-week roadmap from where you are now.
-      </p>
-      <textarea id="goal-text" className={g.textarea} value={text} onChange={e => setText(e.target.value)} placeholder="I want to compete in a HYROX in March" maxLength={300} disabled={busy} />
-      <div className={g.examples} aria-label="Examples">
-        {EXAMPLES.map(x => (
-          <button key={x} type="button" className={g.example} onClick={() => setText(x)} disabled={busy}>
-            {x}
-          </button>
-        ))}
-      </div>
-      <div className={g.row} style={{justifyContent: 'space-between'}}>
-        <p className={g.disclaimer}>Planning help, not medical advice.</p>
-        <button type="submit" className={g.btnPrimary} disabled={busy || text.trim().length < 3}>
-          {busy ? 'Planning your weeks…' : 'Build my roadmap'}
-        </button>
-      </div>
-      {error && (
-        <p className={g.error} role="alert">
-          {error}
-        </p>
-      )}
-    </form>
+    <Card aria-busy={busy}>
+      <VStack gap={3}>
+        <TextArea
+          label="What are you training for?"
+          description="Say it like you would to a friend. Your Muse builds a week-by-week roadmap from where you are now."
+          value={text}
+          onChange={setText}
+          placeholder="I want to compete in a HYROX in March"
+          maxLength={300}
+          rows={3}
+          isDisabled={busy}
+        />
+        <HStack gap={1.5} wrap="wrap" aria-label="Examples">
+          {EXAMPLES.map(x => (
+            <Token key={x} label={x} size="sm" isDisabled={busy} onClick={() => setText(x)} />
+          ))}
+        </HStack>
+        <HStack gap={2} vAlign="center" justify="between" wrap="wrap">
+          <Text type="supporting" color="secondary">
+            Planning help, not medical advice.
+          </Text>
+          <Button label={busy ? 'Planning your weeks…' : 'Build my roadmap'} variant="primary" isLoading={busy} isDisabled={text.trim().length < 3} onClick={() => void submit()} />
+        </HStack>
+        {error && <Banner status="error" title={error} />}
+      </VStack>
+    </Card>
   );
 }

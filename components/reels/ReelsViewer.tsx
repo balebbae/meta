@@ -2,30 +2,36 @@
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import Link from 'next/link';
+import {useRouter} from 'next/navigation';
 import type {Reel} from '@/lib/reels';
 import {BookmarkIcon, ChevronDownIcon, ChevronUpIcon, CommentIcon, LikeIcon, ShareIcon} from '@/components/icons';
 import ChallengeDialog from './ChallengeDialog';
 import styles from './reels.module.css';
 
-/** fitness = the AI-tagged library (Challenge the GC); feed = general "For you" Reels. */
-export type ReelsVariant = 'fitness' | 'feed';
+type Page = {reels: Reel[]; nextAfter: number | null};
 type Props = {
-  initialReels: Reel[];
-  nextAfter: number | null;
+  /** The AI-tagged fitness library (Challenge the GC), shown inside the feed with #activities. */
+  fitness: Page;
+  /** General "For you" Reels. */
+  feed: Page;
+  /** A shared reel (?reel= / ?feed=) to show first. */
+  first?: Reel | null;
   initialTag?: string;
-  variant?: ReelsVariant;
-  /** False while this feed is the off-screen page of the Reels pager: nothing plays, keys go to the other page. */
-  visible?: boolean;
-  /** The pager draws the "Reels | Fitness" tabs, so the per-reel title is hidden there. */
-  showTitle?: boolean;
 };
 type Toast = {text: string; href?: string; hrefLabel?: string; error?: boolean};
 
-const API: Record<ReelsVariant, string> = {fitness: '/api/reels', feed: '/api/reels/feed'};
+const API = {fitness: '/api/reels', feed: '/api/reels/feed'} as const;
+// Two tables, so ids can collide across them.
+const keyOf = (r: Reel) => `${r.fitness ? 'f' : 'g'}${r.id}`;
+const mix = (feed: Reel[], fitness: Reel[]) => Array.from({length: Math.max(feed.length, fitness.length)}, (_, i) => [feed[i], fitness[i]]).flat().filter((r): r is Reel => Boolean(r));
 
-export default function ReelsViewer({initialReels, nextAfter, initialTag, variant = 'fitness', visible = true, showTitle = true}: Props) {
-  const [reels, setReels] = useState(initialReels);
-  const [after, setAfter] = useState(nextAfter);
+export default function ReelsViewer({fitness, feed, first, initialTag}: Props) {
+  const router = useRouter();
+  const [reels, setReels] = useState(() => {
+    const mixed = mix(feed.reels, fitness.reels);
+    return first ? [first, ...mixed.filter(r => keyOf(r) !== keyOf(first))] : mixed;
+  });
+  const [after, setAfter] = useState({fitness: fitness.nextAfter, feed: feed.nextAfter});
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
   const [challenge, setChallenge] = useState<Reel | null>(null);
@@ -53,24 +59,28 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag, varian
 
   // Infinite paging near the end.
   useEffect(() => {
-    if (after == null || loadingRef.current || active < reels.length - 3) return;
+    if ((after.fitness == null && after.feed == null) || loadingRef.current || active < reels.length - 3) return;
     loadingRef.current = true;
-    const qs = new URLSearchParams({after: String(after), limit: '10'});
-    if (initialTag && variant === 'fitness') qs.set('tag', initialTag);
-    fetch(`${API[variant]}?${qs}`)
-      .then(r => (r.ok ? r.json() : null))
-      .then((data: {reels: Reel[]; nextAfter: number | null} | null) => {
-        if (!data) return;
+    const next = (v: keyof typeof API): Promise<Page | null> => {
+      if (after[v] == null) return Promise.resolve(null);
+      const qs = new URLSearchParams({after: String(after[v]), limit: '10'});
+      if (initialTag && v === 'fitness') qs.set('tag', initialTag);
+      return fetch(`${API[v]}?${qs}`)
+        .then(r => (r.ok ? r.json() : null))
+        .catch(() => null);
+    };
+    Promise.all([next('fitness'), next('feed')])
+      .then(([f, g]) => {
         setReels(prev => {
-          const seen = new Set(prev.map(r => r.id));
-          return [...prev, ...data.reels.filter(r => !seen.has(r.id))];
+          const seen = new Set(prev.map(keyOf));
+          return [...prev, ...mix(g?.reels ?? [], f?.reels ?? []).filter(r => !seen.has(keyOf(r)))];
         });
-        setAfter(data.nextAfter);
+        setAfter(a => ({fitness: f ? f.nextAfter : a.fitness, feed: g ? g.nextAfter : a.feed}));
       })
       .finally(() => {
         loadingRef.current = false;
       });
-  }, [active, after, reels.length, initialTag, variant]);
+  }, [active, after, reels.length, initialTag]);
 
   useEffect(() => {
     if (!toast) return;
@@ -84,7 +94,6 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag, varian
   }, []);
 
   useEffect(() => {
-    if (!visible) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'ArrowDown' || e.key === 'j') scrollTo(Math.min(reels.length - 1, active + 1));
@@ -93,7 +102,7 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag, varian
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [active, reels.length, scrollTo, visible]);
+  }, [active, reels.length, scrollTo]);
 
   if (reels.length === 0) {
     return (
@@ -101,7 +110,7 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag, varian
         <div className={styles.empty}>
           <strong>No Reels yet</strong>
           <span>
-            Run <code>node --env-file=.env.local scripts/{variant === 'feed' ? 'seed-feed-reels' : 'seed-reels'}.mjs</code> to seed the demo library.
+            Run <code>node --env-file=.env.local scripts/seed-reels.mjs</code> and <code>scripts/seed-feed-reels.mjs</code> to seed the demo library.
           </span>
         </div>
       </div>
@@ -113,17 +122,15 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag, varian
       <div className={styles.feed} ref={feedRef}>
         {reels.map((reel, i) => (
           <ReelItem
-            key={reel.id}
+            key={keyOf(reel)}
             reel={reel}
             index={i}
-            isActive={visible && i === active}
+            isActive={i === active}
             shouldLoad={Math.abs(i - active) <= 1}
             muted={muted}
             onToggleMute={() => setMuted(m => !m)}
-            onChallenge={variant === 'fitness' ? () => setChallenge(reel) : undefined}
+            onChallenge={reel.fitness ? () => setChallenge(reel) : undefined}
             onToast={setToast}
-            variant={variant}
-            showTitle={showTitle}
           />
         ))}
       </div>
@@ -145,10 +152,7 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag, varian
         <ChallengeDialog
           reel={challenge}
           onClose={() => setChallenge(null)}
-          onSent={(group, conversationId) => {
-            setChallenge(null);
-            setToast({text: `Quest sent to ${group}`, href: `/messages/${conversationId}`, hrefLabel: 'Open chat'});
-          }}
+          onSent={(_group, conversationId) => router.push(`/messages/${conversationId}`)}
           onError={text => setToast({text, error: true})}
         />
       )}
@@ -171,8 +175,6 @@ function ReelItem({
   onToggleMute,
   onChallenge,
   onToast,
-  variant,
-  showTitle,
 }: {
   reel: Reel;
   index: number;
@@ -182,9 +184,8 @@ function ReelItem({
   onToggleMute: () => void;
   onChallenge?: () => void;
   onToast: (t: Toast) => void;
-  variant: ReelsVariant;
-  showTitle: boolean;
 }) {
+  const variant = reel.fitness ? 'fitness' : 'feed';
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
   const [paused, setPaused] = useState(false);
@@ -263,7 +264,7 @@ function ReelItem({
           </div>
         )}
         <div className={styles.topRow}>
-          <span className={styles.topTitle}>{showTitle ? 'Reels' : ''}</span>
+          <span className={styles.topTitle}>Reels</span>
           <button type="button" className={styles.roundBtn} onClick={onToggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
             {muted ? <MutedGlyph /> : <SoundGlyph />}
           </button>
@@ -294,6 +295,7 @@ function ReelItem({
             </div>
           )}
           <div className={styles.meta}>
+            {reel.fitness && <span className={styles.tag}>#activities</span>}
             {reel.tags.slice(0, 5).map(t => (
               <span key={t} className={styles.tag}>
                 #{t.replace(/\s+/g, '')}

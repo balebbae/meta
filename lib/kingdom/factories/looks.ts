@@ -1,6 +1,6 @@
 /**
- * Render looks for any rig. The soft toy is the product avatar; `wire` and `dots` re-present the same meshes for
- * mini-game sequences and Muse moments (the dotted orb language) without touching geometry, pivots or animation.
+ * Render looks for any rig. The soft toy is the product avatar; `dots` (decided Nov 13 2026) is how characters appear in
+ * mini-game sequences and Muse moments, the dotted-orb language; `wire` is kept for scenery and studies. Neither touches geometry, pivots or animation.
  * Look children hang under each mesh, so they follow every pose; `applyLook(root, 'soft')` restores the original.
  */
 import {BufferGeometry, Color, EdgesGeometry, Float32BufferAttribute, LineBasicMaterial, LineSegments, Mesh, MeshBasicMaterial, Object3D, Points, PointsMaterial, Vector3, type Material} from 'three';

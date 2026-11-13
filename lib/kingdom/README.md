@@ -43,7 +43,7 @@ last step for scenes to turn into effects. Tests: `node --test "lib/kingdom/**/*
 
 ## Looks
 
-`factories/looks.ts` re-presents any rig without touching geometry or animation: `applyLook(rig.group, 'soft' | 'wire' | 'dots')`. `wire` is Facebook-blue edge lines over a faint wireframe; `dots` samples the surface into a point cloud coloured like the Muse orb (ember low-left, ivory, pale blue top-right; dark features stay navy). Use the soft look for the product avatar and the other two for mini-game sequences and Muse moments.
+`factories/looks.ts` re-presents any rig without touching geometry or animation: `applyLook(rig.group, 'soft' | 'wire' | 'dots')`. `wire` is Facebook-blue edge lines over a faint wireframe; `dots` samples the surface into a point cloud coloured like the Muse orb (ember low-left, ivory, pale blue top-right; dark features stay navy). The soft look is the product avatar; **dots is the decided look for mini-game sequences and Muse moments**; wire is for scenery (towers, grids) and studies.
 
 ## Adding an asset
 

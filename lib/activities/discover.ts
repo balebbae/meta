@@ -268,7 +268,7 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   // --- Start a game (Rally library; endpoints owned by C/D) ---
   const start: DiscoverCard[] = [
     await build({id: 'start-turf', kind: 'start', title: 'Turf', subtitle: 'Claim streets with friends on real runs and walks', href: '/activities?start=turf', cta: 'Start Turf', score: 3, meta: {template: 'turf'}}, 'Turf fits your Running tag and small-group style.'),
-    await build({id: 'start-reel', kind: 'start', title: 'Quest from a Reel', subtitle: 'Turn any workout reel into a weekly boss fight', href: '/reels', cta: 'Pick a reel', score: 2, meta: {template: 'reel'}}, 'Reels you watch can become group quests.'),
+    await build({id: 'start-reel', kind: 'start', title: 'Quest from a Reel', subtitle: 'Turn any workout reel into a weekly boss fight', href: '/reels?tab=fitness', cta: 'Pick a reel', score: 2, meta: {template: 'reel'}}, 'Reels you watch can become group quests.'),
     await build({id: 'start-sentence', kind: 'start', title: 'Quest from a sentence', subtitle: '"Run 3 km three times this week" → a game for your chat', href: '/activities?start=sentence', cta: 'Write one', score: 1, meta: {template: 'sentence'}}, 'Describe the game; Muse builds the rules.'),
   ];
   sections.push({id: 'start', title: 'Start a game', cards: start});

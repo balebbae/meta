@@ -5,7 +5,7 @@
  */
 import {sql} from '@/lib/db';
 import {ask} from '@/lib/activities/answers';
-import type {Answer, GameSpec, QuestCardPayload, RallyGamePayload, Trust} from '@/lib/activities/types';
+import type {GameSpec, QuestCardPayload, RallyGamePayload, Trust} from '@/lib/activities/types';
 import {insertXpEvent} from '@/lib/closeness-queries';
 import {sendMessage} from '@/lib/messaging-queries';
 import {museConfigured} from '@/lib/muse/client';
@@ -29,6 +29,7 @@ import {
   type BossEvent,
 } from '@/lib/rally/scoring';
 import {bossKindFor, generateGameSpec, thisMonday, type Member, type SpecSource} from '@/lib/rally/spec';
+import {planHandicaps} from '@/lib/rally/handicap';
 
 export type QuestRow = {
   id: number;
@@ -135,17 +136,12 @@ export async function getReelSource(reelId: number): Promise<SpecSource | null> 
 }
 
 /** Reel/sentence -> GameSpec -> quest row + progress rows + quest_card in the thread + push (§15.6, §16.1). */
-export async function createQuest(opts: {source: SpecSource; conversationId: number; creator: {id: number; name: string}}): Promise<{quest: QuestRow; museUsed: boolean}> {
+export async function createQuest(opts: {source: SpecSource; conversationId: number; creator: {id: number; name: string}; goalId?: number}): Promise<{quest: QuestRow; museUsed: boolean}> {
   const members = await conversationMembers(opts.conversationId);
-  const answers: Record<number, Answer | null> = {};
-  for (const m of members) {
-    try {
-      answers[m.id] = await ask(m.id, 'game_participants', 'workouts_this_week', 'quest:new');
-    } catch {
-      answers[m.id] = null;
-    }
-  }
-  const {spec, museUsed} = await generateGameSpec({source: opts.source, members, answers});
+  // Handicaps (per-activity, Spark) and the game itself (Spark) are independent calls: run them together.
+  const [plan, generated] = await Promise.all([planHandicaps(opts.source, members), generateGameSpec({source: opts.source, members, answers: {}})]);
+  const spec: GameSpec = {...generated.spec, handicaps: plan.handicaps};
+  const museUsed = generated.museUsed;
   const bossKind = bossKindFor(spec.boss?.name ?? spec.title);
   let bossImageUrl: string | null = null;
   if (museConfigured() && spec.boss) {
@@ -156,14 +152,16 @@ export async function createQuest(opts: {source: SpecSource; conversationId: num
     }
   }
   const hp = spec.boss?.hp ?? 0;
-  const meta = JSON.stringify({museUsed, bossKind, buffed: false});
+  const meta = JSON.stringify({museUsed, bossKind, buffed: false, focus: plan.focus, fairness: plan.fairness, handicapsByMuse: plan.museUsed, ...(opts.goalId ? {goalId: opts.goalId} : {})});
   const [row] = await sql`
     insert into quests (title, description, xp_reward, goal_type, goal_count, week_start, muse_meta, template, spec, conversation_id, reel_id, created_by, status, starts_at, ends_at, boss_hp, boss_hp_left, boss_image_url)
     values (${spec.title}, ${spec.story}, 100, 'rally', ${spec.levels.length}, ${thisMonday().toISOString().slice(0, 10)}, ${meta}::jsonb, ${spec.template}, ${JSON.stringify(spec)}::jsonb, ${opts.conversationId}, ${opts.source.kind === 'reel' ? opts.source.reelId : null}, ${opts.creator.id}, 'active', ${spec.startsAt}, ${spec.endsAt}, ${hp}, ${hp}, ${bossImageUrl})
     returning *`;
   const quest = mapQuest(row);
   for (const m of members) {
-    await sql`insert into quest_progress (quest_id, user_id, status, progress) values (${quest.id}, ${m.id}, 'active', '{}'::jsonb) on conflict (quest_id, user_id) do nothing`;
+    // handicapWhy is private to that player: getQuestState only returns it to them.
+    const progress = JSON.stringify({handicapWhy: plan.reasons[m.id] ?? null});
+    await sql`insert into quest_progress (quest_id, user_id, status, progress) values (${quest.id}, ${m.id}, 'active', ${progress}::jsonb) on conflict (quest_id, user_id) do nothing`;
   }
   const payload: QuestCardPayload = {questId: quest.id, title: spec.title, template: spec.template, bossName: spec.boss?.name, bossHp: hp, ...(quest.reelId ? {reelId: quest.reelId} : {})};
   await sendMessage(opts.conversationId, opts.creator, `${opts.creator.name.split(' ')[0]} started ${spec.title}`, null, {kind: 'quest_card', payload});
@@ -372,17 +370,24 @@ export type QuestState = {
   streak: Record<number, ReturnType<typeof streakState>>;
   levelDay: number;
   museUsed: boolean;
+  /** Group-visible balance line. Null for quests made before per-activity handicaps. */
+  fairness: {label: string; summary: string} | null;
+  /** The viewer's own handicap and private reason; never other players'. */
+  myHandicap: {targetScale: number; damageScale: number; why: string | null} | null;
 };
 
 export async function getQuestState(questId: number, viewerId: number): Promise<QuestState | null> {
   const quest = await getQuest(questId);
   if (!quest) return null;
-  const [members, moves, gearRows, rewardRows] = await Promise.all([
+  const [members, moves, gearRows, rewardRows, [mine]] = await Promise.all([
     questMembers(questId),
     listMoves(questId),
     sql`select g.user_id, g.slug, g.label, g.description from avatar_gear g join quest_progress p on p.user_id = g.user_id where p.quest_id = ${questId}`,
     sql`select id, user_id, tier, label, sponsor, code, status from reward_claims where quest_id = ${questId} order by id`,
+    sql`select q.muse_meta->'fairness' as fairness, p.progress->>'handicapWhy' as why from quests q left join quest_progress p on p.quest_id = q.id and p.user_id = ${viewerId} where q.id = ${questId}`,
   ]);
+  const fairnessRaw = (mine?.fairness ?? null) as {label?: string; summary?: string} | null;
+  const myScale = quest.spec.handicaps.find(x => x.userId === viewerId);
   const gear: GearRow[] = gearRows.map(r => ({userId: r.user_id as number, slug: r.slug as string, label: r.label as string, description: (r.description as string | null) ?? null}));
   const rewards: RewardRow[] = rewardRows.map(r => ({id: r.id as number, userId: r.user_id as number, tier: r.tier as RewardRow['tier'], label: r.label as string, sponsor: (r.sponsor as string | null) ?? null, code: (r.code as string | null) ?? null, status: r.status as RewardRow['status']}));
   const contrib = contributions(moves);
@@ -420,6 +425,8 @@ export async function getQuestState(questId: number, viewerId: number): Promise<
     streak,
     levelDay,
     museUsed: quest.museUsed,
+    fairness: fairnessRaw?.label ? {label: fairnessRaw.label, summary: fairnessRaw.summary ?? ''} : null,
+    myHandicap: myScale ? {targetScale: myScale.targetScale, damageScale: myScale.damageScale, why: (mine?.why as string | null) ?? null} : null,
   };
 }
 

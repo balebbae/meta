@@ -7,6 +7,7 @@ import type {RallyInvitePayload} from '@/lib/activities/types';
 import {ConsentSheet} from '@/components/turf/ConsentSheet';
 import {HexMap} from '@/components/turf/HexMap';
 import {endsLabel, timeLeft, turfApi, useTurfState} from '@/components/turf/api';
+import {fmtPace} from '@/lib/turf/engine';
 import h from '@/components/activities/home/home.module.css';
 import type {CardProps} from './index';
 import {MemberRing} from './MemberRing';
@@ -33,6 +34,7 @@ export default function RallyInviteCard({message}: CardProps) {
   const cells = Object.fromEntries((state?.scores ?? []).map(sc => [sc.playerId, sc.cells]));
   const top = Math.max(0, ...Object.values(cells));
   const me = state?.me;
+  const pace = state?.pace?.secPerKm ?? payload.paceSecPerKm ?? null, reelId = state?.reelId ?? payload.reelId ?? null;
 
   const accept = () => {
     // Not onboarded yet: Activities onboarding (scope A) takes over and returns to /games/<id>?consent=1,
@@ -83,6 +85,17 @@ export default function RallyInviteCard({message}: CardProps) {
           {state ? ` · ${(state.arena.radiusKm * 2).toFixed(1)} km wide` : ''}
           {players.length > 0 && ` · ${inSoFar.length} in${waiting.length ? `, ${waiting.length} invited` : ''}`}
         </div>
+        {(pace || reelId) && (
+          <div className={styles.cardMeta}>
+            {pace ? `Runs only count at ${fmtPace(pace)} per km or faster` : 'Made from a Reel'}
+            {reelId ? (
+              <>
+                {' · '}
+                <Link href={`/reels?feed=${reelId}`}>Watch the Reel</Link>
+              </>
+            ) : null}
+          </div>
+        )}
         {!state && !error && <div style={{height: 36, marginTop: 10}} />}
         {players.length > 0 && (
           <div className={styles.squad} style={{minHeight: 36}} aria-label="Players">

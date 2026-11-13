@@ -69,7 +69,7 @@ export function CoachMode({initialOn, children}: {initialOn: boolean; children: 
             <HStack gap={3} vAlign="start" justify="between">
               <VStack gap={1}>
                 <Heading level={1}>Coach mode</Heading>
-                <Text color="secondary">This week vs last week, what improved, the gaps, and how to bridge them.</Text>
+                <Text color="secondary">Where you stand against your goal, a bridge for every gap, then this week vs last week.</Text>
               </VStack>
               <CoachClose />
             </HStack>

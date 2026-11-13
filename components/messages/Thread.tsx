@@ -135,6 +135,13 @@ export function Thread({
           </div>
         )}
         {messages.map((m, i) => {
+          if (m.kind === 'system') {
+            return (
+              <div key={m.id} className={styles.divider} title={formatFullDate(m.createdAt)}>
+                {(m.payload?.text as string | undefined) ?? m.body}
+              </div>
+            );
+          }
           const prev = messages[i - 1];
           const next = messages[i + 1];
           const mine = m.sender?.id === viewerId;

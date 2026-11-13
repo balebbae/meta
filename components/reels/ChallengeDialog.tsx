@@ -121,7 +121,7 @@ export default function ChallengeDialog({reel, onClose, onSent, onError}: Props)
                   <GroupAvatar convo={c} />
                   <span>
                     {groupName(c)}
-                    <span className={styles.dlgRowSub}>{c.members.length + 1} members</span>
+                    <span className={styles.dlgRowSub}>{c.members.length} members</span>
                   </span>
                   {busy === c.id && <span className={styles.spinner} style={{marginLeft: 'auto'}} />}
                 </button>

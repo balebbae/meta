@@ -8,6 +8,7 @@ import {listConnections, publicConnection} from '@/lib/activities/connections';
 import {getPolicies} from '@/lib/activities/policies';
 import {museSummary} from '@/lib/activities/summary';
 import {listTags} from '@/lib/activities/tags';
+import {sourceLabel} from '@/lib/activities/source-label';
 import {listVaultEvents} from '@/lib/activities/vault';
 import {getSessionUser} from '@/lib/auth';
 import styles from '@/components/activities/activities.module.css';
@@ -18,9 +19,9 @@ export default async function MusePage({searchParams}: {searchParams: Promise<Re
   const user = await getSessionUser();
   if (!user) redirect('/auth');
   const sp = await searchParams;
-  const [policies, connections, tags, events] = await Promise.all([getPolicies(user.id), listConnections(user.id), listTags(user.id), listVaultEvents(user.id, {limit: 500})]);
+  const [policies, connections, tags, events] = await Promise.all([getPolicies(user.id), listConnections(user.id), listTags(user.id), listVaultEvents(user.id, {limit: 500, includeDuplicates: true})]);
   const connected = connections.filter(c => c.status === 'connected');
-  const summary = museSummary(policies, {sources: connected.map(c => c.source.replace('_', ' ')), tags: tags.map(t => t.tag)});
+  const summary = museSummary(policies, {sources: connected.map(c => sourceLabel(c.source)), tags: tags.map(t => t.tag)});
   const counts: Record<string, number> = {};
   for (const e of events) counts[e.source] = (counts[e.source] ?? 0) + 1;
   const museOnlyTags = tags.filter(t => t.visibility === 'muse_only');
@@ -73,7 +74,7 @@ export default async function MusePage({searchParams}: {searchParams: Promise<Re
         )}
         {museOnlyTags.length > 0 && <p className={styles.small}>Muse-only tags shape your targets and are never shown to anyone, including as a reason for a handicap.</p>}
         <h2 className={styles.h2} style={{marginTop: 12}}>
-          Vault ({events.length} events)
+          Vault ({events.length} {events.length === 1 ? 'event' : 'events'})
         </h2>
         <VaultList events={events} />
       </div>

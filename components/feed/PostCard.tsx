@@ -1,5 +1,5 @@
 'use client';
-import Image from 'next/image';
+import Image from '@/components/ui/SmartImage';
 import Link from 'next/link';
 import {useCallback, useEffect, useRef, useState, type FormEvent, type KeyboardEvent} from 'react';
 import {Avatar} from '@/components/ui/Avatar';

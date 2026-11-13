@@ -40,6 +40,55 @@
   justify-content: center;
   color: var(--fb-text);
 }
+.homeHeader,
+.pageHeader {
+  padding-left: 12px;
+  padding-right: 10px;
+  gap: 6px;
+}
+.homeHeader .hamburger,
+.pageHeader .hamburger {
+  width: 24px;
+  flex-shrink: 0;
+}
+.homeHeader .headerIcons,
+.pageHeader .headerIcons {
+  gap: 2px;
+}
+.homeHeader .headerBtn,
+.pageHeader .headerBtn {
+  width: 36px;
+}
+.homeHeader .wordmark svg {
+  height: 24px;
+  width: auto;
+}
+.pageTitle {
+  flex: 1;
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 34px;
+  letter-spacing: -0.5px;
+}
+.groupsHeader .pageTitle {
+  font-size: 18px;
+  letter-spacing: 0;
+  text-align: center;
+  padding-left: 82px;
+}
+.moreWrap {
+  position: relative;
+}
+.headerOption {
+  display: block;
+  padding: 12px;
+  color: var(--fb-text);
+  font-weight: 600;
+}
+.headerOption:hover {
+  background: var(--fb-hover);
+}
 .badge {
   position: absolute;
   top: 2px;
@@ -288,35 +337,37 @@
 }
 
 /* ---- bottom tab bar ---- */
-/* Bottom tab bar: frosted liquid glass (liquid-glass-react) in Instagram's shape. The library positions the glass
-   itself (fixed, centered by translate) and gets its z-index from the style prop. The dock must NOT create a stacking
-   context (no position/z-index here): backdrop-filter can only see what is painted inside its nearest isolated layer,
-   so a fixed, z-indexed wrapper left the glass blurring nothing and its overLight blend showing as solid black. */
-.glassDock > span {
-  /* the library's two white gradient-border spans: no outline */
-  display: none;
+.glassDock {
+  position: fixed;
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  left: 12px;
+  right: 12px;
+  z-index: 50;
+  justify-content: center;
 }
 .glassBar {
   position: relative;
   display: flex;
   align-items: center;
-  width: min(calc(100vw - 32px), 480px);
-  height: 58px;
-  padding: 5px;
-  border-radius: 33px;
-  /* the frost, blur and darkening come from liquid-glass-react; this only deepens it a little */
-  background: var(--fb-glass-tint);
-  color: var(--fb-on-media);
+  width: 100%;
+  max-width: 480px;
+  height: 50px;
+  padding: 5px 4px;
+  border-radius: 28px;
+  background: var(--fb-card);
+  color: var(--fb-text);
+  border: 1px solid var(--fb-divider-soft);
+  box-shadow: var(--fb-shadow-popover);
 }
 /* One pill that slides to the current tab (moves on tap, before the next page has loaded). */
 .glassIndicator {
   position: absolute;
   top: 5px;
   bottom: 5px;
-  left: 5px;
-  width: calc((100% - 10px) / var(--tabs));
+  left: 4px;
+  width: calc((100% - 8px) / var(--tabs));
   border-radius: 24px;
-  background: var(--fb-glass-pill);
+  background: var(--fb-mobile-active);
   transform: translateX(calc(var(--i) * 100%));
   transition:
     transform 0.42s cubic-bezier(0.32, 1.25, 0.5, 1),
@@ -329,12 +380,11 @@
   z-index: 1;
   flex: 1 1 0;
   min-width: 0;
-  height: 48px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--fb-on-media);
-  opacity: 0.82;
+  color: var(--fb-text);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   transition:
@@ -345,16 +395,16 @@
   transform: scale(0.92);
 }
 .glassTabOn {
-  opacity: 1;
+  color: var(--fb-blue);
 }
 .glassTab:focus-visible {
-  outline: 2px solid var(--fb-on-media);
+  outline: 2px solid var(--fb-blue);
   outline-offset: -2px;
   border-radius: 24px;
 }
 .glassDot {
   position: absolute;
-  top: 27px;
+  top: 3px;
   left: calc(50% + 7px);
   width: 8px;
   height: 8px;
@@ -364,9 +414,10 @@
 .glassAvatar {
   display: flex;
   border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--fb-text);
 }
 .glassAvatarOn {
-  box-shadow: 0 0 0 2px var(--fb-on-media);
+  box-shadow: 0 0 0 2px var(--fb-blue);
 }
 @media (prefers-reduced-motion: reduce) {
   .glassTab,

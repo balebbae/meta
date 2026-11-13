@@ -273,6 +273,9 @@
 
 /* Phone: the desktop side panel collapses to its title + search (the iOS app has no left nav) */
 @media (max-width: 700px) {
+  :global(body:has([data-mobile-title])) .panelHeader {
+    display: none;
+  }
   .panel {
     padding: 0 16px 4px;
     box-shadow: none;

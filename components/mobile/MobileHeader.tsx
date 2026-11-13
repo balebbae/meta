@@ -2,7 +2,9 @@
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useEffect, useState} from 'react';
-import {ArrowLeftIcon, MessengerIcon, SearchIcon} from '@/components/icons';
+import {ArrowLeftIcon, ChevronLeftIcon, MessengerIcon, MoreCircleIcon, SearchIcon} from '@/components/icons';
+import {Popover} from '@/components/ui/Popover';
+import {CreateGroupDialog} from '@/components/pages/CreateGroupDialog';
 import {Avatar} from '@/components/ui/Avatar';
 import {COMPOSE_EVENT} from '@/components/layout/ComposeFab';
 import {useVisiblePolling} from '@/components/messages/hooks';
@@ -144,14 +146,57 @@ export function PeopleSearchButton({className, iconSize = 22}: {className: strin
 }
 
 /** Pages that draw their own large title instead of the wordmark header (like the iOS app). */
-const SELF_TITLED = ['/menu', '/friends', '/messages'];
+const SELF_TITLED = ['/menu', '/messages'];
+const PAGE_TITLES: Record<string, string> = {'/friends': 'Friends', '/marketplace': 'Marketplace', '/notifications': 'Notifications', '/video': 'Video', '/groups': 'Groups'};
 
 export function MobileHeader() {
   const pathname = usePathname();
   const unread = useChatUnread();
+  const [more, setMore] = useState(false);
+  const [createGroup, setCreateGroup] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => { setMore(false); setCreateGroup(false); setError(''); }, [pathname]);
+  async function markAllRead() {
+    setError('');
+    try {
+      const res = await fetch('/api/notifications', {method: 'PATCH', headers: {'content-type': 'application/json'}, body: JSON.stringify({all: true})});
+      if (!res.ok) throw new Error();
+      window.location.reload();
+    } catch {
+      setError('Could not mark notifications as read. Please try again.');
+    }
+  }
   if (SELF_TITLED.some(p => pathname === p || pathname.startsWith(p + '/'))) return null;
+  const title = PAGE_TITLES[pathname];
+  const groups = pathname === '/groups';
+  if (title) return (
+    <header className={`${styles.mobileOnly} ${styles.header} ${styles.pageHeader} ${groups ? styles.groupsHeader : ''}`} data-mobile-title={title} aria-label={title}>
+      <Link href="/menu" className={styles.hamburger} aria-label={groups ? 'Back to menu' : 'Menu'}>
+        {groups ? <ChevronLeftIcon size={24} /> : <HamburgerIcon />}
+      </Link>
+      <h1 className={styles.pageTitle}>{title}</h1>
+      <div className={styles.headerIcons}>
+        {groups && <button className={styles.headerBtn} aria-label="Create group" onClick={() => setCreateGroup(true)}><CreatePlusIcon size={25} /></button>}
+        {(pathname === '/notifications' || pathname === '/marketplace') && <Link href="/messages" className={styles.headerBtn} aria-label={unread ? `Messenger, ${unread} unread` : 'Messenger'}>
+          <MessengerIcon size={24} />
+          {unread > 0 && <span className={styles.badge}>{unread > 9 ? '9+' : unread}</span>}
+        </Link>}
+        <PeopleSearchButton className={styles.headerBtn} iconSize={25} />
+        {pathname !== '/friends' && <div className={styles.moreWrap}>
+          <button className={styles.headerBtn} aria-label="More options" aria-expanded={more} onClick={() => setMore(v => !v)}><MoreCircleIcon size={24} /></button>
+          <Popover open={more} onClose={() => setMore(false)} width={220}>
+            {pathname === '/notifications' && <button className={styles.headerOption} onClick={markAllRead}>Mark all as read</button>}
+            <Link className={styles.headerOption} href="/settings" onClick={() => setMore(false)}>Settings &amp; privacy</Link>
+            <Link className={styles.headerOption} href="/menu" onClick={() => setMore(false)}>Menu</Link>
+            {error && <p className={styles.headerOption} role="alert">{error}</p>}
+          </Popover>
+        </div>}
+      </div>
+      {groups && <CreateGroupDialog open={createGroup} onClose={() => setCreateGroup(false)} />}
+    </header>
+  );
   return (
-    <header className={`${styles.mobileOnly} ${styles.header}`} aria-label="Facebook">
+    <header className={`${styles.mobileOnly} ${styles.header} ${pathname === '/' ? styles.homeHeader : ''}`} aria-label="Facebook">
       <Link href="/menu" className={styles.hamburger} aria-label="Menu">
         <HamburgerIcon />
       </Link>

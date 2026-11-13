@@ -1,18 +1,12 @@
 'use client';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {useEffect, useState, type CSSProperties} from 'react';
-import {Bell, House, SquarePlay, Store, type LucideIcon} from 'lucide-react';
-import {ActivitiesIcon} from '@/components/icons';
+import {ActivitiesIcon, HomeIcon, VideoIcon, MarketplaceIcon, MobileBellIcon} from '@/components/icons';
 import {Avatar} from '@/components/ui/Avatar';
 import type {User} from '@/lib/types';
 import styles from './mobile.module.css';
 
-// liquid-glass-react reads `navigator` while rendering, so it can only render in the browser.
-const LiquidGlass = dynamic(() => import('liquid-glass-react'), {ssr: false});
-
-/** Floating dark liquid-glass tab bar, Instagram style: a wide lighter pill marks the current tab, red dots mark news. */
 export function MobileTabBar({user}: {user?: Pick<User, 'id' | 'avatarUrl' | 'name'>}) {
   const pathname = usePathname();
   const [notif, setNotif] = useState(0);
@@ -29,19 +23,18 @@ export function MobileTabBar({user}: {user?: Pick<User, 'id' | 'avatarUrl' | 'na
   const matches = (href: string) => (href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/'));
   const isActive = (href: string) => (pending ? pending === href : matches(href));
   const profileHref = user ? `/profile/${user.id}` : '/profile';
-  const glyph = (Icon: LucideIcon, active: boolean, filled = false) => <Icon size={23} strokeWidth={active ? 2.3 : 1.9} fill={active && filled ? 'currentColor' : 'none'} aria-hidden />;
   const tabs = [
-    {href: '/', label: 'Home', icon: (a: boolean) => glyph(House, a, true)},
-    {href: '/reels', label: 'Reels', icon: (a: boolean) => glyph(SquarePlay, a)},
+    {href: '/', label: 'Home', icon: (a: boolean) => <HomeIcon size={24} active={a} />},
+    {href: '/reels', label: 'Reels', icon: (a: boolean) => <VideoIcon size={24} active={a} />},
     {href: '/activities', label: 'Activities', icon: (a: boolean) => <ActivitiesIcon size={23} active={a} />},
-    {href: '/marketplace', label: 'Marketplace', icon: (a: boolean) => glyph(Store, a)},
-    {href: '/notifications', label: 'Notifications', icon: (a: boolean) => glyph(Bell, a, true), dot: notif > 0},
+    {href: '/marketplace', label: 'Marketplace', icon: (a: boolean) => <MarketplaceIcon size={24} active={a} />},
+    {href: '/notifications', label: 'Notifications', icon: (a: boolean) => <MobileBellIcon size={24} active={a} />, dot: notif > 0},
     {
       href: profileHref,
       label: 'Profile',
       icon: (a: boolean) => (
         <span className={`${styles.glassAvatar} ${a ? styles.glassAvatarOn : ''}`}>
-          <Avatar src={user?.avatarUrl ?? ''} alt="" size={24} />
+          <Avatar src={user?.avatarUrl ?? ''} alt="" size={26} />
         </span>
       ),
     },
@@ -51,17 +44,6 @@ export function MobileTabBar({user}: {user?: Pick<User, 'id' | 'avatarUrl' | 'na
 
   return (
     <div className={`${styles.mobileOnly} ${styles.glassDock}`}>
-      <LiquidGlass
-        mode="standard"
-        overLight
-        cornerRadius={33}
-        padding="0"
-        blurAmount={0.7}
-        saturation={150}
-        displacementScale={70}
-        aberrationIntensity={1}
-        elasticity={0}
-        style={{position: 'fixed', left: '50%', top: 'calc(100% - 45px - env(safe-area-inset-bottom))', zIndex: 50}}>
         <nav className={styles.glassBar} aria-label="Mobile navigation" style={{'--tabs': tabs.length} as CSSProperties}>
           <span className={styles.glassIndicator} style={{'--i': Math.max(0, activeIndex), opacity: activeIndex < 0 ? 0 : 1} as CSSProperties} aria-hidden />
           {tabs.map(({href, label, icon, dot}) => {
@@ -74,7 +56,6 @@ export function MobileTabBar({user}: {user?: Pick<User, 'id' | 'avatarUrl' | 'na
             );
           })}
         </nav>
-      </LiquidGlass>
     </div>
   );
 }

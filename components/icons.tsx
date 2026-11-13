@@ -119,6 +119,23 @@ export function BellIcon({size = 20, className, style}: IconProps) {
   return <FbSvg name="bell" size={size} className={className} style={style} />;
 }
 
+export function MobileBellIcon({active, ...props}: IconProps & {active?: boolean}) {
+  return (
+    <Svg {...props} fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 10a7 7 0 0 1 14 0v4l2 4H3l2-4zM9 21h6" />
+    </Svg>
+  );
+}
+
+export function MoreCircleIcon(props: IconProps) {
+  return (
+    <Svg {...props} fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M7 12h.01M12 12h.01M17 12h.01" strokeWidth="2.7" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
 export function SearchIcon({size = 16, className, style}: IconProps) {
   return <FbSvg name="search" size={size} className={className} style={style} />;
 }

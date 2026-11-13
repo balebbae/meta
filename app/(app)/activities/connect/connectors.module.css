@@ -1,0 +1,24 @@
+.page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.page h1 {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.description {
+  color: var(--fb-text-secondary);
+  line-height: 1.5;
+  margin: 0 0 20px;
+}
+
+.sources {
+  background: var(--fb-card);
+  border: 1px solid var(--fb-divider-soft);
+  border-radius: 12px;
+  padding: 8px;
+}

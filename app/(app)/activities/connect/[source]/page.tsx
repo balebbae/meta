@@ -35,7 +35,7 @@ export default async function ConnectSourcePage({params, searchParams}: {params:
   return (
     <VStack gap={4} paddingBlock={4}>
       <HStack>
-        <Button label="All sources" variant="ghost" size="sm" icon={<Icon icon="chevronLeft" />} href="/activities/onboarding/connect" />
+        <Button label="All connectors" variant="ghost" size="sm" icon={<Icon icon="chevronLeft" />} href="/activities/connect" />
       </HStack>
       <VStack gap={1}>
         <Heading level={1}>{card.label}</Heading>

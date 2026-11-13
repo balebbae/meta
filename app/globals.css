@@ -25,6 +25,13 @@
 
 /* Facebook design tokens (measured against facebook.com desktop, Nov 2026) */
 :root {
+  --fb-brand-white: #ffffff;
+  --fb-apple-health: #ff2d55;
+  --fb-health-connect: #003144;
+  --fb-health-connect-light: #4285f4;
+  --fb-fitbit: #00b0b9;
+  --fb-google-fit: #ea4335;
+  --fb-garmin: #007cc3;
   --fb-strava: #fc4c02;
   --fb-strava-text: #ffffff;
   --fb-blue: #0866ff;

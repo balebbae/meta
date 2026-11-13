@@ -1,4 +1,4 @@
-/** Deterministic seeded random (mulberry32). Same seed, same voxel detail, every build. */
+/** Deterministic seeded random (mulberry32). Same seed, same detail, every build. */
 export function rng(seed: number): () => number {
   let a = seed >>> 0;
   return () => {

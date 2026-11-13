@@ -1,6 +1,6 @@
 /**
  * The Kaiju base avatar: a soft toy with an oversized rounded head, tiny body and capsule limbs, gender neutral,
- * with costumes layered on named slots (hat, torso wear, cape, hands). Smooth geometry, no voxels.
+ * with costumes layered on named slots (hat, torso wear, cape, hands). Smooth geometry on the shared soft-toy toolkit.
  * Proportions follow the approved SVG turnaround (640×800 sheet → 1.8 m tall, ground at y = 0, face toward +z).
  */
 import {BufferGeometry, CapsuleGeometry, CircleGeometry, ConeGeometry, CylinderGeometry, DoubleSide, Group, LatheGeometry, Mesh, MeshStandardMaterial, Object3D, PlaneGeometry, QuadraticBezierCurve3, TorusGeometry, TubeGeometry, Vector2, Vector3} from 'three';

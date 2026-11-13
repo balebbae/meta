@@ -22,7 +22,7 @@ export const C = {
   flame: 0xff9a3c, flameCore: 0xffe08a, sparkle: 0xfff1a8, puff: 0xcfe7ff,
 } as const;
 
-/** Small deterministic brightness jitter so flat colour reads as voxel texture. */
+/** Small deterministic brightness jitter for seeded colour variation. */
 export function jitter(hex: number, r: () => number, amount = 0.05): number {
   const k = 1 + (r() * 2 - 1) * amount;
   const rr = Math.min(255, Math.round(((hex >> 16) & 255) * k)), g = Math.min(255, Math.round(((hex >> 8) & 255) * k)), b = Math.min(255, Math.round((hex & 255) * k));

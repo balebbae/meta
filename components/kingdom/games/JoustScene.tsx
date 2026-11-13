@@ -6,7 +6,7 @@ import {BoxGeometry, Group, Mesh, Vector3} from 'three';
 import {JOUST, createJoust, joustScore, startJoust, stepJoust} from '@/lib/kingdom/games/joust';
 import {buildTerrain} from '@/lib/kingdom/factories/terrain';
 import {animate, setState} from '@/lib/kingdom/rig';
-import {VOXEL, material} from '@/lib/kingdom/voxel';
+import {softMaterial} from '@/lib/kingdom/factories/soft';
 import {C} from '@/lib/kingdom/palette';
 import {getTheme} from '@/lib/kingdom/theme';
 import {useKingdom} from '../store';
@@ -24,7 +24,7 @@ export function JoustScene({runId, input, report, seed}: SceneProps) {
     const player = rigs.make(theme.roles.mount, {rider: true, hero});
     player.group.rotation.y = Math.PI / 2; player.group.position.z = 0.75;
     const foe = rigs.make('mount-royal'); foe.group.rotation.y = -Math.PI / 2; foe.group.position.z = -0.75;
-    const goblin = rigs.make(theme.roles.smallEnemy, {variant: 'boss'}); goblin.group.position.set(0, -2 * VOXEL, 0); foe.pivots.rider.add(goblin.group); foe.attached = [goblin];
+    const goblin = rigs.make(theme.roles.smallEnemy, {variant: 'boss'}); goblin.group.position.set(0, -0.16, 0); foe.pivots.rider.add(goblin.group); foe.attached = [goblin];
     const terrain = rigs.own(buildTerrain(LIST, {F: 'flowers', S: 'sand'}, seed));
     const scenery = new Group();
     const fence = rigs.make('world-fence'); for (let i = -11; i <= 11; i++) for (const z of [-2.4, 2.4]) { const f = rigs.clone(fence); f.group.position.set(i * 0.96 - 0.48, 0, z); scenery.add(f.group); }
@@ -32,9 +32,9 @@ export function JoustScene({runId, input, report, seed}: SceneProps) {
     for (const [x, id] of [[-7, 'world-tent'], [7, 'world-tent'], [0, 'world-banner'], [-3.5, 'world-banner'], [3.5, 'world-banner']] as const) { const r = rigs.make(id); r.group.position.set(x, 0, -4.6); scenery.add(r.group); }
     const tree = rigs.make('world-tree-round'); for (const x of [-10, -5, 5, 10]) { const t = rigs.clone(tree); t.group.position.set(x, 0, -6.5); scenery.add(t.group); }
     const lanceGeo = new BoxGeometry(0.07, 0.07, 2.3).translate(0, 0, 1.0);
-    const lance = new Mesh(lanceGeo, material('wood')); lance.castShadow = true; const lancePivot = new Group(); lancePivot.position.set(-0.3, 1.05, 0.45); lancePivot.add(lance); player.group.add(lancePivot);
-    const foeLance = new Mesh(lanceGeo, material('wood')); const foeLancePivot = new Group(); foeLancePivot.position.set(-0.3, 1.0, 0.45); foeLancePivot.add(foeLance); foe.group.add(foeLancePivot);
-    const marker = new Mesh(new BoxGeometry(0.22, 0.22, 0.08), material('gold')); marker.visible = false; marker.position.set(-0.32, 1.0, 0.55); foe.group.add(marker);
+    const lance = new Mesh(lanceGeo, softMaterial('wood', C.wood)); lance.castShadow = true; const lancePivot = new Group(); lancePivot.position.set(-0.3, 1.05, 0.45); lancePivot.add(lance); player.group.add(lancePivot);
+    const foeLance = new Mesh(lanceGeo, softMaterial('wood', C.wood)); const foeLancePivot = new Group(); foeLancePivot.position.set(-0.3, 1.0, 0.45); foeLancePivot.add(foeLance); foe.group.add(foeLancePivot);
+    const marker = new Mesh(new BoxGeometry(0.22, 0.22, 0.08), softMaterial('gold', C.gold)); marker.visible = false; marker.position.set(-0.32, 1.0, 0.55); foe.group.add(marker);
     return {player, foe, goblin, terrain, scenery, lancePivot, foeLancePivot, marker, lanceGeo};
   }, [rigs, seed, theme]);
   const stateRef = useRef(createJoust(seed));

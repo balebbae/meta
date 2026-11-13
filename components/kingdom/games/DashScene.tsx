@@ -5,7 +5,7 @@ import {useFrame} from '@react-three/fiber';
 import {BoxGeometry, CylinderGeometry, Group, Mesh} from 'three';
 import {DASH, createDash, startDash, stepDash} from '@/lib/kingdom/games/dash';
 import {animate, setState} from '@/lib/kingdom/rig';
-import {material} from '@/lib/kingdom/voxel';
+import {softMaterial} from '@/lib/kingdom/factories/soft';
 import {C} from '@/lib/kingdom/palette';
 import {useKingdom} from '../store';
 import {ENV, Lights} from '../Preview';
@@ -19,7 +19,7 @@ export function DashScene({runId, input, report, seed}: SceneProps) {
   const world = useMemo(() => {
     const dragon = rigs.make('creature-baby-dragon', {variant: 'medium'}); dragon.group.rotation.y = Math.PI / 2; dragon.rest = 'flap'; setState(dragon, 'flap');
     const castle = rigs.make('world-castle-royal'); castle.group.rotation.y = -Math.PI / 2; castle.group.scale.setScalar(1.6);
-    const stone = material('stone'), gold = material('gold');
+    const stone = softMaterial('stone', C.stoneLight), gold = softMaterial('gold', C.gold);
     const unit = new BoxGeometry(1, 1, 1), cap = new BoxGeometry(1.2, 0.3, 1.2);
     const pillars: {group: Group; bottom: Mesh; top: Mesh; capB: Mesh; capT: Mesh}[] = [];
     const pillarGroup = new Group();

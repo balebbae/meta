@@ -2,8 +2,7 @@
  * Rigs and animation. A rig is a Group with named pivots; animators move pivots every frame from delta time.
  * Nothing here rebuilds geometry. One-shot states (jump, attack, hit, celebrate, puff, stomp) return to `rest`.
  */
-import {Group, Object3D} from 'three';
-import {disposeGroup} from './voxel';
+import {Mesh, Group, Object3D} from 'three';
 import type {AnimState, Rig, Species} from './types';
 
 export const ONE_SHOT: Partial<Record<AnimState, number>> = {jump: 0.8, attack: 0.9, hit: 0.6, celebrate: 2.2, puff: 1.2, stomp: 1.0, flex: 1.8, wave: 1.5, poke: 0.7};
@@ -16,7 +15,7 @@ export function spring(sc: Record<string, number>, key: string, target: number, 
 }
 
 export function makeRig(group: Group, species: Species, pivots: Record<string, Object3D>, height: number, states: AnimState[], rest: AnimState = 'idle'): Rig {
-  const rig: Rig = {group, species, pivots, height, state: rest, stateTime: 0, scratch: {}, rest, states, dispose: () => disposeGroup(group)};
+  const rig: Rig = {group, species, pivots, height, state: rest, stateTime: 0, scratch: {}, rest, states, dispose: () => { group.removeFromParent(); group.traverse((o) => { const m = o as Mesh; if (m.isMesh) m.geometry.dispose(); }); }};
   // Nothing circular goes in userData: Object3D.clone() JSON-copies it, so a Rig reference there would throw.
   return rig;
 }

@@ -1,5 +1,5 @@
 export * from './types';
-export {VOXEL, Vox, material, meshPart, disposeGroup, disposeSharedResources} from './voxel';
+export {softMaterial, disposeSoftResources, blob, cutaway, softEyes, softBlush, softSmile} from './factories/soft';
 export {makeRig, setState, animate, ONE_SHOT} from './rig';
 export {C, shade, jitter} from './palette';
 export {rng, hashString} from './rng';

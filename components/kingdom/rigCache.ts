@@ -4,7 +4,7 @@
  */
 import {Group, Object3D} from 'three';
 import {makeRig} from '@/lib/kingdom/rig';
-import {disposeSharedResources} from '@/lib/kingdom/voxel';
+import {disposeSoftResources} from '@/lib/kingdom/factories/soft';
 import type {AssetDef, BuildOptions, Rig} from '@/lib/kingdom/types';
 
 const MAX = 10;
@@ -35,6 +35,6 @@ export function cloneRig(src: Rig): Rig {
 export function releaseAllRigs(): void {
   for (const rig of cache.values()) { rig.group.removeFromParent(); rig.dispose(); }
   cache.clear();
-  disposeSharedResources();
+  disposeSoftResources();
 }
 export const cachedRigCount = (): number => cache.size;

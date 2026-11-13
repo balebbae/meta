@@ -1,14 +1,13 @@
 # Beta Kingdom · `lib/kingdom`
 
-Kaiju's characters and world pieces plus the pure game logic. Heroes, kaijus and ponies are smooth soft-toy builds (`factories/hero.ts`, `creatures.ts`, `mounts.ts`, shared helpers in `soft.ts`); castles, props and terrain in `world.ts` / `terrain.ts` are still voxel builds and are due for the same treatment.
+Kaiju's characters and world pieces plus the pure game logic. Every piece is a smooth soft-toy build on the shared helpers in `factories/soft.ts`: heroes (`hero.ts`), kaijus (`creatures.ts`), ponies (`mounts.ts`), castles and props (`world.ts`) and merged game boards (`terrain.ts`).
 Rendered by `components/kingdom` (React Three Fiber) at `/kingdom`.
 
 ## Units and conventions
 
-- 1 world unit = 1 metre. One voxel is `VOXEL = 0.08 m` (`voxel.ts`). A hero is 27 voxels ≈ 2.2 m, a pony 18 voxels, a giant 31.
+- 1 world unit = 1 metre. A hero is 1.8 m, a pony 1.34 m, a giant 2.36 m; terrain cells are `CELL = 0.96 m`.
 - Every asset's origin is at ground level under the centre of its footprint. Faces point to **+z**; +x is the character's left on screen.
-- Geometry is merged per part and per material kind: one draw call per (part, material), never per voxel. Materials are shared
-  singletons (`material(kind)`) with 16×16 nearest-filtered sRGB pixel textures; `disposeSharedResources()` frees them once, on app unmount.
+- Geometry and materials are shared caches (`soft.ts`); `disposeSoftResources()` frees them once, on app unmount. Terrain merges one mesh per surface kind.
 - A built asset is a `Rig` (`types.ts`): `group` (add it to a scene), named `pivots`, `height`, animation `state`, and `dispose()` for its geometry.
   Mounts seat riders under the `rider` pivot and list them in `rig.attached`.
 

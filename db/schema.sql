@@ -782,3 +782,24 @@ create table if not exists swim_logs (
 create index if not exists swim_logs_journey_idx on swim_logs (journey_id, created_at desc);
 
 alter table users add column if not exists hero jsonb;
+
+-- Muse call trace (shown at /meta-ai/log) and last good reply per prompt, so the demo survives a Muse outage.
+create table if not exists muse_calls (
+  id bigserial primary key,
+  task text not null,
+  model text not null,
+  ok boolean not null,
+  cached boolean not null default false,
+  ms integer not null,
+  input_chars integer not null,
+  output_preview text,
+  error text,
+  created_at timestamptz not null default now()
+);
+create index if not exists muse_calls_created_idx on muse_calls (created_at desc);
+
+create table if not exists muse_cache (
+  key text primary key,
+  output text not null,
+  updated_at timestamptz not null default now()
+);

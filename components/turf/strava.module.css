@@ -9,13 +9,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: 6px;
+  padding: 6px 12px;
   border-radius: 8px;
   background: var(--fb-strava);
   color: var(--fb-strava-text);
-  font-size: 19px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   text-decoration: none;
   transition: box-shadow 120ms;
 }

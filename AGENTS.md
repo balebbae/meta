@@ -19,7 +19,7 @@ Facebook clone: Next.js 16 (App Router) + React 19 + TypeScript, Neon Postgres v
 
 ## UI rules
 - Match facebook.com desktop exactly: measure against the real site (open facebook.com; the logged-out login page is public, feed screenshots are on Meta's newsroom and image search). Use the CSS variables in `app/globals.css` (`--fb-*`); no new colour hex values outside that file.
-- Plain CSS Modules (`*.module.css`) or inline style objects. No Tailwind, no UI kit.
+- Plain CSS Modules (`*.module.css`) or inline style objects. No Tailwind, no UI kit. Exception: maps use mapcn (`components/ui/map.tsx`, installed with `npx shadcn@latest add @mapcn/map`), which brings Tailwind utilities (no preflight) loaded in `app/globals.css` only for that file.
 - Icons: inline SVG components in `components/icons.tsx` drawn to resemble Facebook's 20/24px glyphs.
 - Use `next/image` for remote images (hosts are allow-listed in `next.config.ts`).
 - Responsive: 3-column at >= 1100px, hide the right rail below that, hide the left rail below 900px, mobile bottom tab bar below 700px.

@@ -6,6 +6,7 @@ import {Avatar} from '@/components/ui/Avatar';
 import {BellIcon, CommentIcon, LikeFilledIcon, MoreHorizontalIcon, UsersIcon} from '@/components/icons';
 import {formatCompactTime} from '@/lib/format';
 import type {Notification} from '@/lib/queries';
+import {Skeleton} from '@/components/ui/Skeleton';
 import styles from './layout.module.css';
 
 export function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (n: number) => void}) {
@@ -92,7 +93,19 @@ export function NotificationsPanel({open, onUnread}: {open: boolean; onUnread: (
           Unread
         </button>
       </div>
-      {items === null && <div className={styles.searchEmpty}>Loading…</div>}
+      {items === null && (
+        <div role="status" aria-label="Loading notifications">
+          {[0, 1, 2, 3, 4].map(i => (
+            <div key={i} className={styles.notifSkeleton}>
+              <Skeleton w={56} h={56} r="50%" />
+              <div className={styles.notifSkeletonLines}>
+                <Skeleton w={i % 2 ? '70%' : '85%'} h={12} />
+                <Skeleton w="30%" h={10} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       {items !== null && shown.length === 0 && <div className={styles.searchEmpty}>You&apos;re all caught up</div>}
       {fresh.length > 0 && (
         <div className={styles.notifSection}>

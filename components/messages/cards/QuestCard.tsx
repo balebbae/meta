@@ -65,7 +65,7 @@ export default function QuestCard({message, conversation}: CardProps) {
         {state?.myReadiness && state.quest.status !== 'completed' && (
           <div className={`${s.fit} ${state.myReadiness.fit === 'good' ? s.fitGood : s.fitStretch}`} title={state.myReadiness.note}>
             <span className={s.fitDot} aria-hidden="true" />
-            {state.myReadiness.fit === 'good' ? 'Good match for you' : 'A stretch for you · go easy'}
+            {state.myReadiness.fit === 'good' ? 'Good match for you' : 'A stretch for you'}
           </div>
         )}
         {state && !state.museUsed && <span className={s.offline}>Muse offline · template quest</span>}
@@ -78,7 +78,7 @@ export default function QuestCard({message, conversation}: CardProps) {
           Log a move
         </button>
       </div>
-      <LogMoveSheet questId={p.questId} open={logOpen} onClose={() => setLogOpen(false)} levelName={level?.name} exercises={level?.exercises.map(e => `${e.name}${e.reps ? ` ×${e.reps}` : ''}${e.seconds ? ` ${e.seconds}s` : ''}`)} target={me?.target ?? null} stretchNote={state?.myReadiness?.fit === 'stretch' && me?.moves === 0 ? state.myReadiness.note : null} onDone={() => rallyApi.state(p.questId).then(setState).catch(() => {})} />
+      <LogMoveSheet questId={p.questId} open={logOpen} onClose={() => setLogOpen(false)} levelName={level?.name} exercises={level?.exercises.map(e => `${e.name}${e.reps ? ` ×${e.reps}` : ''}${e.seconds ? ` ${e.seconds}s` : ''}`)} target={me?.target ?? null} onDone={() => rallyApi.state(p.questId).then(setState).catch(() => {})} />
     </div>
   );
 }

@@ -1,5 +1,9 @@
 # Fine-tuned Rally proof check: what to do when training finishes
 
+> **Update, Nov 13 ~4 AM CT: done, and not shipped.** The fine-tune finished and was evaluated. It did not beat hosted
+> Ember on any test set and was 15–20× slower ([RESULTS.md](RESULTS.md), [MODEL.md](MODEL.md)). **Nothing to do:** the
+> app stays on on-device pose + Ember, and `GLIMMER_PROOF_URL` stays unset. The steps below are kept for a future run.
+
 Everything here runs **on the DGX Spark**. SSH in, then `cd ~/projects/meta-hackathon-veer/meta`.
 If a terminal with Claude Code is open (`tmux attach -t ml-training-task-triage`), you can just ask it to do these steps.
 

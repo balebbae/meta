@@ -34,21 +34,19 @@ export function MobileStories({viewer, requests, stories}: {viewer: Pick<User, '
   return (
     <section className={`${styles.mobileBlock} ${styles.stories}`} aria-label="Stories">
       <div className={styles.storiesTrack}>
-        <Link href="/video" className={`${styles.storyCard} ${styles.musicCard}`}>
-          <span className={styles.musicNote}>
-            <MusicNoteIcon />
-          </span>
-          <span className={styles.musicLabel}>Music</span>
-        </Link>
         <button className={styles.storyCard} aria-label="Create story" onClick={() => setCreating(true)}>
           <img className={styles.createImg} src={viewer.avatarUrl} alt="" />
           <span className={styles.createBottom}>
             <span className={styles.createPlus}>
               <PlusIcon size={18} />
             </span>
-            Create story
+            <span className={styles.createLabel}>Create story</span>
           </span>
         </button>
+        <Link href="/video" className={`${styles.storyCard} ${styles.musicCard}`}>
+          <span className={styles.musicNote}><MusicNoteIcon /></span>
+          <span className={styles.musicLabel}>Music</span>
+        </Link>
         {reqs.map(r => (
           <div key={`req-${r.id}`} className={`${styles.storyCard} ${styles.requestCard}`}>
             <button className={styles.requestClose} aria-label="Dismiss" onClick={() => dismiss(r.id)}>

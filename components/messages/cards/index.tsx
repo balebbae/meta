@@ -8,6 +8,8 @@ import QuestCard from './QuestCard';
 import RallyGameCard from './RallyGameCard';
 import RallyInviteCard from './RallyInviteCard';
 import TurfRecapCard from './TurfRecapCard';
+import MirrorCard from './MirrorCard';
+import SwimCard from './SwimCard';
 
 export type CardProps = {message: Message; viewerId: number; conversation: Conversation};
 
@@ -35,6 +37,8 @@ export const CARD_RENDERERS: Partial<Record<MessageKind, ComponentType<CardProps
   rally_game: RallyGameCard,
   rally_invite: RallyInviteCard,
   turf_recap: TurfRecapCard,
+  mirror_card: MirrorCard,
+  swim_card: SwimCard,
 };
 
 export function registerCard(kind: MessageKind, component: ComponentType<CardProps>) {

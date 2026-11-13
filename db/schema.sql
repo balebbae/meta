@@ -724,3 +724,59 @@ create table if not exists proof_photo_hashes (
   created_at timestamptz not null default now()
 );
 create index if not exists proof_photo_hashes_user_idx on proof_photo_hashes (user_id, created_at desc);
+
+-- Mirror Match (lib/rally/mirror-store.ts): a dance/yoga Reel sent to a chat. steps = Spark's tutorial,
+-- reference = the Reel's joint angles (extracted once on a player's phone), one best attempt per player.
+create table if not exists mirror_matches (
+  id serial primary key,
+  conversation_id integer not null references conversations(id) on delete cascade,
+  reel_id integer not null references reels(id) on delete cascade,
+  mode text not null check (mode in ('dance', 'yoga')),
+  title text not null,
+  clip_start real not null default 0,
+  clip_end real not null,
+  steps jsonb,
+  reference jsonb,
+  status text not null default 'open' check (status in ('open', 'done')),
+  winner_id integer references users(id) on delete set null,
+  muse_used boolean not null default false,
+  created_by integer references users(id) on delete set null,
+  ends_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists mirror_matches_conv_idx on mirror_matches (conversation_id, created_at desc);
+create table if not exists mirror_attempts (
+  match_id integer not null references mirror_matches(id) on delete cascade,
+  user_id integer not null references users(id) on delete cascade,
+  score integer not null check (score between 1 and 100),
+  step_scores jsonb,
+  note text,
+  created_at timestamptz not null default now(),
+  primary key (match_id, user_id)
+);
+
+-- Swim journeys (lib/rally/swim-store.ts): a swimming Reel sent to a chat becomes a shared crossing.
+create table if not exists swim_journeys (
+  id serial primary key,
+  conversation_id integer not null references conversations(id) on delete cascade,
+  reel_id integer references reels(id) on delete set null,
+  route text not null,
+  title text not null,
+  total_m integer not null,
+  progress_m integer not null default 0,
+  story text,
+  status text not null default 'open' check (status in ('open', 'done')),
+  created_by integer references users(id) on delete set null,
+  ends_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+create table if not exists swim_logs (
+  id serial primary key,
+  journey_id integer not null references swim_journeys(id) on delete cascade,
+  user_id integer not null references users(id) on delete cascade,
+  meters integer not null check (meters between 1 and 10000),
+  bonus integer not null default 0,
+  proof text not null default 'typed' check (proof in ('typed', 'photo')),
+  created_at timestamptz not null default now()
+);
+create index if not exists swim_logs_journey_idx on swim_logs (journey_id, created_at desc);

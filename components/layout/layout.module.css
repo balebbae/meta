@@ -478,7 +478,7 @@
   margin: 0 8px 8px;
   padding: 8px;
   border-radius: 8px;
-  box-shadow: var(--fb-shadow-card);
+  border: 1px solid var(--fb-divider);
   background: var(--fb-card);
 }
 .acctRow {
@@ -849,6 +849,9 @@
   z-index: 50;
 }
 @media (max-width: 700px) {
+  :global(body:has([data-mobile-title="Notifications"])) .panelHead {
+    display: none;
+  }
   .tabs,
   .search {
     display: none;
@@ -1032,6 +1035,17 @@
 
 /* ---- Mobile (< 700px): iOS-app chrome, see components/mobile ---- */
 @media (max-width: 700px) {
+  .panel[data-mobile-notifications] {
+    padding: 0;
+  }
+  .panel > .chipRow,
+  .notif,
+  .notifSection .linkBtn {
+    display: none;
+  }
+  .notifSection {
+    padding: 10px 12px 4px;
+  }
   .header,
   .fabWrap,
   .bottomBar {

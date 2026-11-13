@@ -5,13 +5,14 @@ import {useState} from 'react';
 import {IconActivity as Activity, IconBrandApple as Apple, IconBrandStrava as Strava, IconCamera as Camera, IconCircleDot as CircleDot, IconHeartbeat as HeartPulse, IconStack2 as Layers, IconPencil as Pencil, IconDeviceMobile as Smartphone, IconDeviceWatch as Watch, type TablerIcon} from '@tabler/icons-react';
 import {Button} from '@astryxdesign/core/Button';
 import {HStack} from '@astryxdesign/core/HStack';
-import {Icon} from '@astryxdesign/core/Icon';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {Text} from '@astryxdesign/core/Text';
 import {Token} from '@astryxdesign/core/Token';
 import type {ConnectorCard} from '@/lib/activities/connectors';
 import type {publicConnection} from '@/lib/activities/connections';
-import type {ConnectResult, ConnectorId, Platform} from '@/lib/activities/types';
+import type {ConnectorId, Platform} from '@/lib/activities/types';
+import {ConnectorIcon} from '@/components/icons';
+import {startConnector} from '@/lib/activities/connector-start';
 
 export type PublicConnection = ReturnType<typeof publicConnection>;
 
@@ -19,7 +20,7 @@ export const SOURCE_ICON: Record<ConnectorId, TablerIcon> = {
   apple_health: Apple, health_connect: HeartPulse, google_health: Activity, strava: Strava, oura: CircleDot, whoop: Watch, garmin: Watch, aggregator: Layers, phone_steps: Smartphone, proof_photo: Camera, manual: Pencil, mock: Watch,
 };
 
-export const AVAIL_LABEL = {ready: null, not_configured: 'Not configured for this demo', needs_native: 'Needs the native app', other_platform: 'Open on your iPhone'} as const;
+export const AVAIL_LABEL = {ready: null, not_configured: 'Unavailable — not configured', needs_native: 'Coming soon — needs the native app', other_platform: 'Available on iPhone'} as const;
 
 /** Connect / sync a source the same way everywhere: OAuth redirect, instant (demo), or its setup page. */
 export function useConnect(onConnected?: (id: ConnectorId) => void) {
@@ -50,8 +51,7 @@ export function useConnect(onConnected?: (id: ConnectorId) => void) {
     }
     setBusy(card.id);
     try {
-      const res = await fetch(`/api/connect/${card.id}/start`, {method: 'POST'});
-      const {result} = (await res.json()) as {result: ConnectResult};
+      const result = await startConnector(card.id);
       if (result.type === 'redirect') {
         window.location.href = result.url;
         return;
@@ -62,6 +62,8 @@ export function useConnect(onConnected?: (id: ConnectorId) => void) {
         router.refresh();
       } else if (result.type === 'instructions') router.push(`/activities/connect/${card.id}`);
       else setNote(n => ({...n, [card.id]: result.reason}));
+    } catch (error) {
+      setNote(n => ({...n, [card.id]: error instanceof Error ? error.message : 'Could not connect. Please try again.'}));
     } finally {
       setBusy(null);
     }
@@ -84,11 +86,12 @@ export function ConnectorHub({platform, cards, connections, onConnected, compact
         return (
           <ListItem
             key={card.id}
-            startContent={<Icon icon={SOURCE_ICON[card.id]} size="md" color="secondary" />}
+            startContent={<HStack gap={1} vAlign="center"><ConnectorIcon source={card.id} size={32} />{card.id === 'google_health' && <ConnectorIcon source="fitbit" size={24} />}</HStack>}
             label={
               <HStack gap={1.5} vAlign="center" wrap="wrap">
                 <Text weight="bold">{card.label}</Text>
                 {connected && <Token label="Connected" size="sm" color="green" />}
+                {!connected && unavailable && <Token label={AVAIL_LABEL[card.availability] ?? 'Unavailable'} size="sm" />}
                 {card.trust === 'verified' && <Token label="Verified" size="sm" color="blue" />}
                 {card.ownerOnly && <Token label="Only you" size="sm" />}
                 {card.id === 'apple_health' && platform === 'ios' && <Token label="Your phone" size="sm" color="blue" />}

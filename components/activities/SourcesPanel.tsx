@@ -7,12 +7,12 @@ import {Card} from '@astryxdesign/core/Card';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
 import {Heading} from '@astryxdesign/core/Heading';
 import {HStack} from '@astryxdesign/core/HStack';
-import {Icon} from '@astryxdesign/core/Icon';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {Text} from '@astryxdesign/core/Text';
 import {Token} from '@astryxdesign/core/Token';
 import {VStack} from '@astryxdesign/core/VStack';
-import {SOURCE_ICON, type PublicConnection} from './ConnectorHub';
+import type {PublicConnection} from './ConnectorHub';
+import {ConnectorIcon} from '@/components/icons';
 import {sourceLabel} from './VaultList';
 
 type Pending = {source: string; action: 'wipe' | 'revoke'};
@@ -39,7 +39,7 @@ export function SourcesPanel({connections, counts}: {connections: PublicConnecti
       <VStack gap={3}>
         <HStack gap={2} vAlign="center" justify="between">
           <Heading level={2}>Sources</Heading>
-          <Button label="Add a source" variant="ghost" size="sm" href="/activities/onboarding/connect" />
+          <Button label="Add a source" variant="ghost" size="sm" href="/activities/connect" />
         </HStack>
         {sources.length === 0 ? (
           <EmptyState title="No sources yet" description="Connect a watch or app, or log a workout by hand." isCompact />
@@ -48,11 +48,10 @@ export function SourcesPanel({connections, counts}: {connections: PublicConnecti
             {sources.map(s => {
               const c = connections.find(x => x.source === s);
               const n = counts[s] ?? 0;
-              const glyph = SOURCE_ICON[s as keyof typeof SOURCE_ICON];
               return (
                 <ListItem
                   key={s}
-                  startContent={glyph ? <Icon icon={glyph} size="md" color="secondary" /> : undefined}
+                  startContent={<ConnectorIcon source={s} size={32} />}
                   label={
                     <HStack gap={1.5} vAlign="center">
                       <Text weight="bold">{sourceLabel(s)}</Text>

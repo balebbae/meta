@@ -1,0 +1,25 @@
+.modules { display: none; }
+@media (max-width: 700px) {
+  .modules { display: block; }
+  .module { background: var(--fb-card); border-bottom: 5px solid var(--fb-divider-soft); }
+  .header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; min-height: 40px; }
+  .header h2 { flex: 1; font-size: 16px; font-weight: 600; margin: 0; }
+  .header > button, .more > button { width: 28px; height: 28px; display: grid; place-items: center; color: var(--fb-text-secondary); }
+  .more { position: relative; }
+  .more a, .more div button { display: block; padding: 12px; color: var(--fb-text); }
+  .people, .reels { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 0 12px; scroll-snap-type: x mandatory; }
+  .people::-webkit-scrollbar, .reels::-webkit-scrollbar { display: none; }
+  .person { flex: 0 0 80vw; border: 1px solid var(--fb-divider-soft); border-radius: 16px; overflow: hidden; scroll-snap-align: center; }
+  .photo { display: block; position: relative; width: 100%; aspect-ratio: 1; background: var(--fb-icon-bg); }
+  .photo img, .reel img { object-fit: cover; }
+  .personBody { padding: 12px; }
+  .name { display: block; font-size: 16px; font-weight: 600; color: var(--fb-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .personBody p { margin: 4px 0 0; font-size: 16px; color: var(--fb-text-secondary); }
+  .buttons { display: flex; gap: 8px; margin-top: 38px; }
+  .buttons button { min-height: 36px; padding: 0 14px; border-radius: 8px; background: var(--fb-icon-bg); color: var(--fb-text); font-size: 14px; font-weight: 600; }
+  .buttons .add { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; background: var(--fb-blue); color: var(--fb-on-media); }
+  .buttons .add:disabled { background: var(--fb-mobile-active); color: var(--fb-blue); }
+  .footer { display: flex; justify-content: center; align-items: center; gap: 4px; min-height: 46px; font-size: 14px; font-weight: 600; color: var(--fb-text-secondary); }
+  .reel { flex: 0 0 55vw; aspect-ratio: 9 / 14; position: relative; border-radius: 16px; overflow: hidden; background: var(--fb-icon-bg); }
+  .reel span { position: absolute; bottom: 0; left: 0; right: 0; padding: 24px 12px 12px; color: var(--fb-on-media); background: linear-gradient(transparent, var(--fb-scrim)); font-size: 14px; font-weight: 600; }
+}

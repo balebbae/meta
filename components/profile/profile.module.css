@@ -1046,3 +1046,92 @@
 .cardHeadIcon:hover {
   background: var(--fb-hover);
 }
+
+.mobileLabel, .mobileNameMenu, .mobileCommonFriends, .mobilePostTools { display: none; }
+.profileSuggestions { display: contents; }
+.profilePost { scroll-margin-top: 68px; }
+.manageList { display: flex; flex-direction: column; }
+.manageList a { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--fb-divider-soft); }
+.manageList a > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.manageList a > span:last-child { color: var(--fb-blue); white-space: nowrap; }
+
+@media (max-width: 700px) {
+  .page { padding-bottom: calc(110px + env(safe-area-inset-bottom)); }
+  .page:has(.columns) { background: var(--fb-card); }
+  .top { box-shadow: none; }
+  .cover { height: 220px; aspect-ratio: auto; border-radius: 0; background: linear-gradient(var(--fb-text-secondary), var(--fb-icon-bg-hover)); }
+  .coverBtn { right: 10px; bottom: 28px; width: 36px; padding: 0; background: transparent; box-shadow: none; color: var(--fb-on-media); justify-content: center; }
+  .coverBtn svg { width: 24px; height: 24px; }
+  .info { position: relative; margin-top: -24px; padding: 0 12px; border-radius: 24px 24px 0 0; background: var(--fb-card); }
+  .infoRow { padding: 0 0 12px; gap: 12px; }
+  .avatarWrap { width: 180px; height: 180px; margin-top: -90px; }
+  .avatarRing { width: 180px; height: 180px; padding: 4px; }
+  .avatarRing img, .avatarImg { width: 172px; height: 172px; }
+  .avatarCamera { right: 5px; bottom: 8px; border: 2px solid var(--fb-card); }
+  .nameBlock { position: relative; width: 100%; padding: 0 38px; }
+  .name { font-size: 26px; line-height: 30px; text-align: center; }
+  .friendCount { font-size: 14px; line-height: 20px; }
+  .friendStack { display: none; }
+  .mobileNameMenu { display: block; position: absolute; right: 0; top: 0; }
+  .mobileNameMenu > button { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--fb-icon-bg); }
+  .mobileNameMenu > div a, .mobileNameMenu > div button { display: block; padding: 12px; text-align: left; font-size: 15px; }
+  .mobileCommonFriends { display: flex; align-items: center; gap: 8px; width: 100%; padding: 4px 0; font-size: 13px; text-align: left; }
+  .mobileCommonFriends > span { display: flex; flex-shrink: 0; padding-left: 6px; }
+  .mobileCommonFriends img { border-radius: 50%; object-fit: cover; border: 2px solid var(--fb-card); margin-left: -6px; }
+  .actions { width: 100%; padding: 0; gap: 8px; }
+  .actions > :not(.iconOnly) { flex: 1; min-width: 0; padding-left: 0; padding-right: 0; justify-content: center; font-size: 14px; }
+  .actions > .menuWrap > button { width: 100%; justify-content: center; font-size: 14px; }
+  .actions > .iconOnly { display: none; }
+  .profileSuggestions { display: none; }
+  .profileSuggestions.mobileSuggestionsOpen { display: contents; }
+  .divider, .tabsMore { display: none; }
+  .tabsRow { height: 52px; margin: 0 -4px; }
+  .tabs { align-items: center; gap: 6px; }
+  .tabs .tab { height: 36px; padding: 0; color: var(--fb-text); }
+  .tabInner { height: 36px; border-radius: 20px; padding: 0 13px; }
+  .tabs .tabActive { color: var(--fb-blue); }
+  .tabActive .tabInner { background: var(--fb-mobile-active); }
+  .tabActive::after { display: none; }
+  .tabs a[href$="tab=photos"] { order: 1; }
+  .tabs a[href$="tab=reels"] { order: 2; }
+  .tabs a[href$="tab=about"] { order: 3; }
+  .tabs a[href$="tab=friends"] { order: 4; }
+  .tabs a[href$="tab=activities"] { order: 5; }
+  .tabs > button { order: 6; }
+  .body:has(.columns) { padding: 12px 0 0; }
+  .columns { display: block; }
+  .leftCol, .rightCol { gap: 0; }
+  .leftCol > [aria-labelledby="photos-title"] { display: none; }
+  .columns .card { border-radius: 0; box-shadow: none; padding: 12px; }
+  .columns .cardTitle { font-size: 17px; line-height: 22px; }
+  .columns .cardHead { align-items: center; margin-bottom: 12px; }
+  .desktopOnly { display: none; }
+  .mobileLabel { display: inline-flex; }
+  .columns .cardHead .link { font-size: 15px; }
+  .columns .cardHead .cardSub { display: none; }
+  .detailList { gap: 18px; margin: 12px 0 16px; }
+  .detail { font-size: 15px; gap: 14px; }
+  .detail svg { color: var(--fb-text); }
+  .detail[data-profile-detail="birthday"] { order: -2; }
+  .detail[data-profile-detail="gender"] { order: -1; }
+  .friendGrid { display: flex; gap: 14px; overflow-x: auto; scrollbar-width: none; margin: 0 -12px; padding: 0 12px 4px; }
+  .friendGrid::-webkit-scrollbar { display: none; }
+  .friendTile { flex: 0 0 80px; text-align: center; }
+  .friendTileImg { border-radius: 50%; width: 80px; height: 80px; }
+  .friendTileName { font-size: 14px; font-weight: 500; line-height: 18px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .friendMutual { display: block; color: var(--fb-text-secondary); font-size: 12px; line-height: 16px; margin-top: 2px; }
+  .mobilePostTools { display: block; border-bottom: 5px solid var(--fb-divider-soft); }
+  .mobilePostsHead { display: flex; align-items: center; justify-content: space-between; padding: 12px; }
+  .mobilePostsHead h2 { margin: 0; font-size: 17px; }
+  .mobileFilterAnchor { position: relative; }
+  .mobileFilterAnchor > button { color: var(--fb-blue); font-size: 15px; }
+  .mobileFilterAnchor > div button { padding: 12px; display: block; font-size: 15px; }
+  .profileComposer { display: flex; align-items: center; gap: 8px; padding: 8px 12px 12px; border-bottom: 5px solid var(--fb-divider-soft); }
+  .profileComposerText { flex: 1; font-size: 16px; }
+  .profileComposer > a:last-child { color: var(--fb-text-secondary); }
+  .mobileChips { display: flex; gap: 8px; background: var(--fb-bg); padding: 8px 12px; }
+  .mobileChips a { display: inline-flex; justify-content: center; align-items: center; gap: 6px; min-width: 120px; height: 32px; border-radius: 20px; background: var(--fb-card); font-size: 14px; font-weight: 600; }
+  .mobileChips svg { color: var(--fb-red); }
+  .mobileManage { display: flex; align-items: center; justify-content: center; gap: 6px; width: calc(100% - 24px); margin: 8px 12px; height: 36px; border-radius: 6px; font-size: 15px; font-weight: 600; background: var(--fb-icon-bg); }
+  .columns .empty { padding: 24px 12px; }
+}

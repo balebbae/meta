@@ -1,4 +1,9 @@
 /* ---------- grid page ---------- */
+.mobileNav,
+.mobileLocation,
+.mobileCaption {
+  display: none;
+}
 .head {
   display: flex;
   align-items: center;
@@ -404,4 +409,27 @@
     flex: 1 1 auto;
     width: 100%;
   }
+}
+
+@media (max-width: 700px) {
+  .mobileNav { display: flex; align-items: center; justify-content: space-between; height: 48px; padding: 4px 8px 8px; background: var(--fb-card); position: sticky; top: 56px; z-index: 35; }
+  .mobileNav > a, .mobileNav > button, .mobileMore > button { display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 8px; border-radius: 20px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+  .mobileTabActive { background: var(--fb-mobile-active); color: var(--fb-blue); }
+  .mobileMore { position: relative; }
+  .mobileOptions { max-height: 60vh; overflow: auto; padding: 4px; }
+  .mobileOptions a { display: block; padding: 10px 12px; font-size: 15px; }
+  .tabs { display: none; }
+  .head { gap: 8px; padding: 12px; margin: 0; background: var(--fb-card); }
+  .headTitle { font-size: 18px; line-height: 22px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .headLocation { display: none; }
+  .mobileLocation { display: inline-flex; align-items: center; justify-content: flex-end; gap: 3px; color: var(--fb-blue); font-size: 12px; text-align: right; }
+  .mobileLocation svg { flex-shrink: 0; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; background: var(--fb-card); }
+  .card, .cardImage { border-radius: 0; border: 0; }
+  .card { min-width: 0; }
+  .card:hover .cardImage img { transform: none; }
+  .cardBody { padding: 7px 10px 8px; background: var(--fb-card); }
+  .price, .title, .loc { display: none; }
+  .mobileCaption { display: block; font-size: 14px; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .badge { top: 8px; left: 8px; padding: 1px 4px; border-radius: 2px; font-size: 12px; line-height: 16px; }
 }

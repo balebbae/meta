@@ -11,6 +11,8 @@ export function PanelSearch({placeholder}: {placeholder: string}) {
   const params = useSearchParams();
   const [value, setValue] = useState(params.get('q') ?? '');
 
+  useEffect(() => setValue(params.get('q') ?? ''), [params]);
+
   useEffect(() => {
     const current = params.get('q') ?? '';
     if (value.trim() === current) return;

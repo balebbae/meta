@@ -8,6 +8,7 @@ import {
   RailActivitiesIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  ConnectorsIcon,
   RailAdsIcon,
   RailClimateIcon,
   RailEventsIcon,
@@ -34,6 +35,7 @@ const PRIMARY = [
   {label: 'Meta AI', href: '/meta-ai', Icon: RailMetaAIIcon},
   {label: 'Friends', href: '/friends', Icon: RailFriendsIcon},
   {label: 'Activities', href: '/activities', Icon: RailActivitiesIcon},
+  {label: 'Connectors', href: '/activities/connect', Icon: ConnectorsIcon},
   {label: 'Memories', href: '/memories', Icon: RailMemoriesIcon},
   {label: 'Saved', href: '/saved', Icon: RailSavedIcon},
   {label: 'Groups', href: '/groups', Icon: RailGroupsIcon},
@@ -65,7 +67,10 @@ const FOOTER = ['Privacy', 'Consumer Health Privacy', 'Terms', 'Advertising', 'A
 export function LeftSidebar({user}: {user: User}) {
   const pathname = usePathname();
   const [more, setMore] = useState(false);
-  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+  const isActive = (href: string) => {
+    if (href === '/activities' && (pathname === '/activities/connect' || pathname.startsWith('/activities/connect/'))) return false;
+    return pathname === href || pathname.startsWith(href + '/');
+  };
   const item = ({label, href, Icon}: {label: string; href: string; Icon: () => React.JSX.Element}) => (
     <Link key={label} href={href} className={`${styles.railItem} ${isActive(href) ? styles.railItemActive : ''}`} aria-current={isActive(href) ? 'page' : undefined}>
       <span className={styles.railIcon}>

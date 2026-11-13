@@ -12,6 +12,7 @@ export function ListingCard({listing, justListed}: {listing: Pick<Listing, 'id' 
         {justListed && <span className={styles.badge}>Just listed</span>}
       </div>
       <div className={styles.cardBody}>
+        <div className={styles.mobileCaption}>{formatPrice(listing.priceCents)} · {listing.title}</div>
         <div className={styles.price}>{formatPrice(listing.priceCents)}</div>
         <div className={styles.title}>{listing.title}</div>
         <div className={styles.loc}>{listing.location}</div>

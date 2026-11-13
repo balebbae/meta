@@ -14,6 +14,7 @@ import {
   ClockIcon,
   CloseIcon,
   CommentIcon,
+  ConnectorsIcon,
   FacebookLogo,
   FriendsIcon,
   WarningIcon,
@@ -145,7 +146,7 @@ export function Header({user, contacts = []}: {user: User; contacts?: Contact[]}
             </button>
           </Tooltip>
           <Popover open={panel === 'account'} onClose={() => setPanel(null)} width={360}>
-            <AccountPanel user={user} />
+            <AccountPanel user={user} onNavigate={() => setPanel(null)} />
           </Popover>
         </div>
       </div>
@@ -377,7 +378,7 @@ function FeedbackBox() {
   );
 }
 
-function AccountPanel({user}: {user: User}) {
+function AccountPanel({user, onNavigate}: {user: User; onNavigate: () => void}) {
   const router = useRouter();
   const [view, setView] = useState<AcctView>('root');
   const {theme, setTheme} = useTheme();
@@ -474,6 +475,11 @@ function AccountPanel({user}: {user: User}) {
           {v !== 'feedback' && <ChevronRightIcon size={20} />}
         </button>
       ))}
+      <Link href="/activities/connect" className={styles.menuRow} onClick={onNavigate}>
+        <span className={styles.menuIcon}><ConnectorsIcon size={20} /></span>
+        <span className={styles.grow}>Connectors</span>
+        <ChevronRightIcon size={20} />
+      </Link>
       <button className={styles.menuRow} onClick={logout}>
         <span className={styles.menuIcon}>
           <LogoutIcon size={20} />

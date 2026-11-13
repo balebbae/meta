@@ -26,8 +26,18 @@
 
 /* Facebook design tokens (measured against facebook.com desktop, Nov 2026) */
 :root {
+  --fb-brand-white: #ffffff;
+  --fb-apple-health: #ff2d55;
+  --fb-health-connect: #003144;
+  --fb-health-connect-light: #4285f4;
+  --fb-fitbit: #00b0b9;
+  --fb-google-fit: #ea4335;
+  --fb-garmin: #007cc3;
+  --fb-strava: #fc4c02;
+  --fb-strava-text: #ffffff;
   --fb-blue: #0866ff;
   --fb-blue-hover: #0a5ce6;
+  --fb-mobile-active: #d5e9ff;
   --fb-bg: #f0f2f5;
   --fb-card: #ffffff;
   --fb-text: #050505;
@@ -100,6 +110,18 @@
 html {
   scrollbar-gutter: stable;
   color-scheme: light;
+}
+
+@media (max-width: 700px) {
+  body:has([data-home-feed]),
+  body:has([data-mobile-friends]),
+  body:has([data-mobile-notifications]),
+  body:has([data-mobile-marketplace]),
+  body:has([data-mobile-groups]),
+  body:has([data-mobile-profile]) {
+    height: auto;
+    min-height: 100%;
+  }
 }
 [data-theme='dark'] {
   color-scheme: dark;

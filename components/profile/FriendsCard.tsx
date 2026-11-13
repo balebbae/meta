@@ -11,7 +11,7 @@ export function FriendsCard({friends, count, userId}: {friends: FriendSummary[];
           <h2 id="friends-title" className={styles.cardTitle}>Friends</h2>
           <span className={styles.cardSub}>{count.toLocaleString()} {count === 1 ? 'friend' : 'friends'}</span>
         </div>
-        <Link href={`/profile/${userId}?tab=friends`} className={styles.link}>See all friends</Link>
+        <Link href={`/profile/${userId}?tab=friends`} className={styles.link}><span className={styles.desktopOnly}>See all friends</span><span className={styles.mobileLabel}>See all</span></Link>
       </div>
       {friends.length === 0 ? (
         <p className={styles.empty}>No friends to show</p>
@@ -23,6 +23,7 @@ export function FriendsCard({friends, count, userId}: {friends: FriendSummary[];
                 <Image src={f.avatarUrl} alt="" fill sizes="140px" />
               </div>
               <span className={styles.friendTileName}>{f.name}</span>
+              <span className={`${styles.friendMutual} ${styles.mobileLabel}`}>{f.mutualCount} mutual {f.mutualCount === 1 ? 'friend' : 'friends'}</span>
             </Link>
           ))}
         </div>

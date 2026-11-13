@@ -4,6 +4,7 @@ import {Header} from '@/components/layout/Header';
 import {LeftSidebar} from '@/components/layout/LeftSidebar';
 import {MobileTabBar} from '@/components/layout/MobileTabBar';
 import {MobileHeader} from '@/components/mobile/MobileHeader';
+import {MobileMenuDrawer} from '@/components/mobile/MobileMenuDrawer';
 import {RightSidebar} from '@/components/layout/RightSidebar';
 import {ComposeFab} from '@/components/layout/ComposeFab';
 import {IncomingCall} from '@/components/messages/IncomingCall';
@@ -23,6 +24,7 @@ export default async function AppLayout({children}: {children: React.ReactNode})
       <ActivitiesMode />
       <Header user={user} contacts={contacts} />
       <MobileHeader />
+      <MobileMenuDrawer user={user} />
       <div className={styles.shell}>
         <div className={styles.leftCol}>
           <LeftSidebar user={user} />

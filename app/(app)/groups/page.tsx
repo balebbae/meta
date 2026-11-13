@@ -7,6 +7,7 @@ import {formatCount, matchesQuery} from '@/lib/secondary-data';
 import {SecondaryLayout} from '@/components/pages/SecondaryLayout';
 import {GroupsPanel} from '@/components/pages/GroupsPanel';
 import {GroupPostCard} from '@/components/pages/GroupPostCard';
+import {MobileGroups} from '@/components/pages/MobileGroups';
 import {GlobeIcon, LockIcon} from '@/components/pages/icons';
 import styles from '@/components/pages/groups.module.css';
 import mk from '@/components/pages/marketplace.module.css';
@@ -25,13 +26,14 @@ export default async function GroupsPage({searchParams}: {searchParams: Promise<
     const shown = (active === 'yours' ? groups.filter(g => g.isMember) : groups.filter(g => !g.isMember)).filter(group => matchesQuery(q, group.name, group.description));
     return (
       <SecondaryLayout panel={<GroupsPanel groups={groups} active={active} />}>
-        <div className={mk.head}>
+        <MobileGroups groups={groups} view={active} q={q} />
+        <div className={`${mk.head} ${active === 'yours' ? styles.desktopGroupHeading : ''}`}>
           <h2 className={mk.headTitle}>{active === 'yours' ? `All groups you've joined (${shown.length})` : 'Suggested for you'}</h2>
         </div>
         {shown.length === 0 ? (
-          <div className={styles.emptyCard}>{active === 'yours' ? "You haven't joined any groups yet." : "You've joined every group. Nice."}</div>
+          <div className={`${styles.emptyCard} ${active === 'yours' ? styles.desktopGroupHeading : ''}`}>{active === 'yours' ? "You haven't joined any groups yet." : "You've joined every group. Nice."}</div>
         ) : (
-          <div className={mk.grid} style={{gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))'}}>
+          <div className={`${mk.grid} ${active === 'yours' ? styles.desktopGroupCards : styles.discoverGroups}`} style={{gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))'}}>
             {shown.map(g => (
               <Link key={g.id} href={`/groups/${g.id}`} className={styles.post} style={{overflow: 'hidden', color: 'inherit'}}>
                 <div style={{position: 'relative', aspectRatio: '16 / 9'}}>
@@ -59,7 +61,9 @@ export default async function GroupsPage({searchParams}: {searchParams: Promise<
   return (
     <SecondaryLayout center panel={<GroupsPanel groups={groups} active="feed" />}>
       <div className={styles.feed}>
-        <h2 className={styles.feedHead}>Recent activity</h2>
+        <MobileGroups groups={groups} view="feed" q={q} />
+        <h2 className={styles.feedHead}><span className={styles.desktopGroupLabel}>Recent activity</span><span className={styles.mobileGroupLabel}>Recommended for you</span></h2>
+        {posts.length === 0 && <p className={`${styles.emptyCard} ${styles.mobileEmptyFeed}`}>No recent activity yet.</p>}
         {posts.map(p => (
           <GroupPostCard key={p.id} post={p} />
         ))}

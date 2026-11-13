@@ -3,6 +3,7 @@ import {getSessionUser} from '@/lib/auth';
 import {sql} from '@/lib/db';
 import {insertHealthSamples} from '@/lib/health';
 import {exchangeWhoopCode, whoopGet} from '@/lib/whoop';
+import {GET as connectCallback} from '@/app/api/connect/[source]/callback/route';
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -10,6 +11,7 @@ export async function GET(req: Request) {
   const state = url.searchParams.get('state');
   const cookie = req.headers.get('cookie') ?? '';
   const saved = cookie.match(/(?:^|;\s*)whoop_oauth_state=([^;]+)/)?.[1];
+  if (!saved) return connectCallback(req, {params: Promise.resolve({source: 'whoop'})});
   const fail = (msg: string) => NextResponse.redirect(new URL(`/health?whoop=error&msg=${encodeURIComponent(msg)}`, url.origin));
 
   if (!code || !state || !saved || state !== saved) return fail('oauth state mismatch');

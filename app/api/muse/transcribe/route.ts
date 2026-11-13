@@ -42,6 +42,6 @@ export async function POST(req: Request) {
       reason: scored.reason,
     });
 
-    return NextResponse.json({ok: true, voiceNote: note, xp: scored});
+    return NextResponse.json({ok: true, transcript, voiceNote: note, xp: scored});
   });
 }

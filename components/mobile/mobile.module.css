@@ -504,6 +504,34 @@
   background: var(--fb-icon-bg);
   color: var(--fb-text-secondary);
 }
+.searchSheet {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: var(--fb-card);
+  display: flex;
+  flex-direction: column;
+  padding: calc(env(safe-area-inset-top) + 8px) 12px 12px;
+}
+.searchSheetTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.searchSheetList {
+  overflow: auto;
+  margin-top: 8px;
+  padding-bottom: calc(96px + env(safe-area-inset-bottom));
+}
+.searchHit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--fb-text);
+}
 .searchBox input {
   flex: 1;
   border: 0;

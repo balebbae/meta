@@ -10,7 +10,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://meta-tau-two.vercel.
 
 /** Presenter page: judges scan the QR and sign in to the seeded demo account on their own phones. */
 export default function DemoPage() {
-  const target = `${APP_URL}/auth`;
+  const target = `${APP_URL}/auth?demo=judge`;
   // shortcut: QR comes from a public image API, swap for a local generator if the demo must work offline.
   const qr = `https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=12&data=${encodeURIComponent(target)}`;
   return (

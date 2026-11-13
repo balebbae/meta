@@ -5,9 +5,10 @@ import {AuthFooter} from '@/components/auth/AuthFooter';
 import {FacebookLogo} from '@/components/auth/logos';
 import styles from '@/components/auth/auth.module.css';
 
-export default async function AuthPage() {
+export default async function AuthPage({searchParams}: {searchParams: Promise<{demo?: string | string[]}>}) {
   const user = await getSessionUser();
   if (user) redirect('/');
+  const judgeDemo = (await searchParams).demo === 'judge';
   return (
     <div className={styles.page}>
       <div className={styles.main}>
@@ -27,7 +28,7 @@ export default async function AuthPage() {
         </section>
         <div className={styles.vline} />
         <section className={styles.right}>
-          <LoginForm />
+          <LoginForm judgeDemo={judgeDemo} />
         </section>
       </div>
       <AuthFooter line />

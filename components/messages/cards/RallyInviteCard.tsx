@@ -2,12 +2,14 @@
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
 import {useState} from 'react';
+import {Hexagon} from 'lucide-react';
 import type {RallyInvitePayload} from '@/lib/activities/types';
 import {ConsentSheet} from '@/components/turf/ConsentSheet';
 import {HexMap} from '@/components/turf/HexMap';
 import {endsLabel, timeLeft, turfApi, useTurfState} from '@/components/turf/api';
-import turf from '@/components/turf/turf.module.css';
+import h from '@/components/activities/home/home.module.css';
 import type {CardProps} from './index';
+import {MemberRing} from './MemberRing';
 import styles from './cards.module.css';
 
 const STATUS: Record<string, string> = {pending: 'Waiting for players', live: 'Live', ended: 'Ended', cancelled: 'Cancelled'};
@@ -27,6 +29,9 @@ export default function RallyInviteCard({message}: CardProps) {
   const inSoFar = players.filter(p => p.status === 'accepted');
   const waiting = players.filter(p => p.status === 'invited');
   const colors = Object.fromEntries(players.map(p => [p.id, p.color]));
+  // ring per player: their share of the leader's cells once anyone holds some; before that, full once they are in
+  const cells = Object.fromEntries((state?.scores ?? []).map(sc => [sc.playerId, sc.cells]));
+  const top = Math.max(0, ...Object.values(cells));
   const me = state?.me;
 
   const accept = () => {
@@ -48,56 +53,63 @@ export default function RallyInviteCard({message}: CardProps) {
 
   return (
     <div className={styles.card} role="group" aria-label={`Turf invite: ${title}`}>
-      <div className={styles.cardHead}>
-        <span aria-hidden>⬢</span>
-        <span style={{flex: 1, minWidth: 0}}>Turf: {title}</span>
-        {state && <span className={state.status === 'live' ? turf.pillLive : turf.pill}>{STATUS[state.status]}</span>}
+      <div className={styles.hero}>
+        <span className={styles.glyph} aria-hidden>
+          <Hexagon size={20} />
+        </span>
+        <div className={styles.heroText}>
+          <p className={h.eyebrow}>Turf{state ? ` · ${STATUS[state.status]}` : ''}</p>
+          <div className={styles.title}>{title}</div>
+          {state?.status !== 'ended' && endsAt && (
+            <div className={`${styles.live} ${styles.liveSm}`}>
+              <b>{timeLeft(endsAt)}</b>
+            </div>
+          )}
+        </div>
       </div>
       {state ? (
-        <Link href={`/games/${gameId}`} aria-label="Open the Turf map" style={{display: 'block', padding: '0 12px'}}>
+        <Link href={`/games/${gameId}`} aria-label="Open the Turf map" style={{display: 'block'}}>
           <HexMap arena={state.arena} cells={state.cells} colors={colors} grid="preview" label={`Arena preview: ${title}`} />
         </Link>
       ) : (
         // same footprint as the loaded card, so the thread does not jump once the state arrives
-        <div className={styles.cardBody} style={{aspectRatio: '1', margin: '0 12px', display: 'grid', placeItems: 'center'}}>
+        <div className={styles.cardBody} style={{aspectRatio: '1', display: 'grid', placeItems: 'center'}}>
           <span className={styles.cardMeta}>{error ?? 'Loading the arena…'}</span>
         </div>
       )}
       <div className={styles.cardBody}>
         <div className={styles.cardMeta}>
-          {state?.status === 'ended' ? 'Game over' : endsAt ? `Ends ${endsLabel(endsAt)} · ${timeLeft(endsAt)}` : ''}
+          {state?.status === 'ended' ? 'Game over' : endsAt ? `Ends ${endsLabel(endsAt)}` : ''}
           {state ? ` · ${(state.arena.radiusKm * 2).toFixed(1)} km wide` : ''}
+          {players.length > 0 && ` · ${inSoFar.length} in${waiting.length ? `, ${waiting.length} invited` : ''}`}
         </div>
-        {!state && !error && <div style={{height: 36, marginTop: 8}} />}
+        {!state && !error && <div style={{height: 36, marginTop: 10}} />}
         {players.length > 0 && (
-          <div style={{display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, minHeight: 36}}>
-            <div className={turf.avatars}>
-              {[...inSoFar, ...waiting].slice(0, 6).map(p => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={p.id} src={p.avatarUrl} alt={p.name} title={`${p.name}${p.status === 'accepted' ? '' : ' (invited)'}`} className={p.status === 'accepted' ? undefined : turf.avatarPending} style={{borderColor: p.status === 'accepted' ? p.color : undefined}} />
-              ))}
-            </div>
-            <span className={styles.cardMeta}>
-              {inSoFar.length} in{waiting.length ? ` · ${waiting.length} invited` : ''}
-            </span>
+          <div className={styles.squad} style={{minHeight: 36}} aria-label="Players">
+            {[...inSoFar, ...waiting].slice(0, 6).map(p => (
+              <MemberRing key={p.id} size={36} color={p.color} pct={p.status !== 'accepted' ? 0 : top ? ((cells[p.id] ?? 0) / top) * 100 : 100} label={`${p.name}${p.status === 'accepted' ? (top ? `: ${cells[p.id] ?? 0} cells` : '') : ' (invited)'}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={p.avatarUrl} alt="" width={28} height={28} className={p.status === 'accepted' ? undefined : styles.ringPending} />
+              </MemberRing>
+            ))}
           </div>
         )}
       </div>
       <div className={styles.cardActions}>
         {me?.canAccept ? (
           <>
-            <Link href={`/games/${gameId}`} className={styles.btn} style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none'}}>
+            <Link href={`/games/${gameId}`} className={`${h.pill} ${h.pillQuiet}`}>
               Open map
             </Link>
-            <button type="button" className={styles.btn} onClick={() => void decline()} disabled={busy || me.status === 'declined'}>
+            <button type="button" className={`${h.pill} ${h.pillGhost}`} onClick={() => void decline()} disabled={busy || me.status === 'declined'}>
               {me.status === 'declined' ? 'Declined' : 'Decline'}
             </button>
-            <button type="button" className={styles.btnPrimary} onClick={accept} disabled={busy}>
+            <button type="button" className={`${h.pill} ${h.pillEmber}`} onClick={accept} disabled={busy}>
               Accept
             </button>
           </>
         ) : (
-          <Link href={`/games/${gameId}`} className={styles.btnPrimary} style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none'}}>
+          <Link href={`/games/${gameId}`} className={`${h.pill} ${h.pillEmber}`}>
             Open map
           </Link>
         )}

@@ -1,4 +1,5 @@
 import {redirect} from 'next/navigation';
+import {ActivitiesMode} from '@/components/activities/home/ActivitiesMode';
 import {Header} from '@/components/layout/Header';
 import {LeftSidebar} from '@/components/layout/LeftSidebar';
 import {MobileTabBar} from '@/components/layout/MobileTabBar';
@@ -19,6 +20,7 @@ export default async function AppLayout({children}: {children: React.ReactNode})
   const [contacts, requests] = await Promise.all([listContacts(user.id).catch(() => []), listFriendRequests(user.id).catch(() => [])]);
   return (
     <>
+      <ActivitiesMode />
       <Header user={user} contacts={contacts} />
       <MobileHeader />
       <div className={styles.shell}>

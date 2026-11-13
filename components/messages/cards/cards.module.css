@@ -1,54 +1,297 @@
+/* Challenge cards in a thread (quests, boss-fight moments, Turf invites and recaps): the Activities hero / task-row
+   language on the --fb-act-* tokens. Flat surfaces on a hairline; one live number in ember, one ember action, a small
+   progress ring per member. Pills, chips and the eyebrow come from components/activities/home/home.module.css. */
 .card {
-  width: min(320px, 78vw);
-  border: 1px solid var(--fb-divider);
-  border-radius: 16px;
-  background: var(--fb-card);
+  width: min(340px, 82vw);
+  border: 1px solid var(--fb-act-line);
+  border-radius: var(--fb-act-radius);
+  background: var(--fb-act-surface);
+  color: var(--fb-act-ink);
+  box-shadow: var(--fb-act-shadow);
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-family: var(--fb-font);
+  animation: rise 0.45s var(--fb-act-ease) both;
 }
-.cardHead {
+/* hero: boss or glyph, title, the live number */
+.hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  font-weight: 600;
-  font-size: 15px;
-  color: var(--fb-text);
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--fb-act-line);
+}
+/* quest cards only: the Activities contour lines (Contours.tsx) behind the boss, fading out under the text */
+.heroShader {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to left, transparent 30%, black 95%);
+  mask-image: linear-gradient(to left, transparent 30%, black 95%);
+}
+.heroText {
+  flex: 1;
+  min-width: 0;
+}
+.title {
+  margin: 2px 0 0;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--fb-act-ink);
+}
+.glyph {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  font-size: 20px;
+  color: var(--fb-act-blue);
+  background: var(--fb-act-blue-soft);
+}
+.live {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--fb-act-muted);
+  font-variant-numeric: tabular-nums;
+}
+.live b {
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--fb-act-ember-deep);
+}
+.liveSm b {
+  font-size: 17px;
+}
+.hp {
+  height: 6px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: var(--fb-act-ring-track);
+  overflow: hidden;
+}
+.hpFill {
+  height: 100%;
+  border-radius: inherit;
+  background: var(--fb-act-ember);
+  transition: width 0.6s var(--fb-act-ease);
+}
+.hpLow .hpFill {
+  animation: low 1s ease-in-out infinite;
 }
 .cardBody {
-  padding: 10px 12px;
+  padding: 12px 16px;
   font-size: 15px;
-  line-height: 1.33;
-  color: var(--fb-text);
+  line-height: 1.4;
+  color: var(--fb-act-ink);
 }
 .cardMeta {
-  color: var(--fb-text-secondary);
   font-size: 13px;
+  color: var(--fb-act-muted);
 }
+.story {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--fb-act-muted);
+}
+.notes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fb-act-muted);
+}
+.fit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.fitDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--fb-act-blue);
+}
+.fitStretch .fitDot {
+  background: var(--fb-act-ember);
+}
+
+/* squad: one small ring per member (their share of the squad's best) */
+.squad {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.ring {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+.ring svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+.ringTrack,
+.ringBar {
+  fill: none;
+  stroke-width: 2.5;
+}
+.ringTrack {
+  stroke: var(--fb-act-ring-track);
+}
+.ringBar {
+  stroke: var(--fb-act-ember);
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.9s var(--fb-act-ease);
+}
+.ring img {
+  border-radius: 50%;
+  object-fit: cover;
+}
+.ringPending {
+  opacity: 0.45;
+}
+.rank {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fb-act-muted);
+}
+
+/* standings: task rows */
+.rows {
+  margin-top: 10px;
+  border-top: 1px solid var(--fb-act-line);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--fb-act-line);
+  font-size: 14px;
+}
+.row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.rowName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+.rowValue {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.rowValue small {
+  margin-left: 3px;
+  font-weight: 500;
+  color: var(--fb-act-muted);
+}
+.row:first-child .rowValue {
+  color: var(--fb-act-ember-deep);
+}
+
 .cardActions {
   display: flex;
   gap: 8px;
-  padding: 8px 12px 12px;
+  padding: 0 16px 16px;
 }
-.btn {
+.cardActions > * {
   flex: 1;
-  height: 36px;
-  border: 0;
-  border-radius: 6px;
-  font-weight: 600;
+  min-width: 0;
+}
+
+/* boss-fight moment: the player's hero next to a Game Master bubble; big moments get a full card */
+.game {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  width: min(340px, 82vw);
+  color: var(--fb-act-ink);
+}
+.gameBig {
+  width: min(420px, 86vw);
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid var(--fb-act-line);
+  border-radius: var(--fb-act-radius);
+  background: var(--fb-act-surface);
+  box-shadow: var(--fb-act-shadow);
+  animation: rise 0.45s var(--fb-act-ease) both;
+}
+.gm {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--fb-act-line);
+  border-radius: 18px 18px 18px 6px;
+  background: var(--fb-act-surface);
   font-size: 15px;
-  cursor: pointer;
-  background: var(--fb-icon-bg);
-  color: var(--fb-text);
+  line-height: 1.4;
 }
-.btnPrimary {
-  composes: btn;
-  background: var(--fb-blue);
-  color: #fff;
+.gameBig .gm {
+  border: 0;
+  padding: 0 4px;
+  background: transparent;
 }
+
 .system {
   text-align: center;
   font-size: 12px;
   color: var(--fb-text-secondary);
   padding: 4px 12px;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes low {
+  50% {
+    opacity: 0.55;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .gameBig,
+  .hpLow .hpFill {
+    animation: none;
+  }
+  .hpFill,
+  .ringBar {
+    transition: none;
+  }
 }

@@ -1073,3 +1073,283 @@
   flex-direction: column;
   gap: 8px;
 }
+
+/* ===== Activities mode =====
+   html[data-mode='activities'] is set by useActivitiesMode (via ActivitiesMode) while an /activities route is mounted. Same markup and
+   layout: the chrome re-tints by pointing the Facebook tokens it already reads at the --fb-act-* palette, plus a few
+   shape rules (hairlines instead of shadows, pills). Outside the mode none of this applies. */
+:global(html[data-mode='activities']) .header,
+:global(html[data-mode='activities']) .leftRail,
+:global(html[data-mode='activities']) .rightRail,
+:global(html[data-mode='activities']) .fabWrap {
+  --fb-card: var(--fb-act-surface);
+  --fb-bg: var(--fb-act-bg);
+  --fb-text: var(--fb-act-ink);
+  --fb-text-secondary: var(--fb-act-muted);
+  --fb-divider: var(--fb-act-line);
+  --fb-divider-soft: var(--fb-act-line);
+  --fb-hover: var(--fb-act-surface-2);
+  --fb-hover-strong: var(--fb-act-blue-soft);
+  --fb-icon-bg: var(--fb-act-surface-2);
+  --fb-icon-bg-hover: var(--fb-act-line);
+  --fb-input-bg: var(--fb-act-surface-2);
+  --fb-bubble: var(--fb-act-surface-2);
+  --fb-blue: var(--fb-act-blue);
+  --fb-blue-hover: var(--fb-act-blue-deep);
+  --fb-notif: var(--fb-act-ember);
+  --fb-shadow-card: 0 0 0 1px var(--fb-act-line);
+  --fb-shadow-popover: 0 0 0 1px var(--fb-act-line), var(--fb-act-shadow);
+  /* the names closeness.module.css reads (Leaderboard in the right rail) */
+  --fb-surface: var(--fb-act-surface);
+  --fb-primary-text: var(--fb-act-ink);
+  --fb-secondary-text: var(--fb-act-muted);
+  --fb-secondary-button: var(--fb-act-surface-2);
+  color: var(--fb-act-ink);
+}
+
+/* Canvas: flat white / navy instead of the grey feed, with a faint contour field (ActivitiesMode, WebGL) fading in under everything. */
+.actBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  animation: actFade 0.6s var(--fb-act-ease) both;
+}
+:global(html[data-mode='activities'] body):has(.shell) {
+  background: var(--fb-act-bg);
+}
+:global(html[data-mode='activities']) .shell,
+:global(html[data-mode='activities']) .main,
+:global(html[data-mode='activities']) .feedCol {
+  background: transparent;
+}
+
+/* Entering, leaving and the light/dark switch fade (fadeTheme sets data-theme-fade for 450 ms); otherwise Facebook snaps as before. */
+:global(html[data-theme-fade] body):has(.shell),
+:global(html[data-theme-fade]) .header,
+:global(html[data-theme-fade]) .header *,
+:global(html[data-theme-fade]) .leftRail,
+:global(html[data-theme-fade]) .leftRail *,
+:global(html[data-theme-fade]) .rightRail,
+:global(html[data-theme-fade]) .rightRail *,
+:global(html[data-theme-fade]) .fab {
+  transition:
+    background-color 0.42s var(--fb-act-ease),
+    color 0.42s var(--fb-act-ease),
+    border-color 0.42s var(--fb-act-ease),
+    border-radius 0.42s var(--fb-act-ease),
+    box-shadow 0.42s var(--fb-act-ease) !important;
+}
+
+/* Header: frosted surface on a hairline, ember badges, soft-blue active states. */
+:global(html[data-mode='activities']) .header {
+  background: color-mix(in srgb, var(--fb-act-surface) 78%, transparent);
+  -webkit-backdrop-filter: saturate(1.6) blur(16px);
+  backdrop-filter: saturate(1.6) blur(16px);
+  box-shadow: 0 1px 0 var(--fb-act-line);
+}
+:global(html[data-mode='activities']) .search,
+:global(html[data-mode='activities']) .iconBtn,
+:global(html[data-mode='activities']) .avatarCaret {
+  box-shadow: inset 0 0 0 1px var(--fb-act-line);
+}
+:global(html[data-mode='activities']) .iconBtnActive,
+:global(html[data-mode='activities']) .chipActive {
+  background: var(--fb-act-blue-soft);
+  color: var(--fb-act-blue);
+}
+:global(html[data-mode='activities']) .badge,
+:global(html[data-mode='activities']) .tabBadge {
+  color: var(--fb-act-ember-ink);
+}
+:global(html[data-mode='activities']) .tabActive::after {
+  left: 28px;
+  right: 28px;
+  border-radius: 3px 3px 0 0;
+}
+:global(html[data-mode='activities']) .tabInner,
+:global(html[data-mode='activities']) .searchPanel,
+:global(html[data-mode='activities']) .searchRow,
+:global(html[data-mode='activities']) .menuRow,
+:global(html[data-mode='activities']) .menuTile,
+:global(html[data-mode='activities']) .notif,
+:global(html[data-mode='activities']) .contact,
+:global(html[data-mode='activities']) .acctRow,
+:global(html[data-mode='activities']) .toggle,
+:global(html[data-mode='activities']) .rrRow,
+:global(html[data-mode='activities']) .iconBtnWrap > [role='dialog'] {
+  border-radius: 14px;
+}
+:global(html[data-mode='activities']) .acctCard {
+  border-radius: 16px;
+}
+:global(html[data-mode='activities']) .acctAll,
+:global(html[data-mode='activities']) .linkBtn,
+:global(html[data-mode='activities']) .searchHeading button,
+:global(html[data-mode='activities']) .rrSeeAll,
+:global(html[data-mode='activities']) .frConfirm,
+:global(html[data-mode='activities']) .frDelete {
+  border-radius: 999px;
+}
+
+/* Left rail: pill rows; the current page is soft blue. */
+:global(html[data-mode='activities']) .railItem {
+  border-radius: 14px;
+}
+:global(html[data-mode='activities']) .railItemActive {
+  color: var(--fb-act-blue-deep);
+}
+:global(html[data-mode='activities']) .railChevron {
+  box-shadow: inset 0 0 0 1px var(--fb-act-line);
+}
+
+/* Activities sub-nav (LeftSidebar renders it only in the mode), above the usual items. */
+.actNav {
+  display: grid;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--fb-act-line);
+  animation: actRise 0.5s var(--fb-act-ease) both;
+}
+.actNavLabel {
+  padding: 4px 8px 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--fb-act-muted);
+}
+.actNavItem {
+  height: 48px;
+  font-weight: 600;
+  transition: transform 0.14s var(--fb-act-ease);
+}
+.actNavItem:active {
+  transform: scale(0.98);
+}
+.actNavIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--fb-act-blue);
+  background: var(--fb-act-blue-soft);
+}
+/* the one you are on: solid blue */
+.actNavItem[aria-current='page'] .actNavIcon {
+  color: var(--fb-on-media);
+  background: var(--fb-act-blue);
+}
+
+/* Right rail: "Closeness this week" and your squads only, each a hairline card. */
+:global(html[data-mode='activities']) .rrFacebook {
+  display: none;
+}
+:global(html[data-mode='activities']) .rightRail > section {
+  margin: 0 8px 12px 16px;
+  border: 1px solid var(--fb-act-line);
+  border-radius: var(--fb-act-radius);
+  background: var(--fb-act-surface);
+  box-shadow: var(--fb-act-shadow);
+  animation: actRise 0.5s var(--fb-act-ease) both;
+}
+:global(html[data-mode='activities']) .rightRail > section + section {
+  animation-delay: 45ms;
+}
+.squads {
+  padding: 12px 8px 8px;
+}
+.squadsHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 8px 6px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--fb-act-ink);
+}
+.squadsHead a {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fb-act-blue);
+}
+.squadsHead a:hover {
+  text-decoration: underline;
+}
+.squad {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 14px;
+  color: var(--fb-act-ink);
+  transition: background-color 0.14s;
+}
+.squad:hover {
+  background: var(--fb-act-surface-2);
+}
+.squadText {
+  flex: 1;
+  min-width: 0;
+}
+.squadName {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.squadSub {
+  display: block;
+  font-size: 13px;
+  color: var(--fb-act-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* unread in the squad chat: the one live number on the row */
+.squadLive {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fb-act-ember-ink);
+  background: var(--fb-act-ember);
+}
+.squadsEmpty {
+  margin: 0;
+  padding: 4px 8px 8px;
+  font-size: 13px;
+  color: var(--fb-act-muted);
+}
+
+@keyframes actFade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes actRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .actBackdrop,
+  .actNav,
+  :global(html[data-mode='activities']) .rightRail > section {
+    animation: none;
+  }
+}

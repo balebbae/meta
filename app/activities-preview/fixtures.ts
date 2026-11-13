@@ -5,6 +5,12 @@ import type {HomeProgress, Nearby} from '@/lib/activities/home';
 import type {FitnessLevel} from '@/lib/activities/level';
 import type {ListingBrief} from '@/lib/rally/queries';
 import type {MyGame} from '@/components/activities/DiscoverPage';
+import {gridDisk, latLngToCell} from 'h3-js';
+import type {FriendRequestItem} from '@/components/layout/FriendRequests';
+import type {Conversation, ConversationMember, Message} from '@/lib/messaging-types';
+import type {Contact} from '@/lib/queries';
+import type {QuestState} from '@/lib/rally/queries';
+import type {TurfState} from '@/lib/turf/types';
 import type {User} from '@/lib/types';
 
 /** Fixture data for /activities-preview (dev only): the redesign without a database or a session. */
@@ -142,4 +148,152 @@ export const data: DiscoverPayload = {
       ],
     },
   ],
+};
+
+// ---- Activities mode chrome + Messages challenge cards (round 2) ----------------------------------------------
+
+const person = (id: number, name: string, pic: number) => ({id, name, avatarUrl: `https://i.pravatar.cc/160?img=${pic}`});
+const maya = person(2, 'Maya Chen', 47);
+const jordan = person(3, 'Jordan Lee', 33);
+const priya = person(4, 'Priya Patel', 45);
+const me = {id: user.id, name: user.name, avatarUrl: user.avatarUrl};
+const member = (p: {id: number; name: string; avatarUrl: string}, online = false): ConversationMember => ({...p, isOnline: online, role: p.id === user.id ? 'admin' : 'member', lastReadMessageId: null});
+
+/** Facebook-side right rail (hidden in the mode, back on /activities-preview/feed). */
+export const contacts: Contact[] = [maya, jordan, priya].map((p, i) => ({...p, isOnline: i < 2}));
+export const requests: FriendRequestItem[] = [{...person(9, 'Sam Rivera', 15), mutualCount: 4}];
+
+/** GET /api/leaderboard: other people's XP is banded, the viewer's is exact. */
+export const leaderboard = {
+  period: 'week',
+  rows: [
+    {userId: 2, ...maya, xp: '150–199'},
+    {userId: 1, ...me, xp: 124},
+    {userId: 3, ...jordan, xp: '50–99'},
+    {userId: 4, ...priya, xp: '50–99'},
+  ],
+};
+
+const msg = (id: number, sender: typeof me, body: string, kind: Message['kind'], payload: Record<string, unknown> | null, minsAgo: number): Message => ({id, conversationId: 21, sender, body, imageUrl: null, kind, payload, createdAt: new Date(Date.now() - minsAgo * 60_000).toISOString()});
+
+/** One of each challenge card, as they arrive in a squad chat (components/messages/cards).
+ *  Player colours below are data: Turf stores a hex per player and MapLibre paints cannot read CSS variables. */
+export const thread: Message[] = [
+  msg(101, maya, 'New quest: Goblin of Greenville', 'quest_card', {questId: 1, title: 'Goblin of Greenville', template: 'boss', bossName: 'Goblin of Greenville', bossHp: 1200}, 190),
+  msg(102, jordan, 'Jordan lands a 3 km run on the goblin.', 'rally_game', {questId: 1, event: 'move', userId: 3, text: 'Jordan lands a 3 km run on the goblin. It staggers.', damage: 90, hpLeft: 430}, 64),
+  msg(103, maya, 'Critical hit!', 'rally_game', {questId: 1, event: 'critical', userId: 2, text: 'Maya ran before breakfast and it shows. The goblin drops its club.', damage: 180, hpLeft: 340}, 41),
+  msg(104, priya, 'Turf: White Rock loop', 'rally_invite', {gameId: 2, gameType: 'turf', title: 'Turf with friends', arenaLabel: 'White Rock loop', endsAt: at(3, 23)}, 30),
+  msg(105, priya, 'Final standings', 'turf_recap', {gameId: 3, title: 'Katy Trail week', final: true, museUsed: false, text: 'Maya closed two loops on Sunday and took the north end. Good week, everyone.', standings: [
+    {userId: 2, name: 'Maya Chen', color: '#ff7a1a', cells: 64},
+    {userId: 1, name: 'Sahas Sharma', color: '#0866ff', cells: 41},
+    {userId: 3, name: 'Jordan Lee', color: '#31a24c', cells: 18},
+  ]}, 12),
+];
+
+export const squad: Conversation = {
+  id: 21,
+  isGroup: true,
+  title: 'Dallas Run Club',
+  imageUrl: '',
+  isOnline: true,
+  members: [member(me, true), member(maya, true), member(jordan), member(priya)],
+  lastMessage: thread[2],
+  unreadCount: 3,
+  createdBy: 1,
+  createdAt: at(-30, 12),
+  updatedAt: at(0, 12),
+};
+
+/** GET /api/conversations: the right rail keeps the group chats ("Your squads"). */
+export const conversations = {
+  unreadCount: 1,
+  conversations: [
+    squad,
+    {...squad, id: 22, title: 'Sunday long run', members: [member(me, true), member(jordan), member(priya)], lastMessage: msg(201, priya, 'Turf starts Saturday. Who is in?', 'text', null, 300), unreadCount: 0},
+    {...squad, id: 23, title: 'Yoga at Klyde Warren', members: [member(me, true), member(jordan)], lastMessage: null, unreadCount: 0},
+    {...squad, id: 24, isGroup: false, title: 'Maya Chen', imageUrl: maya.avatarUrl, members: [member(me, true), member(maya, true)], lastMessage: null, unreadCount: 0},
+  ] satisfies Conversation[],
+};
+
+const level1 = {day: 1, name: 'Day 1: Easy miles', exercises: [{name: 'Easy run', seconds: 1200}, {name: 'Squats', reps: 20}]};
+const squadMember = (p: typeof me, damage: number, moves: number) => ({...p, damage, moves, level: 3, team: null, gear: moves > 2 ? ['cape'] : [], target: p.id === user.id ? 20 : null, handicapNote: ''});
+
+/** GET /api/quests/1/state: what the quest card polls. */
+export const questState: QuestState = {
+  quest: {
+    id: 1,
+    title: 'Goblin of Greenville',
+    template: 'boss',
+    conversationId: 21,
+    reelId: null,
+    createdBy: 2,
+    status: 'active',
+    startsAt: at(-2, 12),
+    endsAt: at(5, 12),
+    bossHp: 1200,
+    bossHpLeft: 340,
+    bossKind: 'goblin',
+    museUsed: false,
+    buffed: false,
+    createdAt: at(-2, 12),
+    spec: {
+      template: 'boss',
+      title: 'Goblin of Greenville',
+      story: 'A goblin has moved into Greenville Avenue and will not leave until the squad out-moves it. Every run, ride and stretch counts.',
+      source: {kind: 'sentence', text: 'A boss fight for our run club this week'},
+      startsAt: at(-2, 12),
+      endsAt: at(5, 12),
+      levels: [level1, {...level1, day: 2, name: 'Day 2: Hills'}, {...level1, day: 3, name: 'Day 3: Strides'}],
+      boss: {name: 'Goblin of Greenville', hp: 1200},
+      handicaps: [],
+      dares: [],
+      rewards: [],
+    },
+  },
+  viewerId: 1,
+  members: [squadMember(maya, 380, 4), squadMember(me, 250, 3), squadMember(jordan, 180, 2), squadMember(priya, 50, 1)],
+  mvp: 2,
+  moves: [],
+  dares: [],
+  rewards: [],
+  gear: [],
+  listings: [],
+  relay: {legs: {A: 0, B: 0}, totalLegs: 6, winner: null},
+  streak: {},
+  levelDay: 3,
+  museUsed: false,
+  fairness: null,
+  myHandicap: null,
+  myReadiness: {fit: 'good', note: 'You have run three times in the last two weeks.'},
+};
+
+const arena = {center: {lat: 32.8296, lng: -96.7215}, radiusKm: 1.5};
+const patch = (dLat: number, dLng: number, k: number, owner: number): [string, number][] => gridDisk(latLngToCell(arena.center.lat + dLat, arena.center.lng + dLng, 10), k).map(c => [c, owner]);
+
+/** GET /api/games/2/state: what the Turf invite card polls. */
+export const turfState: TurfState = {
+  id: 2,
+  type: 'turf',
+  title: 'White Rock loop',
+  status: 'live',
+  conversationId: 21,
+  hostId: 4,
+  arena,
+  lengthDays: 7,
+  startsAt: at(-1, 12),
+  endsAt: at(3, 23),
+  now: at(0, 12),
+  players: [
+    {...priya, color: '#ff7a1a', status: 'accepted', isHost: true},
+    {...maya, color: '#31a24c', status: 'accepted', isHost: false},
+    {...me, color: '#0866ff', status: 'invited', isHost: false},
+    {...jordan, color: '#f3425f', status: 'invited', isHost: false},
+  ],
+  cells: [...patch(0.004, -0.004, 3, 4), ...patch(-0.005, 0.005, 2, 2)],
+  scores: [
+    {playerId: 4, cells: 37, rank: 1},
+    {playerId: 2, cells: 19, rank: 2},
+  ],
+  winnerId: null,
+  me: {id: 1, status: 'invited', isHost: false, onboarded: true, canAccept: true, canStart: false, canResend: false, outing: null},
 };

@@ -4,32 +4,31 @@ import {useEffect, useState} from 'react';
 
 const read = () => (typeof document !== 'undefined' && document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
 
-/** Current site theme, and a soft fade when it flips while Activities is open: `html[data-theme-fade]` is set for
- *  420 ms and home.module.css transitions colours under it. The rest of the site keeps its instant switch. */
+let fadeTimer: ReturnType<typeof setTimeout> | undefined;
+/** Sets `html[data-theme-fade]` for 450 ms: colours under it transition (home.module.css, layout.module.css) instead of
+ *  snapping. Shared by the light/dark switch and by entering or leaving Activities mode; the timer always clears it. */
+export function fadeTheme() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const html = document.documentElement;
+  html.setAttribute('data-theme-fade', '');
+  clearTimeout(fadeTimer);
+  fadeTimer = setTimeout(() => html.removeAttribute('data-theme-fade'), 450);
+}
+
+/** Current site theme, with a soft fade when it flips while Activities is open. The rest of the site keeps its instant switch. */
 export function useActTheme(): 'light' | 'dark' {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   useEffect(() => {
-    const html = document.documentElement;
     setTheme(read());
-    let timer: ReturnType<typeof setTimeout> | undefined;
     const obs = new MutationObserver(() => {
       const next = read();
       setTheme(prev => {
-        if (prev === next) return prev;
-        if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
-          html.setAttribute('data-theme-fade', '');
-          clearTimeout(timer);
-          timer = setTimeout(() => html.removeAttribute('data-theme-fade'), 450);
-        }
+        if (prev !== next) fadeTheme();
         return next;
       });
     });
-    obs.observe(html, {attributes: true, attributeFilter: ['data-theme']});
-    return () => {
-      obs.disconnect();
-      clearTimeout(timer);
-      html.removeAttribute('data-theme-fade');
-    };
+    obs.observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']});
+    return () => obs.disconnect();
   }, []);
   return theme;
 }

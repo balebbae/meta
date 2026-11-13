@@ -7,10 +7,15 @@ import {RallyAvatar} from '@/components/rally/Avatar';
 import {BossArt} from '@/components/rally/BossArt';
 import {LogMoveSheet} from '@/components/rally/LogMoveSheet';
 import {rallyApi} from '@/components/rally/api';
-import s from '@/components/rally/rally.module.css';
+import {Contours} from '@/components/activities/home/Contours';
+import h from '@/components/activities/home/home.module.css';
 import type {CardProps} from './index';
+import {MemberRing} from './MemberRing';
+import c from './cards.module.css';
 
-/** quest_card: boss art, title, story, squad avatar strip, live HP bar, Open quest / Log a move. */
+const KIND = {boss: 'Boss fight', relay: 'Relay', streak: 'Streak'};
+
+/** quest_card: boss art on the contour shader, title, HP left as the one live number, a damage ring per squad member, Open quest / Log a move (ember). */
 export default function QuestCard({message, conversation}: CardProps) {
   const p = message.payload as unknown as QuestCardPayload;
   const [state, setState] = useState<QuestState | null>(null);
@@ -30,51 +35,60 @@ export default function QuestCard({message, conversation}: CardProps) {
   const hpMax = state?.quest.bossHp ?? p.bossHp ?? 0;
   const hpLeft = state?.quest.bossHpLeft ?? hpMax;
   const pct = hpMax ? Math.max(0, Math.min(100, (hpLeft / hpMax) * 100)) : 0;
-  const members = state?.members ?? conversation.members.map(m => ({...m, gear: [] as string[]}));
+  const members = state?.members ?? conversation.members.map(m => ({...m, gear: [] as string[], damage: 0}));
+  const best = Math.max(1, ...members.map(m => m.damage));
   const level = state ? state.quest.spec.levels[state.levelDay - 1] : undefined;
   const me = state?.members.find(m => m.id === state.viewerId);
 
   return (
-    <div className={s.questCard} role="group" aria-label={`Quest: ${p.title}`}>
-      <div className={s.questHero}>
-        <BossArt kind={state?.quest.bossKind ?? 'goblin'} name={p.bossName ?? p.title} size={84} down={hpMax > 0 && hpLeft <= 0} />
-        <div style={{minWidth: 0}}>
-          <div className={s.questTitle}>{p.title}</div>
-          <p className={s.questStory}>{state?.quest.spec.story ?? (p.bossName ? `${p.bossName} has ${p.bossHp} HP. Every move counts.` : 'A new Rally quest for this chat.')}</p>
+    <div className={c.card} role="group" aria-label={`Quest: ${p.title}`}>
+      <div className={c.hero}>
+        <Contours className={c.heroShader} />
+        <BossArt kind={state?.quest.bossKind ?? 'goblin'} name={p.bossName ?? p.title} size={76} down={hpMax > 0 && hpLeft <= 0} />
+        <div className={c.heroText}>
+          <p className={h.eyebrow}>
+            {KIND[p.template]}
+            {state ? ` · Day ${state.levelDay}` : ''}
+          </p>
+          <div className={c.title}>{p.title}</div>
+          {p.template === 'boss' && hpMax > 0 && (
+            <>
+              <div className={c.live}>
+                <b>{hpLeft}</b> / {hpMax} HP left
+              </div>
+              <div className={`${c.hp} ${pct < 10 ? c.hpLow : ''}`} role="progressbar" aria-valuenow={hpLeft} aria-valuemin={0} aria-valuemax={hpMax} aria-label={`${p.bossName ?? 'Boss'} HP`}>
+                <div className={c.hpFill} style={{width: `${pct}%`}} />
+              </div>
+            </>
+          )}
         </div>
       </div>
-      <div className={s.questBody}>
-        <div className={s.strip} aria-label="Squad">
+      <div className={c.cardBody}>
+        <p className={c.story}>{state?.quest.spec.story ?? (p.bossName ? `${p.bossName} has ${p.bossHp} HP. Every move counts.` : 'A new Rally quest for this chat.')}</p>
+        <div className={c.squad} aria-label="Squad">
           {members.slice(0, 6).map(m => (
-            <RallyAvatar key={m.id} src={m.avatarUrl} name={m.name} gear={m.gear} size={36} />
+            <MemberRing key={m.id} pct={(m.damage / best) * 100} label={`${m.name}: ${m.damage} damage`}>
+              <RallyAvatar src={m.avatarUrl} name={m.name} gear={m.gear} size={34} />
+            </MemberRing>
           ))}
         </div>
-        {p.template === 'boss' && hpMax > 0 && (
-          <div style={{marginTop: 8}}>
-            <div className={`${s.hp} ${pct < 10 ? s.hpLow : ''}`} role="progressbar" aria-valuenow={hpLeft} aria-valuemin={0} aria-valuemax={hpMax} aria-label="Boss HP">
-              <div className={s.hpFill} style={{width: `${pct}%`}} />
-            </div>
-            <div className={s.hpLabel}>
-              <span>{p.bossName}</span>
-              <span>
-                {hpLeft} / {hpMax} HP
+        {((state?.myReadiness && state.quest.status !== 'completed') || (state && !state.museUsed)) && (
+          <div className={c.notes}>
+            {state.myReadiness && state.quest.status !== 'completed' && (
+              <span className={`${c.fit} ${state.myReadiness.fit === 'good' ? '' : c.fitStretch}`} title={state.myReadiness.note}>
+                <span className={c.fitDot} aria-hidden="true" />
+                {state.myReadiness.fit === 'good' ? 'Good match for you' : 'A stretch for you'}
               </span>
-            </div>
+            )}
+            {!state.museUsed && <span className={h.chip}>Muse offline · template quest</span>}
           </div>
         )}
-        {state?.myReadiness && state.quest.status !== 'completed' && (
-          <div className={`${s.fit} ${state.myReadiness.fit === 'good' ? s.fitGood : s.fitStretch}`} title={state.myReadiness.note}>
-            <span className={s.fitDot} aria-hidden="true" />
-            {state.myReadiness.fit === 'good' ? 'Good match for you' : 'A stretch for you'}
-          </div>
-        )}
-        {state && !state.museUsed && <span className={s.offline}>Muse offline · template quest</span>}
       </div>
-      <div className={s.cardActions}>
-        <Link href={`/activities/games/${p.questId}`} className={s.btn}>
+      <div className={c.cardActions}>
+        <Link href={`/activities/games/${p.questId}`} className={`${h.pill} ${h.pillQuiet}`}>
           Open quest
         </Link>
-        <button type="button" className={s.btnPrimary} onClick={() => setLogOpen(true)} disabled={state?.quest.status === 'completed'}>
+        <button type="button" className={`${h.pill} ${h.pillEmber}`} onClick={() => setLogOpen(true)} disabled={state?.quest.status === 'completed'}>
           Log a move
         </button>
       </div>

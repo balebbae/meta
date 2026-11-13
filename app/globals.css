@@ -71,10 +71,8 @@
   --fb-text-disabled: #bcc0c4;
   --fb-shimmer: #e4e6eb;
   --fb-shimmer-highlight: #f0f2f5;
-  /* Activities tab (Instagram/Apple-calm): own canvas, surfaces, blue + ember palette. Light: white washed with pale blue. */
+  /* Activities (Instagram/Apple-calm): flat canvas and surfaces, hairlines, blue for links, ember for the one action. Light: white. */
   --fb-act-bg: #ffffff;
-  --fb-act-wash-a: #e6f0ff;
-  --fb-act-wash-b: #fff1e4;
   --fb-act-surface: #ffffff;
   --fb-act-surface-2: #f4f7fb;
   --fb-act-line: #e5eaf2;
@@ -88,10 +86,12 @@
   --fb-act-ember-soft: #fff1e6;
   --fb-act-ember-ink: #ffffff;
   --fb-act-ring-track: #e9eef6;
-  --fb-act-grain: 0.07;
-  --fb-act-shadow: 0 1px 2px rgba(10, 20, 40, 0.04), 0 14px 36px -18px rgba(10, 30, 80, 0.22);
+  --fb-act-shadow: 0 1px 2px rgba(10, 20, 40, 0.05);
   --fb-act-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --fb-act-radius: 20px;
+  /* Activities mode, phone tab bar: navy liquid glass with a blue pill (same in both themes, like the Facebook one) */
+  --fb-act-glass-tint: rgba(7, 18, 46, 0.5);
+  --fb-act-glass-pill: rgba(77, 141, 255, 0.36);
 }
 
 html {
@@ -121,8 +121,6 @@ html {
   --fb-shimmer-highlight: #4e4f50;
   /* Activities tab, dark: navy, almost black. */
   --fb-act-bg: #070c1a;
-  --fb-act-wash-a: #10244f;
-  --fb-act-wash-b: #2a1507;
   --fb-act-surface: #0d152c;
   --fb-act-surface-2: #121c37;
   --fb-act-line: #1b2847;
@@ -136,8 +134,7 @@ html {
   --fb-act-ember-soft: #2b190c;
   --fb-act-ember-ink: #1a0d04;
   --fb-act-ring-track: #192646;
-  --fb-act-grain: 0.1;
-  --fb-act-shadow: 0 1px 2px rgba(0, 0, 0, 0.45), 0 18px 44px -20px rgba(0, 0, 0, 0.75);
+  --fb-act-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 /* Element resets live in the lowest layer so Astryx component styles (layered) win over them;

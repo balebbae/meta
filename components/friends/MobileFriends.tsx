@@ -5,11 +5,12 @@ import {useEffect, useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import {SearchIcon} from '@/components/icons';
 import {profileApi} from '@/components/profile/api';
+import {formatCompactTime} from '@/lib/format';
 import type {FriendSummary} from '@/lib/profile-queries';
 import type {User} from '@/lib/types';
 import styles from '@/components/mobile/mobile.module.css';
 
-type Props = {viewer: User; view: string; requests: FriendSummary[]; suggestions: FriendSummary[]; friends: FriendSummary[]};
+type Props = {viewer: User; view: string; requests: FriendSummary[]; suggestions: FriendSummary[]; friends: FriendSummary[]; mutualAvatars: Record<number, string[]>};
 type Status = 'idle' | 'confirmed' | 'removed' | 'requested' | 'cancelled';
 
 function mutual(u: FriendSummary) {
@@ -17,12 +18,13 @@ function mutual(u: FriendSummary) {
 }
 
 /** /friends as laid out by the Facebook iOS app: title, pills, request rows, then everyone on the app. */
-export function MobileFriends({viewer, view, requests, suggestions: initial, friends}: Props) {
+export function MobileFriends({viewer, view, requests, suggestions: initial, friends, mutualAvatars}: Props) {
   const router = useRouter();
   const tab = view === 'all' ? 'friends' : 'suggestions';
   const [suggestions, setSuggestions] = useState(initial);
   const [q, setQ] = useState('');
   const [state, setState] = useState<Record<number, Status>>({});
+  const [error, setError] = useState('');
 
   useEffect(() => setSuggestions(initial), [initial]);
   useEffect(() => {
@@ -40,20 +42,27 @@ export function MobileFriends({viewer, view, requests, suggestions: initial, fri
   }, [q]);
 
   async function act(id: number, next: Status, call: () => Promise<unknown>) {
+    setError('');
     setState(s => ({...s, [id]: next}));
     try {
       await call();
       router.refresh();
     } catch {
       setState(s => ({...s, [id]: 'idle'}));
+      setError('Could not update this request. Please try again.');
     }
   }
 
   const pendingIncoming = new Set(requests.map(r => r.id));
-  const people = suggestions.filter(u => !pendingIncoming.has(u.id) || state[u.id]);
+  const people = suggestions.filter(u => !pendingIncoming.has(u.id));
+  const mutualLine = (u: FriendSummary) => <div className={styles.personSub}>
+    {u.mutualCount > 0 && <span className={styles.mutualAvatars} aria-hidden="true">{(mutualAvatars[u.id] ?? []).map((src, i) => <Avatar key={i} src={src} alt="" size={22} />)}</span>}
+    {mutual(u)}
+  </div>;
 
   return (
-    <div className={`${styles.mobileBlock} ${styles.friendsPage}`}>
+    <div className={`${styles.mobileBlock} ${styles.friendsPage}`} data-mobile-friends>
+      {error && <p className={styles.empty} role="alert">{error}</p>}
       <div className={styles.pills}>
         <Link href="/friends?view=suggestions" className={`${styles.pill} ${tab === 'suggestions' ? styles.pillActive : ''}`} style={{display: 'inline-flex', alignItems: 'center'}}>
           Suggestions
@@ -93,8 +102,8 @@ export function MobileFriends({viewer, view, requests, suggestions: initial, fri
           <div className={styles.friendsHead}>
             <span>
               Friend requests
-              <small>{requests.length}</small>
             </span>
+            <Link href="/friends?view=requests">See all</Link>
           </div>
           {requests.length === 0 && <p className={styles.empty}>No pending requests.</p>}
           {requests.map(u => {
@@ -102,13 +111,14 @@ export function MobileFriends({viewer, view, requests, suggestions: initial, fri
             return (
               <div key={u.id} className={styles.personRow}>
                 <Link href={`/profile/${u.id}`}>
-                  <Avatar src={u.avatarUrl} alt={u.name} size={60} />
+                  <Avatar src={u.avatarUrl} alt={u.name} size={96} />
                 </Link>
                 <div className={styles.personBody}>
-                  <Link href={`/profile/${u.id}`} className={styles.personName}>
-                    {u.name}
-                  </Link>
-                  <div className={styles.personSub}>{mutual(u)}</div>
+                  <div className={styles.personTitle}>
+                    <Link href={`/profile/${u.id}`} className={styles.personName}>{u.name}</Link>
+                    {u.createdAt && <span className={styles.personTime}>{formatCompactTime(u.createdAt)}</span>}
+                  </div>
+                  {mutualLine(u)}
                   {st === 'idle' ? (
                     <div className={styles.personBtns}>
                       <button className={styles.btnPrimary} onClick={() => act(u.id, 'confirmed', () => profileApi.accept(u.id))}>
@@ -139,13 +149,13 @@ export function MobileFriends({viewer, view, requests, suggestions: initial, fri
             return (
               <div key={u.id} className={styles.personRow}>
                 <Link href={`/profile/${u.id}`}>
-                  <Avatar src={u.avatarUrl} alt={u.name} size={60} />
+                  <Avatar src={u.avatarUrl} alt={u.name} size={96} />
                 </Link>
                 <div className={styles.personBody}>
                   <Link href={`/profile/${u.id}`} className={styles.personName}>
                     {u.name}
                   </Link>
-                  <div className={styles.personSub}>{mutual(u)}</div>
+                  {mutualLine(u)}
                   {st !== 'idle' ? (
                     <div className={styles.personStatus}>
                       {st === 'requested' && 'Request sent'}

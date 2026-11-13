@@ -567,7 +567,7 @@
   color: var(--fb-text);
 }
 .pillActive {
-  background: #e7f3ff;
+  background: var(--fb-mobile-active);
   color: var(--fb-blue);
 }
 .friendsHead {
@@ -648,7 +648,33 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 16px;
+  padding: 10px 12px;
+}
+.personTitle {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.personTitle .personName {
+  flex: 1;
+  min-width: 0;
+}
+.personTime {
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+}
+.mutualAvatars {
+  display: inline-flex;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.mutualAvatars > span + span {
+  margin-left: -8px;
+}
+.mutualAvatars > span {
+  border-radius: 50%;
+  outline: 2px solid var(--fb-card);
 }
 .personBody {
   flex: 1;

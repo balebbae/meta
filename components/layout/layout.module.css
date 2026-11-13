@@ -1036,6 +1036,17 @@
 
 /* ---- Mobile (< 700px): iOS-app chrome, see components/mobile ---- */
 @media (max-width: 700px) {
+  .panel[data-mobile-notifications] {
+    padding: 0;
+  }
+  .panel > .chipRow,
+  .notif,
+  .notifSection .linkBtn {
+    display: none;
+  }
+  .notifSection {
+    padding: 10px 12px 4px;
+  }
   .header,
   .fabWrap,
   .bottomBar {

@@ -2,8 +2,12 @@ import {randomBytes} from 'node:crypto';
 import {findConnectionByExternalUser, getConnection, revokeConnection, upsertConnection, type Connection} from '@/lib/activities/connections';
 import {deleteVaultSource, insertVaultEvent} from '@/lib/activities/vault';
 import type {ConnectResult, Connector, EventKind, RawEvent} from '@/lib/activities/types';
+import {sql} from '@/lib/db';
+import {getGame, importRoute, TurfError, type Game} from '@/lib/turf/store';
+import {inArena} from '@/lib/turf/engine';
+import {stravaGameEligible, stravaPoints, type StravaStreams} from '@/lib/activities/strava-turf';
 
-/** Strava (§5.2): OAuth activity:read. Policy §2.3: events are display_scope owner_only. */
+/** Strava summaries are display_scope owner_only. */
 const AUTHORIZE_URL = 'https://www.strava.com/oauth/authorize';
 const TOKEN_URL = 'https://www.strava.com/oauth/token';
 const API = 'https://www.strava.com/api/v3';
@@ -26,7 +30,7 @@ async function tokenRequest(params: Record<string, string>): Promise<Tokens & {a
 }
 
 async function accessToken(conn: Connection): Promise<string> {
-  const t = conn.tokens as Tokens;
+  const t = ((await getConnection(conn.userId, 'strava'))?.tokens ?? conn.tokens) as Tokens;
   if (t.expires_at > Date.now() + 60_000) return t.access_token;
   const next = await tokenRequest({grant_type: 'refresh_token', refresh_token: t.refresh_token});
   await upsertConnection(conn.userId, 'strava', {tokens: {...t, access_token: next.access_token, refresh_token: next.refresh_token, expires_at: next.expires_at}});
@@ -67,9 +71,46 @@ export async function backfill(conn: Connection, limit = 20): Promise<number> {
   const res = await fetch(`${API}/athlete/activities?per_page=${limit}`, {headers: {authorization: `Bearer ${await accessToken(conn)}`}});
   if (!res.ok) throw new Error(`Strava backfill: ${res.status}`);
   const list = (await res.json()) as StravaActivity[];
-  for (const a of list) await insertVaultEvent(mapStravaActivity(conn.userId, a));
-  await upsertConnection(conn.userId, 'strava', {tokens: {...conn.tokens, last_sync: new Date().toISOString()}});
+  for (const a of list) {
+    await insertVaultEvent(mapStravaActivity(conn.userId, a));
+    await importStravaActivity(conn, a).catch(e => console.error('[strava] Turf import', e));
+  }
+  const current = await getConnection(conn.userId, 'strava');
+  await upsertConnection(conn.userId, 'strava', {tokens: {...current?.tokens, last_sync: new Date().toISOString()}});
   return list.length;
+}
+
+async function importStravaActivity(conn: Connection, activity: StravaActivity, gameId?: number): Promise<number> {
+  if (!['Run', 'TrailRun', 'Walk', 'Hike'].includes(activity.sport_type ?? activity.type ?? '')) return 0;
+  const invites = await sql`select game_id from game_invites where user_id = ${conn.userId} and status = 'accepted'
+    and (${gameId ?? null}::int is null or game_id = ${gameId ?? null})`;
+  const games = (await Promise.all(invites.map(r => getGame(Number(r.game_id)))))
+    .filter((g): g is Game => g != null && stravaGameEligible(activity, g, 'accepted'));
+  if (!games.length) return 0;
+  const res = await fetch(`${API}/activities/${activity.id}/streams?keys=latlng,time&key_by_type=true`, {
+    headers: {authorization: `Bearer ${await accessToken(conn)}`},
+  });
+  if (!res.ok) throw new TurfError(`Could not read Strava GPS (${res.status}). Reconnect Strava with permission to read private activities.`, 502);
+  const points = stravaPoints(activity.start_date, await res.json() as StravaStreams);
+  if (points.length < 2) return 0;
+  const [user] = await sql`select name from users where id = ${conn.userId}`;
+  let gained = 0;
+  for (const game of games) {
+    if (!points.some(p => inArena(p, {center: game.settings.center, radiusKm: game.settings.radiusKm}))) continue;
+    gained += (await importRoute(game, {id: conn.userId, name: String(user.name)}, points, 'strava', true, String(activity.id))).gained;
+  }
+  return gained;
+}
+
+export async function importRecentStravaRuns(userId: number, gameId: number): Promise<{gained: number}> {
+  if (!stravaConfigured()) throw new TurfError('Strava is not configured for this demo.', 503);
+  const conn = await getConnection(userId, 'strava');
+  if (conn?.status !== 'connected') throw new TurfError('Connect Strava in Activities first (or reconnect to allow private runs).', 409);
+  const res = await fetch(`${API}/athlete/activities?per_page=20`, {headers: {authorization: `Bearer ${await accessToken(conn)}`}});
+  if (!res.ok) throw new TurfError(`Could not fetch Strava runs (${res.status}). Try reconnecting Strava.`, 502);
+  let gained = 0;
+  for (const activity of await res.json() as StravaActivity[]) gained += await importStravaActivity(conn, activity, gameId);
+  return {gained};
 }
 
 export type StravaWebhook = {object_type: 'activity' | 'athlete'; aspect_type: 'create' | 'update' | 'delete'; object_id: number; owner_id: number};
@@ -87,7 +128,7 @@ export const stravaConnector: Connector = {
     url.searchParams.set('redirect_uri', `${origin}/api/connect/strava/callback`);
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('approval_prompt', 'auto');
-    url.searchParams.set('scope', 'activity:read');
+    url.searchParams.set('scope', 'activity:read,activity:read_all');
     url.searchParams.set('state', state);
     return {type: 'redirect', url: url.toString()};
   },
@@ -97,11 +138,13 @@ export const stravaConnector: Connector = {
     if (hook?.object_type !== 'activity' || !/^\d{1,20}$/.test(String(hook.object_id)) || !/^\d{1,20}$/.test(String(hook.owner_id))) return [];
     const conn = await findConnectionByExternalUser('strava', String(hook.owner_id));
     if (!conn) return [];
-    if (hook.aspect_type === 'delete') return [];
+    if (hook.aspect_type !== 'create' && hook.aspect_type !== 'update') return [];
     const res = await fetch(`${API}/activities/${hook.object_id}`, {headers: {authorization: `Bearer ${await accessToken(conn)}`}});
     if (!res.ok) return [];
-    const e = mapStravaActivity(conn.userId, (await res.json()) as StravaActivity);
+    const activity = (await res.json()) as StravaActivity;
+    const e = mapStravaActivity(conn.userId, activity);
     await insertVaultEvent(e);
+    await importStravaActivity(conn, activity).catch(e => console.error('[strava] Turf import', e));
     return [e];
   },
   async disconnect(userId, deleteData) {

@@ -1,7 +1,8 @@
-import {sql} from '@/lib/db';
+import {getSql, sql} from '@/lib/db';
 import {applyIntegrity} from '@/lib/activities/integrity';
 import {isReused} from '@/lib/activities/phash';
-import {TRUST_RANK, type RawEvent, type Trust} from '@/lib/activities/types';
+import {type RawEvent, type Trust} from '@/lib/activities/types';
+import {compatibleKinds, planMerge} from '@/lib/activities/vault-link';
 
 export type VaultEvent = RawEvent & {id: number; duplicateOf: number | null; createdAt: string};
 
@@ -25,15 +26,10 @@ function mapRow(r: Record<string, unknown>): VaultEvent {
   };
 }
 
-function overlapRatio(aStart: number, aEnd: number, bStart: number, bEnd: number): number {
-  const inter = Math.max(0, Math.min(aEnd, bEnd) - Math.max(aStart, bStart));
-  const shortest = Math.max(1, Math.min(aEnd - aStart, bEnd - bStart));
-  return inter / shortest;
-}
-
 /**
- * Insert a normalized event into the owner's vault. Events of the same kind overlapping >80% in time
- * are merged: the highest-trust one stays primary, the others are linked via duplicate_of (§5.1).
+ * Insert a normalized event into the owner's vault, then link it to the same outing from other sources (vault-link.ts):
+ * compatible kinds whose time, duration and distance agree. The highest-trust copy stays primary and fills its empty
+ * fields from equal-trust copies (e.g. WHOOP avg_hr + Strava distance); the others point at it via duplicate_of (§5.1).
  * Returns the primary event id (the inserted one, or the existing higher-trust one).
  */
 export async function insertVaultEvent(input: RawEvent): Promise<{id: number; duplicateOf: number | null; trust: Trust; flags: string[]}> {
@@ -51,22 +47,24 @@ export async function insertVaultEvent(input: RawEvent): Promise<{id: number; du
 
   const start = new Date(e.startedAt).getTime();
   const end = e.endedAt ? new Date(e.endedAt).getTime() : start + (e.durationMin ?? 30) * 60_000;
+  const kinds = ['run', 'walk', 'ride', 'strength', 'yoga', 'swim', 'other'].filter(k => compatibleKinds(e.kind, k as RawEvent['kind']));
   const candidates = await sql`
-    select id, started_at, ended_at, duration_min, trust from vault_events
-    where user_id = ${e.userId} and kind = ${e.kind} and id <> ${id} and duplicate_of is null
-      and started_at between ${new Date(start - 6 * 3_600_000).toISOString()} and ${new Date(end + 6 * 3_600_000).toISOString()}`;
-  for (const c of candidates) {
-    const cs = new Date(String(c.started_at)).getTime();
-    const ce = c.ended_at ? new Date(String(c.ended_at)).getTime() : cs + Number(c.duration_min ?? 30) * 60_000;
-    if (overlapRatio(start, end, cs, ce) <= 0.8) continue;
-    const existingWins = TRUST_RANK[c.trust as Trust] >= TRUST_RANK[e.trust];
-    if (existingWins) {
-      await sql`update vault_events set duplicate_of = ${Number(c.id)} where id = ${id}`;
-      return {id: Number(c.id), duplicateOf: Number(c.id), trust: e.trust, flags};
-    }
-    await sql`update vault_events set duplicate_of = ${id} where id = ${Number(c.id)} or duplicate_of = ${Number(c.id)}`;
-  }
-  return {id, duplicateOf: null, trust: e.trust, flags};
+    select * from vault_events
+    where user_id = ${e.userId} and kind = any(${kinds}::text[]) and id <> ${id} and duplicate_of is null
+      and started_at between ${new Date(start - 6 * 3_600_000).toISOString()} and ${new Date(end + 6 * 3_600_000).toISOString()}
+    order by id`;
+  const {primary, duplicates, patch} = planMerge({...e, id}, candidates.map(mapRow));
+  if (!duplicates.length) return {id, duplicateOf: null, trust: e.trust, flags};
+  const dupIds = duplicates.map(d => d.id);
+  const db = getSql();
+  // coalesce: a value that landed on the primary since we read it is never overwritten
+  await db.transaction([
+    db`update vault_events set duplicate_of = ${primary.id} where id = any(${dupIds}::bigint[]) or duplicate_of = any(${dupIds}::bigint[])`,
+    db`update vault_events set distance_km = coalesce(distance_km, ${patch.distanceKm ?? null}), duration_min = coalesce(duration_min, ${patch.durationMin ?? null}),
+         steps = coalesce(steps, ${patch.steps ?? null}), avg_hr = coalesce(avg_hr, ${patch.avgHr ?? null})
+       where id = ${primary.id}`,
+  ]);
+  return {id: primary.id, duplicateOf: primary.id === id ? null : primary.id, trust: e.trust, flags};
 }
 
 /** Primary (non-duplicate) events, newest first. Owner-facing only; other audiences go through answers.ts. */

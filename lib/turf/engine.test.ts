@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {latLngToCell} from 'h3-js';
 import {
-  applyClaim, arenaCells, cellCenter, detectCut, detectLoop, fastPoints, fillLoop, haversineM, inArena, MAX_ACCEL_MS2, obfuscateZone, outingTrimM,
-  pointsToCells, releasePlayer, score, TRIM_M, TRIM_MAX_M, TRIM_MIN_M, TURF_RES, type LatLng, type Zone, type Arena, type GpsPoint, type TrailCell,
+  applyClaim, arenaCells, cellCenter, detectCut, detectLoop, fastPoints, fillLoop, haversineM, inArena, MAX_STEP_MS, obfuscateZone, outingTrimM,
+  pointsToCells, releasePlayer, score, smoothTrack, TRIM_M, TRIM_MAX_M, TRIM_MIN_M, TURF_RES, type LatLng, type Zone, type Arena, type GpsPoint, type TrailCell,
   type TurfGame,
 } from './engine.ts';
 import {KATY_TRAIL, scriptGpx, scriptPoints} from './fixtures.ts';
@@ -314,12 +314,101 @@ test('untimed GPX is refused for territory claims, timed GPX is accepted', () =>
   assert.equal(tooUntimed(timed), false);
 });
 
-test('acceleration bound flags a speed jump that stays under 25 km/h', () => {
-  // 1 m/s, one point every second; then a single point 6.5 m ahead (6.5 m/s = 23 km/h), then 1 m/s again
-  const pts: GpsPoint[] = [at(0, 0, 0), at(1, 0, 1000), at(2, 0, 2000), at(8.5, 0, 3000), at(9.5, 0, 4000), at(10.5, 0, 5000)];
-  assert.deepEqual(fastPoints(pts), [false, false, false, true, true, false]);
-  // same top speed reached gradually (<= 2 m/s per second) is fine
-  const ramp: GpsPoint[] = [at(0, 0, 0), at(1, 0, 1000), at(3, 0, 2000), at(6.5, 0, 3000), at(13, 0, 4000), at(19.5, 0, 5000)];
-  assert.deepEqual(fastPoints(ramp), [false, false, false, false, false, false]);
-  assert.ok(MAX_ACCEL_MS2 < 5.5);
+/** 1 Hz walk at `slow` m/s along y = 0 with a `fast` m/s stretch from 180 s to 240 s. */
+function stepTrack(slow: number, fast: number): GpsPoint[] {
+  let x = -600;
+  return Array.from({length: 421}, (_, t) => at((x += t === 0 ? 0 : t > 180 && t <= 240 ? fast : slow), 0, t * 1000));
+}
+const share = (f: boolean[], from: number, to: number) => f.slice(from, to).filter(Boolean).length / (to - from);
+
+test('sustained jump: a minute in a car at 20 km/h inside a walk is dropped, even under 20 m jitter', () => {
+  // Under the 25 km/h cap, so only the jump bound catches it. The old fix-to-fix bound (5 m/s^2) missed it on a clean track.
+  const car = stepTrack(1.4, 5.6);
+  const clean = fastPoints(car);
+  assert.equal(share(clean, 181, 241), 1);
+  assert.equal(share(clean, 0, 150) + share(clean, 272, 421), 0, 'walk kept');
+  const noisy = fastPoints(jitter(car, 20, rng(4)));
+  assert.ok(share(noisy, 181, 241) > 0.8, `${share(noisy, 181, 241)}`);
+  assert.ok(share(noisy, 0, 150) + share(noisy, 272, 421) < 0.02);
+});
+
+test('teleports and vehicles are still flagged; honest noisy 1 Hz runs are not', () => {
+  const walkPts = walk([0, 0], [600, 0]).map((p, i) => ({...p, t: i * 1000}));
+  const tele = walkPts.map((p, i) => (i === 25 ? at(300, 300, p.t) : p));
+  assert.ok(fastPoints(tele)[25], 'a fix 300 m off the track');
+  // jitter that defeated the old fix-to-fix bound: intervals and an out-and-back keep every point
+  const r = rng(8);
+  assert.ok(!fastPoints(jitter(stepTrack(2.5, 4.5), 20, r)).some(Boolean), 'jog -> fast interval');
+  const back = Array.from({length: 361}, (_, t) => at(-700 + 4 * (t <= 180 ? t : 360 - t), 0, t * 1000));
+  assert.ok(!fastPoints(jitter(back, 20, r)).some(Boolean), 'out-and-back');
+  const loop1hz = scriptPoints('priya_loop').flatMap((p, i, a) => (i ? [0.25, 0.5, 0.75, 1].map(f => ({lat: a[i - 1].lat + (p.lat - a[i - 1].lat) * f, lng: a[i - 1].lng + (p.lng - a[i - 1].lng) * f, t: a[i - 1].t + (p.t - a[i - 1].t) * f})) : [p]));
+  for (const sigma of [5, 10, 15, 20]) assert.ok(share(fastPoints(jitter(loop1hz, sigma, r)), 0, loop1hz.length) < 0.02, `sigma ${sigma}`);
+  const short = Array.from({length: 61}, (_, t) => at(5 * t, 0, t * 1000));
+  assert.ok(!fastPoints(short).some(Boolean), 'a 1-minute fast run has no pace to compare with');
+  assert.ok(MAX_STEP_MS <= 3.5);
+});
+
+const gauss = (r: () => number) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
+const jitter = (pts: GpsPoint[], s: number, r: () => number) => pts.map(p => ({lat: p.lat + (s * gauss(r)) / M_LAT, lng: p.lng + (s * gauss(r)) / M_LNG, t: p.t}));
+
+test('smoothTrack leaves a clean constant-speed line in place and pulls jitter back toward it', () => {
+  const line = walk([0, 0], [600, 0]);
+  assert.ok(smoothTrack(line).every((p, i) => haversineM(p, line[i]) < 0.5));
+  const noisy = jitter(line, 10, rng(3));
+  const rms = (ps: LatLng[]) => Math.sqrt(ps.reduce((a, p, i) => a + haversineM(p, line[i]) ** 2, 0) / ps.length);
+  assert.ok(rms(smoothTrack(noisy)) < 0.6 * rms(noisy), `${rms(smoothTrack(noisy))} vs ${rms(noisy)}`);
+});
+
+test('Kalman/RTS smoothing: fewer spurious zig-zag cells and better loop closure on noisy tracks', () => {
+  const clean = scriptPoints('priya_loop');
+  const truth = new Set(pointsToCells(clean, arena, {trimM: 0, smoothM: 0}).map(c => c.cell));
+  const truthFill = new Set(fillLoop(detectLoop(pointsToCells(clean, arena, {keepHidden: true, smoothM: 0}), new Set()).loop, arena));
+  for (const sigma of [5, 10, 15, 20]) {
+    const m = [0, 10].map(smoothM => {
+      const r = rng(sigma);
+      let spurious = 0, zigzag = 0, closed = 0, jaccard = 0;
+      const N = 20;
+      for (let k = 0; k < N; k++) {
+        const pts = jitter(clean, sigma, r);
+        const trail = pointsToCells(pts, arena, {trimM: 0, smoothM});
+        spurious += trail.filter(c => !truth.has(c.cell)).length;
+        for (let i = 2; i < trail.length; i++) if (trail[i].cell === trail[i - 2].cell) zigzag++;
+        const loop = detectLoop(pointsToCells(pts, arena, {keepHidden: true, smoothM}), new Set());
+        if (!loop.closed || loop.reason !== 'start') continue;
+        closed++;
+        const f = new Set(fillLoop(loop.loop, arena));
+        const inter = [...f].filter(c => truthFill.has(c)).length;
+        jaccard += inter / (f.size + truthFill.size - inter);
+      }
+      return {spurious: spurious / N, zigzag: zigzag / N, closed, jaccard: jaccard / Math.max(1, closed)};
+    });
+    const f = (x: (typeof m)[0]) => `spurious ${x.spurious.toFixed(1)} zigzag ${x.zigzag.toFixed(1)} closed ${x.closed}/20 jaccard ${x.jaccard.toFixed(3)}`;
+    console.log(`smoothing sigma ${sigma} m: before ${f(m[0])} | after ${f(m[1])}`);
+    assert.ok(m[1].spurious < m[0].spurious, `spurious sigma ${sigma}`);
+    assert.ok(m[1].zigzag <= 0.7 * m[0].zigzag, `zigzag sigma ${sigma}`);
+    assert.ok(m[1].closed >= m[0].closed - 1 && m[1].jaccard >= m[0].jaccard - 0.005, `loop sigma ${sigma}`);
+  }
+});
+
+test('smoothing never moves a visible cell into a privacy zone or toward a hidden end', () => {
+  const zone = {...at(500, 0, 0), radiusM: 100};
+  const r = rng(11);
+  for (let k = 0; k < 20; k++) {
+    // through the zone, and skirting its edge 5 m outside
+    for (const track of [walk([0, 0], [1200, 0]), walk([300, 105], [700, 105])]) {
+      const noisy = jitter(track, 12, r);
+      const raw = pointsToCells(noisy, arena, {trimM: 150, zones: [zone], keepHidden: true, smoothM: 0});
+      const smooth = pointsToCells(noisy, arena, {trimM: 150, zones: [zone], keepHidden: true});
+      for (const c of smooth.filter(c => !c.hidden)) assert.ok(haversineM(cellCenter(c.cell), zone) > zone.radiusM - 30, 'visible cell inside the zone');
+      // hidden/visible is decided per raw point, so smoothing brings no visible cell closer to the zone, start or end than ~1 cell
+      const vis = (cs: TrailCell[]) => cs.filter(c => !c.hidden).map(c => cellCenter(c.cell));
+      const [rv, sv] = [vis(raw), vis(smooth)];
+      if (!sv.length) continue;
+      assert.ok(rv.length, 'smoothing showed an outing the raw trim hid');
+      for (const anchor of [zone, track[0], track[track.length - 1]]) {
+        const near = (cs: LatLng[]) => Math.min(...cs.map(c => haversineM(c, anchor)));
+        assert.ok(near(sv) > near(rv) - 30, `smoothed ${near(sv).toFixed(0)} m vs raw ${near(rv).toFixed(0)} m`);
+      }
+    }
+  }
 });

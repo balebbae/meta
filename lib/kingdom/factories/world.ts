@@ -92,7 +92,7 @@ export function buildTree(kind: 'round' | 'pink' | 'pine' = 'round', seed = 1): 
   return prop(g, 20);
 }
 export function buildShrub(seed = 2): Rig { const g = new Group(), r = rng(seed); box(g, M('leaf', C.greenDark), 8, 6, 8, 0, 3, 0); for (const [dx, dz] of SIDES.slice(0, 3)) { const slide = Math.round(r() * 2 - 1); box(g, M('leaf', C.green), 4, 4, 4, dx * 4 + Math.abs(dz) * slide, 3, dz * 4 + Math.abs(dx) * slide); } return prop(g, 6); }
-export function buildRock(seed = 3): Rig { const g = new Group(), r = rng(seed); box(g, M('rock', C.stone), 10, 7, 9, 0, 3.5, 0); box(g, M('rock', C.stoneDark), 6, 5, 6, 4 + Math.round(r()), 2.5, 2); box(g, M('grass', C.moss), 5, 1, 4, -1, 7.5, 0); return prop(g, 8); }
+export function buildRock(seed = 3): Rig { const g = new Group(), r = rng(seed); box(g, M('rock', C.stone), 10, 7, 9, 0, 3.5, 0); box(g, M('rock', C.stoneDark), 6, 5, 6, 4 + Math.round(r()), 2.5, 2); box(g, M('grass', C.moss), 6, 1, 5, -2, 7.5, -2); return prop(g, 8); }
 export function buildSteppingStone(): Rig { const g = new Group(); box(g, M('rock', C.stoneLight), 7, 1, 6, 0, 0.5, 0); return prop(g, 1); }
 export function buildHedge(): Rig { const g = new Group(); box(g, M('leaf', C.greenDark), 8, 6, 5, 0, 3, 0); for (const [x, z] of [[-2.5, -1], [1, 1]]) box(g, M('leaf', C.green), 3, 2, 3, x, 7, z); return prop(g, 8); }
 export function buildTile(kind: 'grass' | 'sand' | 'water' | 'path' | 'flowers', seed = 4): Rig {

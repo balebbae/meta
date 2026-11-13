@@ -41,6 +41,18 @@ One-shots (`jump attack hit celebrate puff stomp squash`) return to `rig.rest` a
 Pure modules, no three import: `createX(seed)`, `startX(state)`, `stepX(state, input, dt)`. `state.events` lists what happened in the
 last step for scenes to turn into effects. Tests: `node --test "lib/kingdom/**/*.test.ts"` (also `pnpm test:kingdom`).
 
+## Scenes (`scenes/`)
+
+The 3D side of each game, as plain three with no React: `createGameScene(id, {camera, hero})` returns `{group, background, start(seed), step(dt, input), auto(), hud(), dispose()}`.
+Add `group` to a scene, call `step` every frame and read `hud()`. The app wraps this in one R3F component (`components/kingdom/games/GameScene.tsx`); the character sheet in `docs/characters` runs the very same modules.
+
+- `stage.ts`: what every game stands on. Lights with shadows, stepped hills and drifting clouds, pixel-true ground and blocks, the rigs it animates, pixel-cube bursts, scale pulses for hits, a death pop, and a camera with shake. A scene sets `eye` and `look`; `update(dt)` does the rest.
+- `defense.ts`: kaijus march down three lanes and stop in front of the hero at the gate. Swings spark, hits shove them back, health bars sit over anything that takes more than two swings, kills burst into cubes of the creature's colour, blows on the gate throw rubble and shake the camera, and the gate topples when it falls.
+- `dash.ts`: full-height brick towers slide in from above and below so their bricks never stretch; coins spin, hedges and pines scroll at different speeds, the dragon pitches with its speed and puffs on every flap.
+- `joust.ts`: two riders charge past a wooden stand whose crowd bobs harder the better you ride; the camera pushes in for the impact and a perfect strike rocks the goblin back in the saddle.
+- `quest.ts`: the maze is drawn at two metres a cell, so the patrolling slimes are as big as the hero; chests stay open, treasure sparkles, the camera follows from above.
+- `games/autopilot.ts`: the input a competent player would give, read from game state alone. `scene.auto()` returns it, so a demo can play itself and tests can drive whole runs (`autopilot.test.ts`).
+
 ## Adding an asset
 
 1. Build it from `box(parent, material, w, h, d, x, y, z)` calls in px, origin at the feet, named pivots (`piv`) for anything that moves. Keep sizes whole pixels; a worn layer is 1 px larger than what it covers.

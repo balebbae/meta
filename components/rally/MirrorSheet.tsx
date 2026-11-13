@@ -16,12 +16,14 @@ import {RallyAvatar} from './Avatar';
 import {angleFrame, jointHits, MATCH_AT, mirrorTitle, pointFrame, poseScore, toReference, type AngleFrame, type Target} from '@/lib/rally/mirror';
 import type {MirrorState} from '@/lib/rally/mirror-store';
 import type {Landmark} from '@/lib/rally/repcount';
-import {analyzeVideoUrl, localVideo, openCamera, stillsFromUrl, trackLive, warmUp} from './clip';
+import {IconCamera} from '@tabler/icons-react';
+import {analyzeVideoUrl, cameraAccess, cameraHelp, localVideo, openCamera, stillsFromUrl, trackLive, warmUp, type CameraAccess} from './clip';
 import {burstOverlay, resetOverlay, setOverlay, startOverlay} from './overlay';
 import styles from './rally.module.css';
 import m from './mirror.module.css';
 
-type Stage = 'intro' | 'guide' | 'scoring' | 'result';
+/** camera = the 'Turn on your camera' step shown before the first camera use (or after it was blocked). */
+type Stage = 'intro' | 'camera' | 'guide' | 'scoring' | 'result';
 type Result = {score: number; best: number; note: string; stepScores: number[]};
 type Stills = {urls: string[]; aspect: number};
 
@@ -52,6 +54,8 @@ export function MirrorSheet({matchId, open, onClose}: {matchId: number; open: bo
   const [refTry, setRefTry] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cam, setCam] = useState<CameraAccess>('unknown');
+  const [camError, setCamError] = useState<string | null>(null);
   const camRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -85,6 +89,9 @@ export function MirrorSheet({matchId, open, onClose}: {matchId: number; open: bo
   useEffect(() => stopAll, []);
 
   const ready = Boolean(state?.steps && state?.targets);
+  useEffect(() => {
+    if (open) void cameraAccess().then(setCam);
+  }, [open]);
   // on open, the Reel download starts alongside the match data (the pose model loads later, see below)
   useEffect(() => {
     if (open) void localVideo(videoUrl).catch(() => {});
@@ -219,10 +226,16 @@ export function MirrorSheet({matchId, open, onClose}: {matchId: number; open: bo
     setError(null);
     let stream: MediaStream;
     try {
+      // first thing after the tap: iPhones only show their camera prompt for a call made from a tap
       stream = await openCamera('user');
     } catch (e) {
-      return setError(e instanceof Error ? e.message : 'Could not open the camera.');
+      setCamError(e instanceof Error ? e.message : 'Could not open the camera.');
+      setCam(await cameraAccess());
+      setStage('camera');
+      return;
     }
+    setCam('granted');
+    setCamError(null);
     streamRef.current = stream;
     targetsRef.current = ts;
     run.current = {step: first, best: ts.map(() => angleFrame(null)), bestScore: ts.map(() => 0), holdSince: 0, stepStarted: performance.now(), busy: false};
@@ -260,6 +273,14 @@ export function MirrorSheet({matchId, open, onClose}: {matchId: number; open: bo
     onClose();
   };
 
+  /** Start / Go again / Again: straight to the camera once it's allowed, else the explainer first. */
+  const begin = () => {
+    setError(null);
+    if (cam === 'granted') void start();
+    else setStage('camera');
+  };
+  const blocked = Boolean(camError) || cam === 'denied';
+
   const steps = state?.steps ?? [];
   const current = steps[step];
   const still = stills?.urls[step];
@@ -276,13 +297,18 @@ export function MirrorSheet({matchId, open, onClose}: {matchId: number; open: bo
       </>
     ) : stage === 'result' ? (
       <>
-        <Button label="Again" variant="secondary" isDisabled={over} onClick={() => void start()} />
+        <Button label="Again" variant="secondary" isDisabled={over} onClick={begin} />
         <Button label="Done" variant="primary" onClick={close} />
       </>
     ) : stage === 'intro' ? (
       <>
         <Button label="Close" variant="secondary" onClick={close} />
-        <Button label={over ? 'Match over' : state?.mine ? 'Go again' : 'Start'} variant="primary" isDisabled={!ready || over} onClick={() => void start()} />
+        <Button label={over ? 'Match over' : state?.mine ? 'Go again' : 'Start'} variant="primary" isDisabled={!ready || over} onClick={begin} />
+      </>
+    ) : stage === 'camera' ? (
+      <>
+        <Button label="Not now" variant="secondary" onClick={() => setStage('intro')} />
+        <Button label={blocked ? 'Try again' : 'Allow camera'} variant="primary" onClick={() => void start()} />
       </>
     ) : null;
 
@@ -320,6 +346,23 @@ export function MirrorSheet({matchId, open, onClose}: {matchId: number; open: bo
                   )}
                   <Leaderboard state={state} />
                 </>
+              )}
+
+              {stage === 'camera' && (
+                <VStack gap={3}>
+                  <HStack gap={3} vAlign="center">
+                    <IconCamera size={36} aria-hidden />
+                    <Heading level={3}>Turn on your camera</Heading>
+                  </HStack>
+                  <Text>Mirror checks each pose with your front camera. Video stays on your phone; nothing is recorded or sent.</Text>
+                  {blocked ? (
+                    <Banner status="warning" title={camError ?? 'Camera is off for this site'} description={camError ? undefined : cameraHelp()} />
+                  ) : (
+                    <Text type="supporting" color="secondary">
+                      Your phone will ask next. Tap Allow.
+                    </Text>
+                  )}
+                </VStack>
               )}
 
               {stage === 'guide' && current && (

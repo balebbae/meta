@@ -2,7 +2,7 @@ import {NextResponse} from 'next/server';
 import {badRequest, notFound, readJson, withUser} from '@/lib/api';
 import {sql} from '@/lib/db';
 import {isMember} from '@/lib/messaging-queries';
-import {createMirrorMatch} from '@/lib/rally/mirror-store';
+import {createMirrorMatch, UNREADABLE_V} from '@/lib/rally/mirror-store';
 import {reelGameByText} from '@/lib/rally/reel-kind';
 import {getReelInfo} from '@/lib/rally/reel-router';
 import {ROUTES} from '@/lib/rally/swim';
@@ -22,7 +22,7 @@ export async function GET(req: Request) {
     const rows = await sql`
       select id, caption, slug, tags, exercises, poster_url, duration_sec from reels r
       where video_url is not null
-        and not exists (select 1 from mirror_matches m where m.reel_id = r.id and m.reference->>'unreadable' = 'true')
+        and not exists (select 1 from mirror_matches m where m.reel_id = r.id and m.reference->>'unreadable' = 'true' and m.reference->>'v' = ${String(UNREADABLE_V)})
       order by plays desc, id desc limit 300`;
     const reels: StartReel[] = rows
       .filter(r => {

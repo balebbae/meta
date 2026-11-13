@@ -160,8 +160,9 @@ export async function getMirrorState(matchId: number, viewerId: number): Promise
   }
   const mine = rows.find(r => Number(r.user_id) === viewerId);
   const [w] = status === 'done' ? await sql`select winner_id from mirror_matches where id = ${matchId}` : [];
-  const raw = (m.reference as (Reference & {unreadable?: boolean}) | null) ?? null;
-  const unreadable = Boolean(raw?.unreadable);
+  const raw = (m.reference as (Reference & {unreadable?: boolean; v?: number}) | null) ?? null;
+  // only verdicts from the current rules count; older ones are read again
+  const unreadable = Boolean(raw?.unreadable) && raw?.v === UNREADABLE_V;
   const ref = unreadable ? null : raw;
   const steps = (m.steps as MirrorStep[] | null) ?? null;
   return {
@@ -188,7 +189,15 @@ export async function getMirrorState(matchId: number, viewerId: number): Promise
 
 /** The Reel was read and nobody is in it: remember, so no phone re-reads it and the Reel isn't offered again. */
 export async function markUnreadable(matchId: number) {
-  await sql`update mirror_matches set reference = '{"unreadable": true}'::jsonb where id = ${matchId} and (reference is null or reference->'points' is null)`;
+  await sql`update mirror_matches set reference = ${JSON.stringify({unreadable: true, v: UNREADABLE_V})}::jsonb where id = ${matchId} and (reference is null or reference->'points' is null)`;
+}
+
+/** Bumped when the "is someone visible" rules change, so Reels rejected under old rules get another read. */
+export const UNREADABLE_V = 2;
+
+export async function matchSteps(matchId: number): Promise<MirrorStep[]> {
+  const [m] = await sql`select steps from mirror_matches where id = ${matchId}`;
+  return (m?.steps as MirrorStep[] | null) ?? [];
 }
 
 /** First complete reference wins (older ones without overlay points get replaced), so nobody swaps the routine mid-game. */

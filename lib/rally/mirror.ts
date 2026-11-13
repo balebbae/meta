@@ -45,7 +45,9 @@ function angle(a: Landmark, b: Landmark, c: Landmark): number {
   return Math.round(d);
 }
 
-const seen = (lm: Landmark[], i: number) => (lm[i].visibility ?? 1) >= 0.5;
+/** MediaPipe's visibility for a point we treat as seen. 0.5 threw away most side-on yoga and waist-up dance frames. */
+const SEEN_AT = 0.3;
+const seen = (lm: Landmark[], i: number) => (lm[i].visibility ?? 1) >= SEEN_AT;
 
 /** One pose -> 8 angles; a joint is null when any of its 3 points is hidden. No pose -> all null. */
 export function angleFrame(lm: Landmark[] | null): AngleFrame {
@@ -53,8 +55,10 @@ export function angleFrame(lm: Landmark[] | null): AngleFrame {
   return JOINTS.map(([a, b, c]) => (seen(lm, a) && seen(lm, b) && seen(lm, c) ? angle(lm[a], lm[b], lm[c]) : null));
 }
 
+/** Someone we can place: a shoulder and hip on at least one side (side-on poses hide the far side). */
 export function pointFrame(lm: Landmark[] | null): PointFrame {
-  if (!lm || lm.length < 29 || !seen(lm, 11) || !seen(lm, 12) || !seen(lm, 23) || !seen(lm, 24)) return null;
+  if (!lm || lm.length < 29) return null;
+  if (!(seen(lm, 11) && seen(lm, 23)) && !(seen(lm, 12) && seen(lm, 24))) return null;
   return POINT_IDS.flatMap(i => [Math.round(lm[i].x * 1000) / 1000, Math.round(lm[i].y * 1000) / 1000]);
 }
 
@@ -117,8 +121,13 @@ export function jointHits(target: AngleFrame, pose: AngleFrame): (boolean | null
 
 /** The pose to hold for a step: the clearest frame in the middle half of its window. */
 export function targetFor(ref: Reference, start: number, end: number): Target | null {
-  const from = Math.max(0, Math.floor((start + (end - start) * 0.25) * ref.fps));
-  const to = Math.min(ref.frames.length - 1, Math.ceil((start + (end - start) * 0.75) * ref.fps));
+  // the clearest frame in the middle half of the step, else anywhere in the step (cuts and close-ups at the edges)
+  return clearest(ref, start + (end - start) * 0.25, start + (end - start) * 0.75) ?? clearest(ref, start, end);
+}
+
+function clearest(ref: Reference, start: number, end: number): Target | null {
+  const from = Math.max(0, Math.floor(start * ref.fps));
+  const to = Math.min(ref.frames.length - 1, Math.ceil(end * ref.fps));
   let best = -1;
   let bestSeen = 0;
   for (let i = from; i <= to; i++) {
@@ -126,6 +135,16 @@ export function targetFor(ref: Reference, start: number, end: number): Target | 
     if (ref.points[i] && n > bestSeen) (best = i), (bestSeen = n);
   }
   return best >= 0 && bestSeen >= MIN_COMMON ? {angles: ref.frames[best], points: ref.points[best], at: Math.round((best / ref.fps) * 100) / 100} : null;
+}
+
+/**
+ * Can this Reel be played? Judged per step, not over the whole clip, so intros, title cards and close-ups don't
+ * sink a Reel whose poses are clear: playable when at least half the steps have a clear target pose.
+ */
+export function playable(ref: Reference, steps: {start: number; end: number}[]): boolean {
+  if (!steps.length) return ref.points.filter(Boolean).length >= ref.frames.length * 0.25;
+  const ok = steps.filter(s => targetFor(ref, s.start, s.end)).length;
+  return ok >= Math.ceil(steps.length / 2);
 }
 
 /** Grade the routine: one score per step (0 = no clear pose in the Reel, skipped), overall = average of the rest. */

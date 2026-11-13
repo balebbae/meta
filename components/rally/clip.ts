@@ -22,19 +22,34 @@ let detector: Promise<Detector> | null = null;
 // MediaPipe VIDEO mode needs strictly increasing timestamps across every clip analysed in this tab
 let lastTs = 0;
 
+/** The live-camera model: lite, fast enough for every frame. */
 function getDetector(): Promise<Detector> {
-  detector ??= (async () => {
-    const mp = await importUrl(`${VISION}/vision_bundle.mjs`);
-    const files = await mp.FilesetResolver.forVisionTasks(`${VISION}/wasm`);
-    const make = (delegate: 'GPU' | 'CPU') => mp.PoseLandmarker.createFromOptions(files, {baseOptions: {modelAssetPath: MODEL, delegate}, runningMode: 'VIDEO', numPoses: 1});
-    try {
-      return await make('GPU');
-    } catch {
-      return await make('CPU');
-    }
-  })();
+  detector ??= makeDetector(MODEL, {});
   detector.catch(() => (detector = null));
   return detector;
+}
+
+/**
+ * Reading a Reel happens once per match, so it gets the bigger "full" model and lower confidence floors: it finds
+ * people the lite model misses (small in frame, lying down, dim light, fast dance moves).
+ */
+const READ_MODEL = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task';
+let reader: Promise<Detector> | null = null;
+function getReader(): Promise<Detector> {
+  reader ??= makeDetector(READ_MODEL, {minPoseDetectionConfidence: 0.3, minPosePresenceConfidence: 0.3, minTrackingConfidence: 0.3}).catch(() => getDetector());
+  reader.catch(() => (reader = null));
+  return reader;
+}
+
+async function makeDetector(model: string, extra: Record<string, number>): Promise<Detector> {
+  const mp = await importUrl(`${VISION}/vision_bundle.mjs`);
+  const files = await mp.FilesetResolver.forVisionTasks(`${VISION}/wasm`);
+  const make = (delegate: 'GPU' | 'CPU') => mp.PoseLandmarker.createFromOptions(files, {baseOptions: {modelAssetPath: model, delegate}, runningMode: 'VIDEO', numPoses: 1, ...extra});
+  try {
+    return await make('GPU');
+  } catch {
+    return await make('CPU');
+  }
 }
 
 const once = (el: HTMLVideoElement, ev: string) =>
@@ -68,14 +83,46 @@ const pose = (det: Detector, v: HTMLVideoElement): Landmark[] | null => {
   return p ? p.map(q => ({x: q.x, y: q.y, visibility: q.visibility})) : null;
 };
 
-/** Front or back camera, no audio. Throws a readable message when it's blocked or missing. */
+export type CameraAccess = 'granted' | 'denied' | 'prompt' | 'unknown';
+
+/** Whether the site may already use the camera, without asking. Safari 16+, Chrome, Firefox; 'unknown' elsewhere. */
+export async function cameraAccess(): Promise<CameraAccess> {
+  try {
+    const s = await navigator.permissions.query({name: 'camera' as PermissionName});
+    return s.state;
+  } catch {
+    return 'unknown';
+  }
+}
+
+const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const inApp = () => Boolean((window as {__META_SHELL__?: boolean}).__META_SHELL__);
+
+/** Where to turn the camera back on after it was blocked, for this device. */
+export function cameraHelp(): string {
+  if (isIOS() && inApp()) return 'On your iPhone open Settings › Facebook and turn on Camera, then come back and tap Try again.';
+  if (isIOS()) return 'In Safari tap aA in the address bar › Website Settings › Camera › Allow. Or open Settings › Apps › Safari › Camera › Allow. Then tap Try again.';
+  if (/Android/.test(navigator.userAgent)) return 'Tap the icon left of the address › Permissions › Camera › Allow, then tap Try again.';
+  return 'Click the camera icon in the address bar, choose Allow, then try again.';
+}
+
+/** Front or back camera, no audio. Call it straight from a tap so iPhones show their permission prompt. */
 export async function openCamera(facing: 'user' | 'environment'): Promise<MediaStream> {
-  if (!navigator.mediaDevices?.getUserMedia) throw new Error('This browser cannot open the camera here. Upload a video instead.');
+  if (!window.isSecureContext) throw new Error('The camera only works on a secure (https) page.');
+  if (!navigator.mediaDevices?.getUserMedia) throw new Error(isIOS() ? 'This browser can’t open the camera. Open the page in Safari.' : 'This browser cannot open the camera here. Upload a video instead.');
   try {
     return await navigator.mediaDevices.getUserMedia({audio: false, video: {facingMode: {ideal: facing}, width: {ideal: 640}, height: {ideal: 480}}});
   } catch (e) {
     const name = e instanceof DOMException ? e.name : '';
-    throw new Error(name === 'NotAllowedError' ? 'Camera access was blocked. Allow the camera for this site and try again.' : name === 'NotFoundError' ? 'No camera found on this device.' : 'Could not open the camera.');
+    throw new Error(
+      name === 'NotAllowedError' || name === 'SecurityError'
+        ? `Camera is off for this site. ${cameraHelp()}`
+        : name === 'NotFoundError' || name === 'OverconstrainedError'
+          ? 'No camera found on this device.'
+          : name === 'NotReadableError'
+            ? 'Another app is using the camera. Close it and try again.'
+            : 'Could not open the camera.',
+    );
   }
 }
 
@@ -150,7 +197,7 @@ export async function analyzeVideoUrl(url: string, start: number, end: number, f
   // Playing streams, so it starts on the first bytes; seeking needs the whole file in memory. Either way the
   // in-memory copy (for the pose pictures) downloads alongside, and the pose model loads in parallel.
   const local = localVideo(url);
-  const [det, src] = await Promise.all([getDetector(), canPlayScan ? url : local]);
+  const [det, src] = await Promise.all([getReader(), canPlayScan ? url : local]);
   const v = document.createElement('video');
   v.muted = true;
   v.playsInline = true;
@@ -171,10 +218,10 @@ export async function analyzeVideoUrl(url: string, start: number, end: number, f
   return out;
 }
 
-const SCAN_RATE = 1.5;
+const SCAN_RATE = 1.25;
 
 /**
- * Plays the clip at 1.5x and runs the pose model on frames as they arrive (at most `fps` a second), then lines
+ * Plays the clip at 1.25x and runs the pose model on frames as they arrive (at most `fps` a second), then lines
  * the samples up on the fps grid. Seeking costs a keyframe decode per frame, so this is ~3x faster than seeking.
  * Returns null if the browser wouldn't play it (the caller then seeks frame by frame).
  */

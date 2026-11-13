@@ -1,8 +1,8 @@
 import {NextResponse} from 'next/server';
 import {badRequest, notFound, readJson, withUser} from '@/lib/api';
 import {memberOfGame} from '@/lib/rally/game-access';
-import {validReference} from '@/lib/rally/mirror';
-import {markUnreadable, saveReference} from '@/lib/rally/mirror-store';
+import {playable, validReference} from '@/lib/rally/mirror';
+import {markUnreadable, matchSteps, saveReference} from '@/lib/rally/mirror-store';
 
 /** Body: the Reel's poses (angles + overlay points), read on the first player's phone. The first valid one wins. */
 export async function POST(req: Request, {params}: {params: Promise<{id: string}>}) {
@@ -11,8 +11,8 @@ export async function POST(req: Request, {params}: {params: Promise<{id: string}
     if (!(await memberOfGame('mirror_matches', id, user.id))) return notFound();
     const body = await readJson<unknown>(req);
     if (!validReference(body)) return badRequest('not a pose reference');
-    const visible = body.points.filter(Boolean).length;
-    if (visible < body.frames.length * 0.4) {
+    // usable when most steps have a clear pose (intros and close-ups don't count against it)
+    if (!playable(body, await matchSteps(id))) {
       await markUnreadable(id);
       return badRequest('No one is clearly visible in this Reel. Pick another one.');
     }

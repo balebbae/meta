@@ -1,4 +1,4 @@
-"""python -m repcount.cli VIDEO --exercise pushup   (omit --exercise to guess it)."""
+"""python -m repcount.cli VIDEO --exercise pushup   (omit --exercise to guess it; --classify for the trained model)."""
 
 from __future__ import annotations
 
@@ -15,9 +15,16 @@ def main() -> None:
     p.add_argument("video")
     p.add_argument("--exercise", choices=sorted(EXERCISES))
     p.add_argument("--max-fps", type=float, default=15.0)
+    p.add_argument("--classify", action="store_true", help="print the exercise classifier verdict (classify.py)")
     a = p.parse_args()
     t = time.time()
     lm, fps = landmarks(a.video, max_fps=a.max_fps)
+    if a.classify:
+        from repcount.classify import TO_COUNTER, classify
+
+        expected = {v: k for k, v in TO_COUNTER.items()}.get(a.exercise) if a.exercise else None
+        print(json.dumps({**classify(lm, fps, expected=expected), "seconds": round(time.time() - t, 2)}))
+        return
     ex = a.exercise or guess_exercise(lm)
     c = count(lm, fps, ex)
     out = {

@@ -2,23 +2,22 @@
  * World pieces in the soft-toy style: castles, modular walls, towers, gates, props, plants and terrain tiles.
  * Pivots the animator drives: `lid` (chest), `flag` (banner), `bridge` (drawbridge). Tiles are CELL (0.96 m) square with their top at y = 0.
  */
-import {ConeGeometry, CylinderGeometry, DoubleSide, Group, Mesh, MeshStandardMaterial, Object3D, PlaneGeometry, type Material} from 'three';
-import {RoundedBoxGeometry} from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import {BoxGeometry, type BufferGeometry, DoubleSide, Group, Mesh, MeshStandardMaterial, Object3D, PlaneGeometry, type Material} from 'three';
 import {C, shade} from '../palette';
 import {makeRig} from '../rig';
 import {rng} from '../rng';
 import type {AnimState, Rig} from '../types';
-import {blob, capsule, geo, mesh, piv, softMaterial} from './soft';
+import {blob, capsule, cylBox, geo, mesh, piv, pyramid, softMaterial} from './soft';
 
 export const TILE = 12, CELL = 0.96;
 const prop = (group: Group, height: number, states: AnimState[] = ['idle']): Rig => {
   const pivots: Record<string, Object3D> = {}; group.traverse((o) => { if (o.name && o !== group && !(o as Mesh).isMesh) pivots[o.name] = o; });
   const rig = makeRig(group, 'prop', pivots, height, states); rig.dispose = () => { group.removeFromParent(); }; return rig;
 };
-const rbox = (w: number, h: number, d: number, r: number) => geo(`rbox:${w}:${h}:${d}:${r}`, () => new RoundedBoxGeometry(w, h, d, 4, r));
+const rbox = (w: number, h: number, d: number, _r: number): BufferGeometry => geo(`rbox:${w}:${h}:${d}`, () => new BoxGeometry(w, h, d));
 const box = (parent: Object3D, m: Material, w: number, h: number, d: number, x: number, y: number, z: number, r = Math.min(w, h, d) * 0.3): Mesh => { const o = mesh(rbox(w, h, d, r), m); o.position.set(x, y, z); parent.add(o); return o; };
-const cone = (parent: Object3D, m: Material, r: number, h: number, x: number, y: number, z: number): Mesh => { const o = mesh(geo(`cone:${r}:${h}`, () => new ConeGeometry(r, h, 24)), m); o.position.set(x, y + h / 2, z); parent.add(o); return o; };
-const cyl = (parent: Object3D, m: Material, r: number, h: number, x: number, y: number, z: number): Mesh => { const o = mesh(geo(`cyl:${r}:${h}`, () => new CylinderGeometry(r, r * 1.04, h, 28)), m); o.position.set(x, y + h / 2, z); parent.add(o); return o; };
+const cone = (parent: Object3D, m: Material, r: number, h: number, x: number, y: number, z: number): Mesh => { const o = mesh(geo(`cone:${r}:${h}`, () => pyramid(r, h, 24)), m); o.position.set(x, y + h / 2, z); parent.add(o); return o; };
+const cyl = (parent: Object3D, m: Material, r: number, h: number, x: number, y: number, z: number): Mesh => { const o = mesh(geo(`cyl:${r}:${h}`, () => cylBox(r, r * 1.04, h, 28)), m); o.position.set(x, y + h / 2, z); parent.add(o); return o; };
 const flagOn = (parent: Object3D, x: number, y: number, z: number, color: number, size = 0.18): void => { const pole = mesh(capsule(0.012, size * 1.4), softMaterial('wood', C.woodDark)); pole.position.set(x, y + size * 0.7, z); parent.add(pole); const f = mesh(geo(`flag:${size}`, () => new PlaneGeometry(size, size * 0.7)), new MeshStandardMaterial({color, roughness: 0.9, side: DoubleSide})); f.position.set(x + size / 2, y + size * 1.05, z); parent.add(f); };
 /** Little rounded bumps along a top edge: soft crenellations. */
 const crenels = (parent: Object3D, m: Material, x0: number, x1: number, y: number, z: number, n: number, s = 0.08): void => { for (let i = 0; i < n; i++) box(parent, m, s, s * 0.9, s, x0 + ((x1 - x0) * i) / (n - 1), y, z, s * 0.3); };

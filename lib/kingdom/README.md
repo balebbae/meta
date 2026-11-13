@@ -1,6 +1,6 @@
 # Beta Kingdom · `lib/kingdom`
 
-Kaiju's characters and world pieces plus the pure game logic. Every piece is a smooth soft-toy build on the shared helpers in `factories/soft.ts`: heroes (`hero.ts`), kaijus (`creatures.ts`), ponies (`mounts.ts`), castles and props (`world.ts`) and merged game boards (`terrain.ts`).
+Kaiju's characters and world pieces plus the pure game logic. Every piece is a block build (Minecraft-like boxes and pyramids, flat shading, a 16×16 noise map) on the shared helpers in `factories/soft.ts`: heroes (`hero.ts`), kaijus (`creatures.ts`), ponies (`mounts.ts`), castles and props (`world.ts`) and merged game boards (`terrain.ts`).
 Rendered by `components/kingdom` (React Three Fiber) at `/kingdom`.
 
 ## Units and conventions
@@ -40,10 +40,6 @@ One-shots (`jump attack hit celebrate puff stomp squash`) return to `rig.rest` a
 
 Pure modules, no three import: `createX(seed)`, `startX(state)`, `stepX(state, input, dt)`. `state.events` lists what happened in the
 last step for scenes to turn into effects. Tests: `node --test "lib/kingdom/**/*.test.ts"` (also `pnpm test:kingdom`).
-
-## Looks
-
-`factories/looks.ts` re-presents any rig without touching geometry or animation: `applyLook(rig.group, 'soft' | 'wire' | 'dots')`. `wire` is Facebook-blue edge lines over a faint wireframe; `dots` samples the surface into a point cloud coloured like the Muse orb (ember low-left, ivory, pale blue top-right; dark features stay navy). The soft look is the product avatar; **dots is the decided look for mini-game sequences and Muse moments**; wire is for scenery (towers, grids) and studies.
 
 ## Adding an asset
 

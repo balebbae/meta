@@ -41,7 +41,8 @@ def pct(v) -> str:
 
 
 def main() -> None:
-    out = ["# Rally proof check: hosted vs fine-tuned\n", "Same prompts, schema and rows for every model. `all` = every field right.",
+    out = ["# Rally proof check: hosted vs fine-tuned\n",
+           "Same prompts, schema and rows for every model. `all` = every field right.",
            "Lower is better only for `false_reject` and latency.\n"]
     verdict = {}
     for title, pattern, keys in SETS:

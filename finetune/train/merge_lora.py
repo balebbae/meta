@@ -86,7 +86,8 @@ def main() -> None:
         raise SystemExit(f"merged {merged} of {len(lora)} adapter targets")
 
     total = sum((a.out / s).stat().st_size for s in set(new_map.values()))
-    (a.out / "model.safetensors.index.json").write_text(json.dumps({"metadata": {"total_size": total}, "weight_map": new_map}, indent=2))
+    index_out = {"metadata": {"total_size": total}, "weight_map": new_map}
+    (a.out / "model.safetensors.index.json").write_text(json.dumps(index_out, indent=2))
     for extra in base.iterdir():
         if extra.suffix != ".safetensors" and extra.name != "model.safetensors.index.json" and extra.is_file():
             shutil.copy(extra, a.out / extra.name)

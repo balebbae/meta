@@ -23,6 +23,11 @@ export function isCallState(value: unknown): value is CallState {
     && (row.answer === null || typeof row.answer === 'string') && Array.isArray(row.ice);
 }
 
+/** The ringing call the viewer should answer. */
+export function pickIncoming(calls: {conversationId: number; state: CallState}[], viewerId: number) {
+  return calls.find(call => call.state.from !== viewerId && call.state.phase === 'ringing') ?? null;
+}
+
 /** Pure call-state transitions. 'busy' and 'gone' are refusals; null means the call ended. */
 export function reduceCall(state: CallState | null, action: CallAction): CallState | null | 'busy' | 'gone' {
   if (action.type === 'end') return null;

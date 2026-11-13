@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {angleFrame, gradeRoutine, MATCH_AT, pointFrame, poseScore, targetFor, validPoses, validReference, type AngleFrame, type Reference} from './mirror.ts';
+import {angleFrame, gradeRoutine, jointHits, MATCH_AT, pointFrame, poseScore, targetFor, validPoses, validReference, type AngleFrame, type Reference} from './mirror.ts';
 import {reelGameByText} from './reel-kind.ts';
 import {clampSwim, crossed, laneBuddyBonus, routeFor} from './swim.ts';
 
@@ -75,4 +75,15 @@ test('swim journeys: route by group size, clamps, lane buddy bonus, checkpoints'
   assert.equal(laneBuddyBonus(1000, true), 200);
   assert.equal(laneBuddyBonus(1000, false), 0);
   assert.deepEqual(crossed(routeFor(5), 500, 9_500).map(c => c.name), ['Shakespeare Beach', 'Southwest shipping lane']);
+});
+
+test('jointHits marks the joints that are already right, mirrored too', () => {
+  assert.deepEqual(jointHits(fold, fold), Array(8).fill(true));
+  // right knee bent: only that joint is off
+  const bent = [...fold];
+  bent[7] = 90;
+  assert.deepEqual(jointHits(fold, bent), [true, true, true, true, true, true, true, false]);
+  // a mirrored copy of tree counts joint by joint, the same way poseScore does
+  assert.deepEqual(jointHits(tree, swapLR(tree)), Array(8).fill(true));
+  assert.deepEqual(jointHits(fold, [null, ...fold.slice(1)]), [null, true, true, true, true, true, true, true]);
 });

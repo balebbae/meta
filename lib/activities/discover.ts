@@ -273,6 +273,9 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
     await build({id: 'start-turf', kind: 'start', title: 'Turf', subtitle: 'Claim streets with friends on real runs and walks', href: '/activities?start=turf', cta: 'Start Turf', score: 3, meta: {template: 'turf'}}, 'Turf fits your Running tag and small-group style.'),
     await build({id: 'start-reel', kind: 'start', title: 'Quest from a Reel', subtitle: 'Turn any workout reel into a weekly boss fight', href: '/reels', cta: 'Pick a reel', score: 2, meta: {template: 'reel'}}, 'Reels you watch can become group quests.'),
     await build({id: 'start-sentence', kind: 'start', title: 'Quest from a sentence', subtitle: '"Run 3 km three times this week" → a game for your chat', href: '/activities?start=sentence', cta: 'Write one', score: 1, meta: {template: 'sentence'}}, 'Describe the game; Muse builds the rules.'),
+    await build({id: 'start-yoga', kind: 'start', title: 'Mirror Yoga', subtitle: 'Hold the poses from a yoga Reel on camera. Best score wins.', href: '/activities?start=yoga', cta: 'Pick a flow', score: 2.5, meta: {template: 'yoga'}}, 'Your camera checks each pose.'),
+    await build({id: 'start-dance', kind: 'start', title: 'Mirror Dance', subtitle: 'Hit the moves from a dance Reel on camera. Best score wins.', href: '/activities?start=dance', cta: 'Pick a dance', score: 2.5, meta: {template: 'dance'}}, 'Your camera checks each move.'),
+    await build({id: 'start-swim', kind: 'start', title: 'Castle Crossing', subtitle: 'Swim a real crossing together, one logged swim at a time.', href: '/activities?start=swim', cta: 'Pick a crossing', score: 2, meta: {template: 'swim'}}, 'Every swim moves the chat across.'),
   ];
   sections.push({id: 'start', title: 'Start a game', cards: start});
 

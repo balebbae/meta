@@ -4,7 +4,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import {useRouter} from 'next/navigation';
 import {useCallback, useEffect, useRef, useState} from 'react';
-import {IconChevronRight, IconEyeOff, IconListDetails, IconMap2, IconMask, IconPlayerPlay, IconSettings, IconSwords, IconTrophy, IconWand} from '@tabler/icons-react';
+import {IconChevronRight, IconEyeOff, IconListDetails, IconMap2, IconMask, IconPlayerPlay, IconSettings, IconSwords, IconSwimming, IconTrophy, IconWand, IconYoga, IconMusic} from '@tabler/icons-react';
 import {InfoTip} from '@astryxdesign/core/InfoTip';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {Button} from '@astryxdesign/core/Button';
@@ -31,14 +31,18 @@ import {Communities} from './home/Communities';
 import {EventsNearby} from './home/EventsNearby';
 import {ProgressHero} from './home/ProgressHero';
 import {YourGames} from './home/YourGames';
+import {StartReelGame, type ReelGameMode} from './StartReelGame';
 import h from './home/home.module.css';
 import b from './reels-bento.module.css';
 
 type Viewer = {id: number; name: string; avatarUrl: string};
-export type MyGame = {key: string; href: string; title: string; subtitle: string; boss: {kind: string; name: string} | null};
+/** boss = Rally boss art; hero = the viewer's Kingdom hero (Mirror Yoga/Dance idle, Castle Crossing running); neither = Turf pin. */
+export type MyGame = {key: string; href: string; title: string; subtitle: string; boss: {kind: string; name: string} | null; hero?: 'idle' | 'run'};
 type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; listings: ListingBrief[]; start: string | null; eventId: number | null; goal?: Goal | null; games?: MyGame[]; level?: FitnessLevel | null; progress?: HomeProgress | null; nearby?: Nearby | null};
 type Chat = {id: number; title: string; isGroup: boolean};
 
+const CHAT_MODES = ['sentence', 'yoga', 'dance', 'swim'];
+const REEL_GAMES: string[] = ['yoga', 'dance', 'swim'];
 const json = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
 const TurfSetup = dynamic(() => import('@/components/turf/TurfSetup').then(m => m.TurfSetup), {loading: () => <Text>Loading Turf setup…</Text>});
 
@@ -85,7 +89,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
   }, [data]);
 
   useEffect(() => {
-    if (startMode !== 'sentence' || chats.length) return;
+    if (!startMode || !CHAT_MODES.includes(startMode) || chats.length) return;
     fetch('/api/conversations')
       .then(r => (r.ok ? r.json() : {conversations: []}))
       .then((d: {conversations?: Chat[]}) => {
@@ -162,6 +166,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
     }
   };
 
+  const startCard = (template: string) => (template === 'reel' ? void startGame('reel') : setStartMode(template === 'sentence' || REEL_GAMES.includes(template) ? template : 'turf'));
   const byId = (id: DiscoverSection['id']) => sections.find(s => s.id === id);
   let order = 0;
   const section = (key: string, title: string, body: React.ReactNode, sub?: string, href?: string) => (
@@ -182,7 +187,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
             hero={s.id === 'first_move'}
             onNotInterested={() => notInterested(c)}
             onOpen={() => logEvents([c], 'click')}
-            onStart={c.kind === 'start' ? () => (c.meta?.template === 'reel' ? startGame('reel') : setStartMode(c.meta?.template === 'sentence' ? 'sentence' : 'turf')) : undefined}
+            onStart={c.kind === 'start' ? () => startCard(String(c.meta?.template ?? 'turf')) : undefined}
             busy={busy === c.meta?.template}
           />
         ))}
@@ -243,7 +248,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
           '/reels',
         )}
       <MuseActions initial={museActions} viewerName={viewer.name} say={say} />
-      {section('games', 'Your games', <YourGames games={games} onStart={() => setStartMode('choose')} />)}
+      {section('games', 'Your games', <YourGames games={games} viewer={viewer} onStart={() => setStartMode('choose')} />)}
       {groups && section('groups', 'Communities', <Communities cards={groups.cards} onOpen={c => logEvents([c], 'click')} onHide={c => void notInterested(c)} />, undefined, '/groups')}
 
       {nearby && nearby.events.length > 0 && section('nearby', 'Events near you', <EventsNearby events={nearby.events} home={nearby.home} />, nearby.home ? undefined : 'Add your city', '/events')}
@@ -287,6 +292,9 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
                 <ListItem startContent={<IconMap2 size={22} aria-hidden />} label="Turf" description="Claim streets on real runs and walks" onClick={() => setStartMode('turf')} />
                 <ListItem startContent={<IconPlayerPlay size={22} aria-hidden />} label="From a reel" description="Turn a workout reel into a boss fight" onClick={() => void startGame('reel')} />
                 <ListItem startContent={<IconWand size={22} aria-hidden />} label="From a sentence" description="Describe it; Muse builds the game" onClick={() => setStartMode('sentence')} />
+                <ListItem startContent={<IconYoga size={22} aria-hidden />} label="Mirror Yoga" description="Hold a yoga Reel's poses on camera" onClick={() => setStartMode('yoga')} />
+                <ListItem startContent={<IconMusic size={22} aria-hidden />} label="Mirror Dance" description="Hit a dance Reel's moves on camera" onClick={() => setStartMode('dance')} />
+                <ListItem startContent={<IconSwimming size={22} aria-hidden />} label="Castle Crossing" description="Swim a real crossing together" onClick={() => setStartMode('swim')} />
               </List>
             </LayoutContent>
           }
@@ -309,6 +317,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
           }
         />
       </Dialog>
+      <StartReelGame mode={startMode && REEL_GAMES.includes(startMode) ? (startMode as ReelGameMode) : null} viewer={viewer} chatPicker={chatPicker} chatId={chatId} onClose={() => setStartMode(null)} say={say} />
       <Dialog isOpen={startMode === 'sentence'} onOpenChange={o => !o && setStartMode(null)} purpose="form" width={480}>
         <Layout
           header={<DialogHeader title="Quest from a sentence" subtitle="Describe the game in one line and Muse builds the rules, the boss and the weekly drop." onOpenChange={() => setStartMode(null)} />}

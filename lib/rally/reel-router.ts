@@ -42,7 +42,7 @@ const SCHEMA = {
   additionalProperties: false,
 };
 
-/** Ember picks the game; names are fixed (Mirror Match, Castle Crossing), so no title is asked for. */
+/** Ember picks the game; names are fixed (Mirror Yoga, Mirror Dance, Castle Crossing), so no title is asked for. */
 export async function classifyReel(r: ReelInfo): Promise<{game: ReelGame; museUsed: boolean}> {
   const backup = reelGameByText(describe(r));
   if (!museConfigured()) return {game: backup, museUsed: false};

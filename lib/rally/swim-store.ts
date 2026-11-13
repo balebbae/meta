@@ -12,14 +12,15 @@ import {clampSwim, crossed, laneBuddyBonus, routeById, routeFor, type SwimRoute}
 
 const first = (name: string) => name.split(' ')[0];
 
-export async function createSwimJourney(opts: {reel: ReelInfo; conversationId: number; creator: {id: number; name: string}}): Promise<{journeyId: number}> {
+/** From a swim Reel (route picked by group size) or from Activities (no Reel; the player picks the route). */
+export async function createSwimJourney(opts: {reel: ReelInfo | null; conversationId: number; creator: {id: number; name: string}; routeId?: string}): Promise<{journeyId: number}> {
   const members = await sql`select u.name from conversation_members cm join users u on u.id = cm.user_id where cm.conversation_id = ${opts.conversationId}`;
-  const route = routeFor(members.length);
+  const route = opts.routeId ? routeById(opts.routeId) : routeFor(members.length);
   const title = 'Castle Crossing';
   const intro = `${route.from} to ${route.to}`;
   const [row] = await sql`
     insert into swim_journeys (conversation_id, reel_id, route, title, total_m, story, created_by, ends_at)
-    values (${opts.conversationId}, ${opts.reel.id}, ${route.id}, ${title}, ${route.totalM}, ${intro}, ${opts.creator.id}, now() + interval '30 days')
+    values (${opts.conversationId}, ${opts.reel?.id ?? null}, ${route.id}, ${title}, ${route.totalM}, ${intro}, ${opts.creator.id}, now() + interval '30 days')
     returning id`;
   const journeyId = Number(row.id);
   const payload: SwimCardPayload = {journeyId, title, route: route.id, totalM: route.totalM};
@@ -100,4 +101,13 @@ export async function logSwim(id: number, user: {id: number; name: string}, inpu
     await addSystemMessage(conv, user, '🎉 Castle Crossing done');
   }
   return {meters, bonus, progressM: after, totalM: Number(p.total_m), checkpoints: passed, finished, proof};
+}
+
+/** Open crossings in the player's chats, for "Your games" on Activities. */
+export async function listOpenSwims(userId: number): Promise<{id: number; conversationId: number; title: string; route: string; progressM: number; totalM: number}[]> {
+  const rows = await sql`
+    select j.id, j.conversation_id, j.title, j.route, j.progress_m, j.total_m from swim_journeys j
+    join conversation_members cm on cm.conversation_id = j.conversation_id and cm.user_id = ${userId}
+    where j.status = 'open' and j.ends_at > now() order by j.created_at desc limit 6`;
+  return rows.map(r => ({id: Number(r.id), conversationId: Number(r.conversation_id), title: String(r.title), route: routeById(String(r.route)).name, progressM: Number(r.progress_m), totalM: Number(r.total_m)}));
 }

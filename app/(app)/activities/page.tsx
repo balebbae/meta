@@ -4,6 +4,9 @@ import {getDiscover, getUserTags} from '@/lib/activities/discover';
 import {listActions} from '@/lib/activities/actions';
 import {listingsForTags, listQuestsForUser} from '@/lib/rally/queries';
 import {listActiveGamesForUser} from '@/lib/turf/store';
+import {listOpenMirrors} from '@/lib/rally/mirror-store';
+import {listOpenSwims} from '@/lib/rally/swim-store';
+import {mirrorTitle} from '@/lib/rally/mirror';
 import {listListings} from '@/lib/secondary-queries';
 import {DiscoverPage, type MyGame} from '@/components/activities/DiscoverPage';
 import {listGoals} from '@/lib/activities/goals';
@@ -23,7 +26,7 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
   if (!user) redirect('/auth/signin');
   const params = await searchParams;
   // Goals are optional here: if the table isn't migrated yet Discover still renders without the spotlight.
-  const [data, museActions, listings, goals, quests, turf, progress, nearby] = await Promise.all([
+  const [data, museActions, listings, goals, quests, turf, progress, nearby, mirrors, swims] = await Promise.all([
     getDiscover(user.id),
     listActions(user.id),
     // Gear for the user's tags (no tags: 'fitness' + Sporting Goods); nothing matching falls back to newest listings.
@@ -36,6 +39,9 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
     listActiveGamesForUser(user.id),
     homeProgress(user.id).catch(() => null),
     nearbyEvents(user.id).catch(() => null),
+    // Mirror Yoga / Mirror Dance and Castle Crossing live in the chat that started them
+    listOpenMirrors(user.id).catch(() => []),
+    listOpenSwims(user.id).catch(() => []),
   ]);
   // Coach mode always opens off; only an explicit ?coach=on (Your Muse link, old /activities/coach) opens it on
   const coachOn = params.coach === 'on';
@@ -47,6 +53,8 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
       .filter(q => q.status === 'active')
       .map(q => ({key: `q${q.id}`, href: `/activities/games/${q.id}`, title: q.title, subtitle: q.bossHp ? `${q.bossHpLeft} / ${q.bossHp} HP` : `Rally · ${q.template}`, boss: {kind: q.bossKind, name: q.spec.boss?.name ?? q.title}})),
     ...turf.map(g => ({key: `t${g.id}`, href: `/games/${g.id}`, title: g.label, subtitle: g.status === 'live' ? 'Turf · live' : 'Turf · starting soon', boss: null})),
+    ...mirrors.map(m => ({key: `m${m.id}`, href: `/messages/${m.conversationId}`, title: mirrorTitle(m.mode), subtitle: m.mine != null ? `Your best ${m.mine} · ${m.played}/${m.members} played` : `${m.played}/${m.members} played`, boss: null, hero: 'idle' as const})),
+    ...swims.map(j => ({key: `s${j.id}`, href: `/messages/${j.conversationId}`, title: j.title, subtitle: `${j.route} · ${Math.round((j.progressM / j.totalM) * 100)}%`, boss: null, hero: 'run' as const})),
     // finished quests stay reachable here now that /activities/games redirects to this section
     ...quests.filter(q => q.status === 'completed').map(q => ({key: `q${q.id}`, href: `/activities/games/${q.id}`, title: q.title, subtitle: 'Boss defeated', boss: {kind: q.bossKind, name: q.spec.boss?.name ?? q.title}})),
   ];

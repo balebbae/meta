@@ -2,6 +2,7 @@
 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {CalendarDays, Check, ShoppingBag} from 'lucide-react';
+import {ThinkingOrb} from 'thinking-orbs';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
@@ -78,7 +79,10 @@ export function MuseActions({initial, viewerName, say}: {initial: MuseActionsPay
     <section className={h.section} style={{'--i': 1} as React.CSSProperties} aria-label="From your Muse" aria-busy={asking}>
       <div className={h.head}>
         <div>
-          <h2 className={h.h2}>From your Muse</h2>
+          <h2 className={`${h.h2} ${h.museTitle}`}>
+            From your Muse
+            <ThinkingOrb size={20} state={asking ? 'searching' : 'breathing'} aria-hidden />
+          </h2>
           <span className={h.sub}>One tap each · only you see these · demo checkout</span>
         </div>
         <button type="button" className={`${h.pill} ${h.pillSm} ${h.pillGhost}`} disabled={asking} onClick={() => void ask(data.needsLocation)}>
@@ -88,6 +92,7 @@ export function MuseActions({initial, viewerName, say}: {initial: MuseActionsPay
       <div className={h.list}>
         {data.actions.length === 0 ? (
           <p className={h.empty}>
+            {asking && <ThinkingOrb size={64} state="searching" aria-hidden />}
             {asking
               ? 'Muse is looking at what you do and what is coming up near you. About half a minute.'
               : data.needsLocation

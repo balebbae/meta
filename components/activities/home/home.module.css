@@ -12,23 +12,39 @@
     box-shadow 0.42s var(--fb-act-ease) !important;
 }
 
+/* Spacing sits on a 4px grid: 32 between sections, 12 from a heading to its body, 16 inside cards, 24 inside the hero. */
 .page {
   display: grid;
-  gap: 28px;
-  padding: 16px 0 56px;
+  gap: 32px;
+  padding: 16px 0 64px;
   color: var(--fb-act-ink);
   font-family: var(--fb-font);
+  /* Astryx parts inside Activities (leaderboard, switch, dialogs) read the same palette */
+  --color-background-body: var(--fb-act-bg);
+  --color-background-card: var(--fb-act-surface);
+  --color-background-surface: var(--fb-act-surface);
+  --color-background-popover: var(--fb-act-surface);
+  --color-background-muted: var(--fb-act-surface-2);
+  --color-text-primary: var(--fb-act-ink);
+  --color-text-secondary: var(--fb-act-muted);
+  --color-border: var(--fb-act-line);
+  --color-neutral: var(--fb-act-surface-2);
+  --color-accent: var(--fb-act-blue);
+  --color-on-accent: var(--fb-on-media);
 }
-.page a {
+/* :where keeps this at one class of specificity, so link pills (.pillEmber, .pillBlue) keep their own ink like button pills do */
+.page :where(a) {
   color: inherit;
   text-decoration: none;
 }
+/* headings sit 4px inside the cards' edge, so text and rounded corners line up optically */
 .titleRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+  padding: 0 4px;
 }
 .h1 {
   margin: 0;
@@ -39,15 +55,15 @@
 .section {
   display: grid;
   gap: 12px;
-  animation: rise 0.5s var(--fb-act-ease) both;
-  animation-delay: calc(var(--i, 0) * 45ms);
+  animation: rise 0.3s var(--fb-act-ease) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
 }
 .head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
-  padding: 0 2px;
+  padding: 0 4px;
 }
 .h2 {
   margin: 0;
@@ -56,6 +72,8 @@
   letter-spacing: -0.01em;
 }
 .sub {
+  display: block;
+  margin-top: 2px;
   font-size: 13px;
   color: var(--fb-act-muted);
 }
@@ -85,10 +103,9 @@
   cursor: pointer;
   white-space: nowrap;
   transition:
-    transform 0.14s var(--fb-act-ease),
-    background-color 0.14s,
-    box-shadow 0.14s,
-    filter 0.14s;
+    transform 0.16s var(--fb-act-ease),
+    background-color 0.16s,
+    filter 0.16s;
 }
 .pill:hover {
   filter: brightness(0.98);
@@ -165,7 +182,7 @@
 .heroGrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 24px;
+  gap: 32px;
   align-items: center;
 }
 .eyebrow {
@@ -175,7 +192,7 @@
   color: var(--fb-act-muted);
 }
 .headline {
-  margin: 6px 0 4px;
+  margin: 4px 0;
   font-size: 26px;
   font-weight: 700;
   line-height: 1.15;
@@ -190,11 +207,11 @@
 .stats {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 20px;
 }
 .stat {
-  padding: 12px 14px;
+  padding: 12px 16px;
   border-radius: 14px;
   border: 1px solid var(--fb-act-line);
   background: var(--fb-act-surface);
@@ -225,9 +242,9 @@
 }
 .actions {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin-top: 18px;
+  margin-top: 20px;
 }
 .ring {
   position: relative;
@@ -275,7 +292,7 @@
 }
 @media (max-width: 560px) {
   .hero {
-    padding: 20px 18px;
+    padding: 20px;
   }
   .heroGrid {
     grid-template-columns: 1fr;
@@ -291,14 +308,21 @@
   .headline {
     font-size: 22px;
   }
+  /* three bordered tiles do not fit a phone: plain columns, the unit under its number */
   .stats {
-    gap: 6px;
+    gap: 16px;
   }
   .stat {
-    padding: 10px 10px;
+    padding: 0;
+    border: 0;
   }
   .statValue {
-    font-size: 18px;
+    font-size: 20px;
+  }
+  .statValue em {
+    display: block;
+    margin-top: 2px;
+    font-size: 12px;
   }
 }
 
@@ -314,10 +338,10 @@
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr) auto;
   gap: 12px;
-  align-items: start;
-  padding: 14px 16px;
+  align-items: center;
+  padding: 16px;
   border-top: 1px solid var(--fb-act-line);
-  animation: rise 0.45s var(--fb-act-ease) both;
+  animation: rise 0.3s var(--fb-act-ease) both;
   animation-delay: calc(var(--i, 0) * 40ms);
 }
 .task:first-child {
@@ -345,6 +369,7 @@
   font-size: 15px;
   line-height: 1.4;
   min-width: 0;
+  text-wrap: pretty;
 }
 .taskText strong {
   font-weight: 600;
@@ -353,6 +378,7 @@
   margin: 2px 0 0;
   font-size: 13px;
   color: var(--fb-act-muted);
+  text-wrap: pretty;
 }
 .chip {
   display: inline-block;
@@ -371,14 +397,18 @@
 }
 .taskBtns {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 }
 .taskDone .taskText {
   color: var(--fb-act-muted);
 }
 .empty {
-  padding: 28px 20px;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  margin: 0;
+  padding: 32px 24px;
   text-align: center;
   font-size: 14px;
   color: var(--fb-act-muted);
@@ -386,10 +416,42 @@
 @media (max-width: 560px) {
   .task {
     grid-template-columns: 36px minmax(0, 1fr);
+    align-items: start;
   }
   .taskBtns {
     grid-column: 2;
   }
+}
+
+/* the Muse's presence: a dotted thinking-orb (Libraries.dev) after the heading, so the text keeps the shared left edge; a larger one in the empty state while it looks */
+.museTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---- leaderboard (an Astryx Card): the same hairline card as everything else ---- */
+.board :global(.astryx-card) {
+  padding: 20px;
+  border: 1px solid var(--fb-act-line);
+  border-radius: var(--fb-act-radius);
+  background: var(--fb-act-surface);
+  box-shadow: var(--fb-act-shadow);
+}
+/* XP reads like the page's chips: soft blue, the leader in ember */
+.board :global(.astryx-token) {
+  border-radius: 999px;
+  background: var(--fb-act-blue-soft);
+  color: var(--fb-act-blue-deep);
+  font-variant-numeric: tabular-nums;
+}
+.board :global(.astryx-token[data-color='yellow']) {
+  background: var(--fb-act-ember-soft);
+  color: var(--fb-act-ember-deep);
+}
+.board :global(.astryx-segmented-control),
+.board :global(.astryx-segmented-control-item) {
+  border-radius: 999px;
 }
 
 /* ---- horizontal strips (games, Marketplace) ---- */
@@ -398,6 +460,8 @@
   gap: 12px;
   overflow-x: auto;
   scroll-snap-type: x proximity;
+  /* the 4px bleed makes room for focus rings; snapping must not eat it */
+  scroll-padding-inline: 4px;
   padding: 4px 4px 12px;
   margin: -4px -4px -8px;
   scrollbar-width: none;
@@ -413,14 +477,16 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  /* a card that also staggers in (.section) must not take its 12px gap between cover and body */
+  gap: 0;
   min-width: 0;
-  transition:
-    transform 0.14s var(--fb-act-ease),
-    box-shadow 0.14s;
+  transition: transform 0.16s var(--fb-act-ease);
 }
-a.card:hover,
-button.card:hover {
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  a.card:hover,
+  button.card:hover {
+    transform: translateY(-2px);
+  }
 }
 a.card:active,
 button.card:active {
@@ -429,9 +495,10 @@ button.card:active {
 .gameTile {
   flex: 0 0 148px;
   scroll-snap-align: start;
-  padding: 14px 12px;
+  padding: 16px 12px;
   display: grid;
   justify-items: center;
+  align-content: start;
   gap: 8px;
   text-align: center;
 }
@@ -453,6 +520,7 @@ button.card:active {
 .gameSub {
   font-size: 12px;
   color: var(--fb-act-muted);
+  font-variant-numeric: tabular-nums;
 }
 .gameNew {
   border-style: dashed;
@@ -480,6 +548,7 @@ button.card:active {
 .price {
   font-size: 15px;
   font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- cards with a cover (communities, people, events) ---- */
@@ -508,7 +577,7 @@ button.card:active {
 .avatarWrap {
   display: grid;
   place-items: center;
-  padding: 18px 0 0;
+  padding: 16px 0 0;
 }
 .avatar {
   width: 64px;
@@ -520,9 +589,9 @@ button.card:active {
     0 0 0 5px var(--fb-act-blue-soft);
 }
 .cardBody {
-  padding: 14px 16px 16px;
+  padding: 16px;
   display: grid;
-  gap: 6px;
+  gap: 4px;
   align-content: start;
   flex: 1;
 }
@@ -538,12 +607,13 @@ button.card:active {
   color: var(--fb-act-muted);
 }
 .why {
-  margin: 0;
+  margin: 4px 0 0;
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: flex-start;
   font-size: 13px;
   color: var(--fb-act-muted);
+  text-wrap: pretty;
 }
 .why svg {
   flex: none;
@@ -552,14 +622,15 @@ button.card:active {
 }
 .cardBtns {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin-top: 6px;
+  margin-top: 12px;
 }
 .chips {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
+  margin-bottom: 4px;
 }
 
 /* ---- events near you: map + list ---- */
@@ -590,9 +661,9 @@ button.card:active {
 .ev {
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) auto;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
-  padding: 12px 14px;
+  padding: 12px 16px;
   border-top: 1px solid var(--fb-act-line);
   transition: background-color 0.14s;
 }
@@ -604,7 +675,8 @@ button.card:active {
 }
 .evDate {
   text-align: center;
-  padding: 5px 0;
+  padding: 6px 0;
+  font-variant-numeric: tabular-nums;
   border-radius: 10px;
   line-height: 1.05;
   background: var(--fb-act-blue-soft);
@@ -639,6 +711,7 @@ button.card:active {
   font-weight: 700;
   color: var(--fb-act-ember-deep);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 .pin {
   display: block;
@@ -657,7 +730,7 @@ button.card:active {
 }
 @media (max-width: 700px) {
   .page {
-    padding: 12px 12px 56px;
+    padding: 16px 16px 64px;
   }
   .events {
     grid-template-columns: 1fr;
@@ -675,7 +748,7 @@ button.card:active {
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;

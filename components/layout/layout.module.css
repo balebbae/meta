@@ -1107,16 +1107,7 @@
   color: var(--fb-act-ink);
 }
 
-/* Canvas: flat white / navy instead of the grey feed, with a faint contour field (ActivitiesMode, WebGL) fading in under everything. */
-.actBackdrop {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  animation: actFade 0.6s var(--fb-act-ease) both;
-}
+/* Canvas: one solid colour (white / navy) instead of the grey feed. Nothing is drawn under the app. */
 :global(html[data-mode='activities'] body):has(.shell) {
   background: var(--fb-act-bg);
 }
@@ -1211,7 +1202,7 @@
   margin-bottom: 8px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--fb-act-line);
-  animation: actRise 0.5s var(--fb-act-ease) both;
+  animation: actRise 0.3s var(--fb-act-ease) both;
 }
 .actNavLabel {
   padding: 4px 8px 8px;
@@ -1219,13 +1210,13 @@
   font-weight: 500;
   color: var(--fb-act-muted);
 }
+/* same 52px row as the items below, so the rail keeps one rhythm */
 .actNavItem {
-  height: 48px;
   font-weight: 600;
-  transition: transform 0.14s var(--fb-act-ease);
+  transition: transform 0.16s var(--fb-act-ease);
 }
 .actNavItem:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 .actNavIcon {
   width: 36px;
@@ -1243,29 +1234,31 @@
   background: var(--fb-act-blue);
 }
 
-/* Right rail: "Closeness this week" and your squads only, each a hairline card. */
+/* Right rail: "Closeness this week" and your squads only, each a hairline card. The cards sit 28px from the feed
+   column (as the left rail's rows do) and end on the header's 16px edge. */
 :global(html[data-mode='activities']) .rrFacebook {
   display: none;
 }
 :global(html[data-mode='activities']) .rightRail > section {
-  margin: 0 8px 12px 16px;
+  margin: 0 8px 16px;
+  padding-top: 16px;
   border: 1px solid var(--fb-act-line);
   border-radius: var(--fb-act-radius);
   background: var(--fb-act-surface);
   box-shadow: var(--fb-act-shadow);
-  animation: actRise 0.5s var(--fb-act-ease) both;
+  animation: actRise 0.3s var(--fb-act-ease) both;
 }
 :global(html[data-mode='activities']) .rightRail > section + section {
   animation-delay: 45ms;
 }
 .squads {
-  padding: 12px 8px 8px;
+  padding: 16px 8px 8px;
 }
 .squadsHead {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  padding: 0 8px 6px;
+  padding: 0 8px 8px;
   font-size: 17px;
   font-weight: 700;
   color: var(--fb-act-ink);
@@ -1331,15 +1324,10 @@
   color: var(--fb-act-muted);
 }
 
-@keyframes actFade {
-  from {
-    opacity: 0;
-  }
-}
 @keyframes actRise {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -1347,7 +1335,6 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .actBackdrop,
   .actNav,
   :global(html[data-mode='activities']) .rightRail > section {
     animation: none;

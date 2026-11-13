@@ -11,10 +11,13 @@ export default function ActivitiesPreview() {
       <CoachMode initialOn={false}>
         <DiscoverPage viewer={{id: fx.user.id, name: fx.user.name, avatarUrl: fx.user.avatarUrl}} data={fx.data} museActions={fx.museActions} listings={fx.listings} start={null} eventId={null} goal={fx.goal} games={fx.games} level={fx.level} progress={fx.progress} nearby={fx.nearby} />
       </CoachMode>
-      <section className={h.section} style={{padding: '0 12px 56px'}} aria-label="Challenges in Messages">
-        <SectionHead title="Challenges in Messages" sub="The cards a squad chat gets" />
-        <PreviewThread />
-      </section>
+      {/* .page gives the same gutters as the page above; the margin closes its 64px foot down to one 32px section gap */}
+      <div className={h.page} style={{marginTop: -32, paddingTop: 0}}>
+        <section className={h.section} aria-label="Challenges in Messages">
+          <SectionHead title="Challenges in Messages" sub="The cards a squad chat gets" />
+          <PreviewThread />
+        </section>
+      </div>
     </>
   );
 }

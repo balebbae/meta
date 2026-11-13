@@ -36,34 +36,52 @@ Order on the page, top to bottom (the user's list):
 | `--fb-act-blue`, `-blue-deep`, `-blue-soft` | FB blue family | lifted | links, primary pills, chips |
 | `--fb-act-ember`, `-ember-deep`, `-ember-soft` | orange family | muted | the one action that matters, live numbers, pins |
 | `--fb-act-shadow` | one soft 1px shadow | same, darker | cards sit on a hairline, not on a glow |
-| `--fb-act-ease`, `--fb-act-radius` | `cubic-bezier(.2,.8,.2,1)`, 20px | same | every transition, big cards |
+| `--fb-act-ease`, `--fb-act-radius` | `cubic-bezier(.23,1,.32,1)` (a strong ease-out), 20px | same | every transition, big cards |
 
 No new hex outside `app/globals.css` (AGENTS.md rule).
 
 ### Motion rules
 
-- Sections fade + rise 500 ms, staggered 45 ms; Muse rows 40 ms.
-- Hover: surface lift 2px / tint, 140 ms. Press: scale .97–.98.
+- Sections fade + rise 8px over 300 ms, staggered 40 ms; Muse rows the same.
+- Press: scale .97–.98 over 160 ms on everything pressable. Hover lifts only behind
+  `@media (hover: hover) and (pointer: fine)`, so a tap never leaves a card stuck raised.
+- Transitions name their properties (never `all`) and ease out; nothing eases in.
 - Count-up once, 900 ms, cubic ease-out. Ring 1.2 s.
-- The only looping motion is the contour shader (below). No beams, no glows.
+- Looping motion: the contour shader inside the hero and the quest card, and the Muse's thinking-orb. No beams, no glows.
 - `prefers-reduced-motion`: no stagger, one still shader frame, no count-up.
 - **Theme switch fades**: `useActTheme` sets `html[data-theme-fade]` for 450 ms when `data-theme` flips while
   Activities is mounted; the page and (round 2) the chrome transition colours. Outside Activities Facebook still snaps.
 
-### Flat surfaces, one shader (the minimal pass)
+### Flat surfaces, a solid canvas (the minimal pass)
 
 The first cut read as generic: pastel radial washes, blue-to-orange gradient orbs, gradient buttons with coloured
-glows, a beam around the ring. All of that is gone. The rules now:
+glows, a beam around the ring. The second put contour lines under the whole app, which was noise. The rules now:
 
-- Surfaces are flat (`--fb-act-surface` on `--fb-act-bg`) with a 1px `--fb-act-line`. No gradient fills anywhere:
+- The canvas is one solid colour (`--fb-act-bg`). Nothing is drawn under the page.
+- Surfaces are flat (`--fb-act-surface`) with a 1px `--fb-act-line`. No gradient fills anywhere:
   ember and blue are solid, icons sit on `-soft` discs, labels are sentence case.
 - Ember is for the one action and the one live number. Blue is for links and "where you are".
-- Life comes from one WebGL shader, `components/activities/home/Contours.tsx`: slow topographic contour lines of
-  a warped height field, thin ink lines with one level in ember. It is used in three places: behind the ring in
-  the progress hero, behind the boss on quest cards in Messages, and very faintly under the whole app while
-  Activities mode is on. It reads the ink and ember tokens (so it follows light/dark), runs at about 30 fps,
-  pauses off-screen and in hidden tabs, and leaves the flat surface alone without WebGL2. The only gradients
-  left in the CSS are alpha masks that fade the lines out under text.
+- The one shader, `components/activities/home/Contours.tsx` (WebGL), is contained: slow topographic contour lines
+  in the ink at 10%, only behind the ring in the progress hero and behind the boss on quest cards. No ember line:
+  the ring is the ember element. It follows light/dark, runs at about 30 fps, pauses off-screen and in hidden
+  tabs, and leaves the flat surface alone without WebGL2. The only gradients left in the CSS are alpha masks
+  that fade the lines out under text.
+- The Muse has a face: `ThinkingOrb` from `thinking-orbs` (Libraries.dev, MIT, 2D canvas, monochrome) sits after
+  the "From your Muse" heading, breathing at rest and searching while Muse looks, and larger in the empty state.
+
+### Spacing and details (the padding pass)
+
+Everything sits on a 4px grid: 32 between sections, 12 from a heading to its body, 16 inside cards and rows,
+24 inside the hero, 8 between sibling buttons, tiles and chips. Headings sit 4px inside the cards' edge.
+
+- Left rail: sub-nav rows are 52px like the items below them. Right rail: cards are 28px from the feed column
+  (the same gap as on the left) and end on the header's 16px edge.
+- Numbers use tabular figures. Captions and reasons use `text-wrap: pretty`.
+- Link pills and button pills share one ink (`.page :where(a)` no longer overrides `.pillEmber`).
+- Phone: 16px gutters; the three stats become plain columns with the unit under the number (bordered tiles
+  overflowed at 390); task rows align to the top.
+- The Astryx parts inside the page (leaderboard card, switch, dialogs) read the same palette through
+  `--color-*` overrides on `.page`; the leaderboard's XP tags look like the page's chips.
 
 ### Files
 
@@ -90,8 +108,8 @@ same feeling in Messages for the challenges. No logic changed: same API routes, 
    ember badges, pill rows and buttons. Same markup, same layout. Entering, leaving and the light/dark switch
    call `fadeTheme()` (`useActTheme.ts`), which sets `html[data-theme-fade]` for 450 ms; colours transition over
    420 ms only while it is set, so outside those moments Facebook snaps exactly as before.
-3. **Entry.** The canvas goes flat white / navy and the faint contour field fades in under everything, the
-   chrome re-tints, the sub-nav and the right-rail cards rise, page sections rise as in round 1.
+3. **Entry.** The canvas goes to one solid colour (white / navy), the chrome re-tints, the sub-nav and the
+   right-rail cards rise, page sections rise as in round 1.
 4. **Left rail** gets the Activities sub-nav (Home, Goals, Games, Muse, Privacy) above the usual items; the
    current one is solid blue. **Right rail** shows "Closeness this week" and "Your squads" (the
    viewer's group chats, `components/layout/Squads.tsx`, unread count in ember) only; friend requests and
@@ -110,7 +128,7 @@ same feeling in Messages for the challenges. No logic changed: same API routes, 
 
 **Still open:** whether the Feed ever enters the mode (it does not), whether a squad chat with a live quest
 should switch the mode on in Messages (it does not; only the cards carry the look), and the name. `border-beam`
-is no longer imported and can leave `package.json`. Dialogs that portal to `<body>` from the chrome
+(Libraries.dev) is installed but not imported: a beam is a gradient, which the minimal pass rules out. Dialogs that portal to `<body>` from the chrome
 (weekly quests, create story) keep the Facebook surface.
 
 ## How to review

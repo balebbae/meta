@@ -245,7 +245,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
             {listings.map(l => (
               <Link key={l.id} href={`/marketplace/item/${l.id}`} className={`${h.card} ${h.shopTile}`}>
                 <img src={l.imageUrl} alt="" loading="lazy" />
-                <span className={h.cardBody} style={{padding: '10px 12px 12px', gap: 2}}>
+                <span className={h.cardBody} style={{padding: 12, gap: 2}}>
                   <span className={h.price}>${(l.priceCents / 100).toFixed(0)}</span>
                   <span className={h.cardTitle} style={{fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
                     {l.title}
@@ -263,7 +263,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
 
       {firstMove && renderSection(firstMove)}
       {sections.filter(s => !['first_move', 'learn', 'groups'].includes(s.id)).map(renderSection)}
-      <div className={h.section} style={{'--i': order++} as React.CSSProperties}>
+      <div className={`${h.section} ${h.board}`} style={{'--i': order++} as React.CSSProperties}>
         <ActivityLeaderboard />
       </div>
 

@@ -166,3 +166,16 @@
 .tabBlue:hover {
   background: var(--fb-blue-hover);
 }
+
+/* Activities mode (the right-rail card, see layout.module.css): same card on a 4px grid, numbers that do not jitter. */
+:global(html[data-mode='activities']) .heading,
+:global(html[data-mode='activities']) .tabs {
+  margin-bottom: 12px;
+}
+:global(html[data-mode='activities']) .row {
+  gap: 12px;
+}
+:global(html[data-mode='activities']) .rank,
+:global(html[data-mode='activities']) .xp {
+  font-variant-numeric: tabular-nums;
+}

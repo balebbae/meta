@@ -27,7 +27,7 @@ export default function PreviewLayout({children}: {children: React.ReactNode}) {
         </div>
         <main className={styles.main}>
           <div className={styles.feedCol}>
-            <p className="fb-text-secondary" style={{margin: 0, padding: '0 12px 8px', fontSize: 13}}>
+            <p className="fb-text-secondary" style={{margin: 0, padding: '0 4px 8px', fontSize: 13}}>
               Dev preview: <Link href="/activities-preview" style={{color: 'var(--fb-blue)'}}>Activities</Link> · <Link href="/activities-preview/feed" style={{color: 'var(--fb-blue)'}}>Facebook feed</Link>
             </p>
             {children}

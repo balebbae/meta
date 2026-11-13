@@ -10,7 +10,7 @@
   box-shadow: var(--fb-act-shadow);
   overflow: hidden;
   font-family: var(--fb-font);
-  animation: rise 0.45s var(--fb-act-ease) both;
+  animation: rise 0.3s var(--fb-act-ease) both;
 }
 /* hero: boss or glyph, title, the live number */
 .hero {
@@ -20,7 +20,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 16px;
   border-bottom: 1px solid var(--fb-act-line);
 }
 /* quest cards only: the Activities contour lines (Contours.tsx) behind the boss, fading out under the text */
@@ -93,7 +93,7 @@
   animation: low 1s ease-in-out infinite;
 }
 .cardBody {
-  padding: 12px 16px;
+  padding: 16px;
   font-size: 15px;
   line-height: 1.4;
   color: var(--fb-act-ink);
@@ -107,13 +107,14 @@
   font-size: 13px;
   line-height: 1.4;
   color: var(--fb-act-muted);
+  text-wrap: pretty;
 }
 .notes {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 10px;
-  margin-top: 10px;
+  gap: 8px 12px;
+  margin-top: 12px;
   font-size: 12px;
   font-weight: 600;
   color: var(--fb-act-muted);
@@ -138,8 +139,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 12px;
 }
 .ring {
   position: relative;
@@ -170,6 +171,7 @@
 .ring img {
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 }
 .ringPending {
   opacity: 0.45;
@@ -178,17 +180,18 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--fb-act-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* standings: task rows */
 .rows {
-  margin-top: 10px;
+  margin-top: 12px;
   border-top: 1px solid var(--fb-act-line);
 }
 .row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   padding: 8px 0;
   border-bottom: 1px solid var(--fb-act-line);
   font-size: 14px;
@@ -210,7 +213,7 @@
   font-variant-numeric: tabular-nums;
 }
 .rowValue small {
-  margin-left: 3px;
+  margin-left: 4px;
   font-weight: 500;
   color: var(--fb-act-muted);
 }
@@ -238,18 +241,18 @@
 }
 .gameBig {
   width: min(420px, 86vw);
-  gap: 14px;
-  padding: 12px;
+  gap: 16px;
+  padding: 16px;
   border: 1px solid var(--fb-act-line);
   border-radius: var(--fb-act-radius);
   background: var(--fb-act-surface);
   box-shadow: var(--fb-act-shadow);
-  animation: rise 0.45s var(--fb-act-ease) both;
+  animation: rise 0.3s var(--fb-act-ease) both;
 }
 .gm {
   flex: 1;
   min-width: 0;
-  padding: 10px 14px;
+  padding: 12px 16px;
   border: 1px solid var(--fb-act-line);
   border-radius: 18px 18px 18px 6px;
   background: var(--fb-act-surface);
@@ -258,7 +261,7 @@
 }
 .gameBig .gm {
   border: 0;
-  padding: 0 4px;
+  padding: 0;
   background: transparent;
 }
 

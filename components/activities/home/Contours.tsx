@@ -7,16 +7,13 @@ const VERT = `#version 300 es
 in vec2 p;
 void main() { gl_Position = vec4(p, 0., 1.); }`;
 
-// Contour lines of a slowly warped height field ("distortion waves"): thin ink lines, one level drawn in ember.
+// Contour lines of a slowly warped height field: thin, faint ink lines.
 // Output is premultiplied; everything between the lines stays transparent, so the surface underneath shows through.
 const FRAG = `#version 300 es
 precision highp float;
 uniform vec2 r;
 uniform float t;
 uniform vec3 ink;
-uniform vec3 hot;
-uniform float k;
-uniform float hotK;
 out vec4 o;
 float field(vec2 p, float s) {
   p += .34 * vec2(sin(p.y * 1.7 + s * 1.3), cos(p.x * 1.3 - s));
@@ -25,20 +22,17 @@ float field(vec2 p, float s) {
 }
 void main() {
   vec2 uv = gl_FragCoord.xy / r.y;
-  float h = field(uv * 2.6 + 3., t * .11) * 3.2;
+  float h = field(uv * 2.6 + 3., t * .11) * 2.4;
   float px = abs(fract(h - .5) - .5) / fwidth(h);
-  float level = floor(h + .5);
-  float isHot = hotK * (1. - step(.5, abs(level - 2.)));
-  float line = 1. - smoothstep(.35 + .5 * isHot, 1.35 + .5 * isHot, px);
-  float a = line * mix(k, .85, isHot);
-  o = vec4(mix(ink, hot, isHot) * a, a);
+  float a = (1. - smoothstep(.35, 1.35, px)) * .1;
+  o = vec4(ink * a, a);
 }`;
 
-/** Slow topographic contour lines in WebGL, drawn on the --fb-act-* ink and ember (re-read when the theme flips).
- *  Decorative: sits behind content, pauses off-screen and in hidden tabs, one still frame under reduced motion,
- *  and leaves the flat surface alone when WebGL2 is missing. `strength` is the ink lines' opacity, `hot` draws one
- *  level in ember, `dpr` caps the pixel ratio (1 is enough for a faint full-page field). */
-export function Contours({className, strength = 0.13, hot = true, dpr = 2}: {className?: string; strength?: number; hot?: boolean; dpr?: number}) {
+/** Slow topographic contour lines in WebGL, drawn in the --fb-act-ink at 10% (re-read when the theme flips).
+ *  Decorative and contained: only inside the progress hero and the quest card, never under the page. Pauses
+ *  off-screen and in hidden tabs, one still frame under reduced motion, and leaves the flat surface alone when
+ *  WebGL2 is missing. */
+export function Contours({className}: {className?: string}) {
   const ref = useRef<HTMLCanvasElement>(null);
   const theme = useActTheme();
   const kick = useRef<() => void>(undefined);
@@ -66,8 +60,6 @@ export function Contours({className, strength = 0.13, hot = true, dpr = 2}: {cla
     gl.enableVertexAttribArray(loc);
     gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
     const u = (name: string) => gl.getUniformLocation(prog, name);
-    gl.uniform1f(u('k'), strength);
-    gl.uniform1f(u('hotK'), hot ? 1 : 0);
 
     // tokens -> rgb through a 2D context, so any CSS colour format works; custom properties flip at once, unlike `color` mid-fade
     const probe = document.createElement('canvas').getContext('2d');
@@ -84,7 +76,7 @@ export function Contours({className, strength = 0.13, hot = true, dpr = 2}: {cla
     let painted = '';
     const draw = (now: number) => {
       raf = 0;
-      const d = Math.min(devicePixelRatio, dpr);
+      const d = Math.min(devicePixelRatio, 2);
       const w = Math.round(c.clientWidth * d);
       const h = Math.round(c.clientHeight * d);
       const key = `${w}x${h}${document.documentElement.dataset.theme}`;
@@ -96,7 +88,6 @@ export function Contours({className, strength = 0.13, hot = true, dpr = 2}: {cla
           gl.viewport(0, 0, w, h);
           gl.uniform2f(u('r'), w, h);
           gl.uniform3fv(u('ink'), rgb('--fb-act-ink'));
-          gl.uniform3fv(u('hot'), rgb('--fb-act-ember'));
           painted = key;
         }
         last = now;
@@ -124,7 +115,7 @@ export function Contours({className, strength = 0.13, hot = true, dpr = 2}: {cla
       document.removeEventListener('visibilitychange', wake);
       kick.current = undefined;
     };
-  }, [strength, hot, dpr]);
+  }, []);
 
   // repaint with the new palette when light/dark flips (the loop may be idle: reduced motion, off-screen)
   useEffect(() => kick.current?.(), [theme]);

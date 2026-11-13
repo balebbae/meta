@@ -36,7 +36,7 @@ export function Squads() {
           <GroupAvatar srcs={c.imageUrl ? [c.imageUrl] : c.members.map(m => m.avatarUrl)} size={40} />
           <span className={styles.squadText}>
             <span className={styles.squadName}>{c.title}</span>
-            <span className={styles.squadSub}>{c.lastMessage?.body || `${c.members.length} members`}</span>
+            <span className={styles.squadSub}>{c.lastMessage?.body || `${c.members.length} ${c.members.length === 1 ? 'member' : 'members'}`}</span>
           </span>
           {c.unreadCount > 0 && (
             <span className={styles.squadLive} aria-label={`${c.unreadCount} unread`}>

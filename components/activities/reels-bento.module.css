@@ -3,18 +3,21 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-auto-rows: 210px;
-  gap: 10px;
+  gap: 12px;
 }
-.reelTile {
+a.reelTile {
   position: relative;
   display: block;
   overflow: hidden;
   border-radius: 18px;
   background: var(--fb-act-surface-2);
-  color: #fff;
+  color: var(--fb-on-media);
   box-shadow: var(--fb-act-shadow);
-  transition: transform 0.14s var(--fb-act-ease);
+  transition: transform 0.16s var(--fb-act-ease);
   isolation: isolate;
+}
+.reelTile:active {
+  transform: scale(0.98);
 }
 .reelTile:first-child {
   grid-column: span 2;
@@ -29,7 +32,7 @@
   z-index: -1;
   transition: transform 0.25s ease;
 }
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .reelTile:hover img {
     transform: scale(1.04);
   }
@@ -50,9 +53,9 @@
 }
 .reelTag {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  max-width: calc(100% - 16px);
+  top: 12px;
+  left: 12px;
+  max-width: calc(100% - 24px);
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -69,9 +72,9 @@
 }
 .reelCaption {
   position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
   font-size: 14px;
   font-weight: 600;
   line-height: 1.25;
@@ -82,9 +85,9 @@
   overflow: hidden;
 }
 .reelTile:first-child .reelCaption {
-  left: 14px;
-  right: 14px;
-  bottom: 14px;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
   font-size: 18px;
   -webkit-line-clamp: 3;
 }

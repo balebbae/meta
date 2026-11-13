@@ -31,7 +31,7 @@ const schema = {
 };
 
 const PROMPT = `You read a photo of a fitness device or screen (treadmill, watch, bike computer, phone app, race bib) and extract the workout it shows.
-Rules: only report numbers that are visibly printed. Convert miles to km (x1.609). Convert mm:ss to minutes as a decimal. If the image is not a workout screen, set verdict to not_a_workout and confidence 0.
+Rules: only report numbers that are visibly printed. Convert miles to km (x1.609). Convert mm:ss to minutes as a decimal. If the image is not a workout screen, set verdict to not_a_workout and confidence 0. Idle, menu, all-zero/dash and lifetime or odometer total screens are not workout screens.
 Never describe or comment on any person, body, weight or health condition in the image; only the device readout.
 Return JSON matching the schema. confidence is 0..1.`;
 

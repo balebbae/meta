@@ -157,7 +157,7 @@ export function MobileHeader() {
   const title = PAGE_TITLES[pathname] ?? (groupDetail ? 'Groups' : undefined);
   const groups = pathname === '/groups' || groupDetail;
   if (title) return (
-    <header className={`${styles.mobileOnly} ${styles.header} ${styles.pageHeader} ${groups ? styles.groupsHeader : ''}`} data-mobile-title={title} aria-label={title}>
+    <header className={`${styles.mobileOnly} ${styles.header} ${styles.pageHeader} ${groups ? styles.groupsHeader : ''}`} data-mobile-title={title} aria-label={title} data-mobile-shell-header>
       <Link href={groupDetail ? '/groups' : '/menu'} className={styles.hamburger} aria-label={groupDetail ? 'Back to groups' : groups ? 'Back to menu' : 'Menu'} onClick={e => { if (groupDetail) return; e.preventDefault(); window.dispatchEvent(new Event(MOBILE_MENU_EVENT)); }}>
         {groups ? <ChevronLeftIcon size={24} /> : <HamburgerIcon />}
       </Link>
@@ -183,7 +183,7 @@ export function MobileHeader() {
     </header>
   );
   return (
-    <header className={`${styles.mobileOnly} ${styles.header} ${pathname === '/' ? styles.homeHeader : ''}`} aria-label="Facebook">
+    <header className={`${styles.mobileOnly} ${styles.header} ${pathname === '/' ? styles.homeHeader : ''}`} aria-label="Facebook" data-mobile-shell-header>
       <Link href="/menu" className={styles.hamburger} aria-label="Menu" onClick={e => { e.preventDefault(); window.dispatchEvent(new Event(MOBILE_MENU_EVENT)); }}>
         <HamburgerIcon />
       </Link>

@@ -2,6 +2,7 @@
 
 import {useState} from 'react';
 import {useRouter} from 'next/navigation';
+import Link from 'next/link';
 import type {Profile} from '@/lib/profile-queries';
 import {BriefcaseIcon, CakeIcon, GraduationIcon, HeartIcon, HomeIcon, PencilIcon, PinIcon, ClockIcon, UserIcon} from './icons';
 import {EditDialog} from './EditDialog';
@@ -17,16 +18,17 @@ export function IntroCard({profile, isOwn}: {profile: Profile; isOwn: boolean}) 
   return (
     <section className={styles.card} aria-labelledby="intro-title">
       <div className={styles.cardHead}>
-        <h2 id="intro-title" className={styles.cardTitle}>Intro</h2>
+        <h2 id="intro-title" className={styles.cardTitle}><span className={styles.desktopOnly}>Intro</span><span className={styles.mobileLabel}>Personal details</span></h2>
         {isOwn && (
-          <button type="button" className={styles.cardHeadIcon} aria-label="Edit bio" onClick={() => setEditing(true)}>
+          <button type="button" className={`${styles.cardHeadIcon} ${styles.desktopOnly}`} aria-label="Edit bio" onClick={() => setEditing(true)}>
             <PencilIcon size={20} />
           </button>
         )}
+        {isOwn && <Link href={`/profile/${user.id}?tab=about&section=contact`} className={`${styles.cardHeadIcon} ${styles.mobileLabel}`} aria-label="Edit personal details"><PencilIcon size={20} /></Link>}
       </div>
       {user.bio && <p className={styles.bio}>{user.bio}</p>}
       {isOwn && (
-        <button type="button" className={styles.fullBtn} onClick={() => setEditing(true)}>
+        <button type="button" className={`${styles.fullBtn} ${styles.desktopOnly}`} onClick={() => setEditing(true)}>
           {user.bio ? 'Edit bio' : 'Add bio'}
         </button>
       )}
@@ -70,13 +72,13 @@ export function IntroCard({profile, isOwn}: {profile: Profile; isOwn: boolean}) 
           </div>
         )}
         {details.birthday && (
-          <div className={styles.detail}>
+          <div className={styles.detail} data-profile-detail="birthday">
             <CakeIcon size={20} />
             <span><b>{details.birthday}</b></span>
           </div>
         )}
         {details.gender && (
-          <div className={styles.detail}>
+          <div className={styles.detail} data-profile-detail="gender">
             <UserIcon size={20} />
             <span>{details.gender}</span>
           </div>

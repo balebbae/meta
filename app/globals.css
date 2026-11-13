@@ -93,7 +93,8 @@ html {
   body:has([data-mobile-friends]),
   body:has([data-mobile-notifications]),
   body:has([data-mobile-marketplace]),
-  body:has([data-mobile-groups]) {
+  body:has([data-mobile-groups]),
+  body:has([data-mobile-profile]) {
     height: auto;
     min-height: 100%;
   }

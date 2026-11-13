@@ -8,6 +8,7 @@ import {formatCount} from '@/lib/secondary-data';
 import {GroupHeader, type GroupTab} from '@/components/pages/GroupHeader';
 import {GroupPostCard} from '@/components/pages/GroupPostCard';
 import {GroupComposer} from '@/components/pages/GroupComposer';
+import {MobileCoverHeader} from '@/components/mobile/MobileCoverHeader';
 import {CalendarIcon, GlobeIcon, GroupsIcon, LockIcon} from '@/components/pages/icons';
 import styles from '@/components/pages/groups.module.css';
 
@@ -58,6 +59,7 @@ export default async function GroupPage({params, searchParams}: {params: Promise
 
   return (
     <div data-layout="wide" className={styles.groupPage} data-mobile-groups>
+      <MobileCoverHeader name={group.name} href={`/groups/${group.id}`} avatarUrl={group.iconUrl} group />
       <GroupHeader group={group} members={members} tab={tab} />
       <div className={styles.groupBody}>
         <div className={styles.groupMain}>

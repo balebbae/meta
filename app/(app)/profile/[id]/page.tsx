@@ -7,6 +7,7 @@ import {IntroCard} from '@/components/profile/IntroCard';
 import {PhotosCard} from '@/components/profile/PhotosCard';
 import {FriendsCard} from '@/components/profile/FriendsCard';
 import {ProfilePosts} from '@/components/profile/ProfilePosts';
+import {MobileCoverHeader} from '@/components/mobile/MobileCoverHeader';
 import {AboutTab, type AboutSection} from '@/components/profile/AboutTab';
 import {FriendsTab} from '@/components/profile/FriendsTab';
 import {PhotosTab} from '@/components/profile/PhotosTab';
@@ -45,7 +46,8 @@ export default async function ProfilePage({params, searchParams}: Props) {
   ]);
 
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-mobile-profile>
+      <MobileCoverHeader name={profile.user.name} href={`/profile/${id}`} avatarUrl={profile.user.avatarUrl} isOwn={isOwn} />
       <ProfileHeader profile={profile} isOwn={isOwn} tab={tab} suggestions={suggestions} />
       <div className={styles.body}>
         {tab === 'posts' && (

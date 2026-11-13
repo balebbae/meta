@@ -43,7 +43,7 @@ export function GroupHeader({group, members, tab}: {group: Group; members: Group
   return (
     <div className={styles.hero}>
       <div className={styles.heroInner}>
-        <div className={styles.cover}>
+        <div className={styles.cover} data-mobile-cover>
           <Image src={group.coverUrl} alt="" fill priority sizes="1250px" />
         </div>
         <div className={styles.heroBody}>

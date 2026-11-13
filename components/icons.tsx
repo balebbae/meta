@@ -356,6 +356,14 @@ export function PencilIcon({size = 16, className, style}: IconProps) {
   return <FbImg name="editProfile16" size={size} className={className} style={style} />;
 }
 
+export function MobileEditIcon(p: IconProps) {
+  return <Svg {...p} fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinejoin="round"><path d="m16 3 5 5L9 20l-6 1 1-6L16 3Zm-3 3 5 5" /></Svg>;
+}
+
+export function MobileStoryIcon(p: IconProps) {
+  return <Svg {...p} fill="none" stroke="currentColor" strokeWidth={1.5}><circle cx="12" cy="12" r="9" /><path d="M12 7v10M7 12h10" /></Svg>;
+}
+
 export function TrashIcon(p: IconProps) {
   return (
     <Svg {...p}>

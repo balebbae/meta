@@ -11,6 +11,7 @@ export const WHOOP_SCOPES = [
   'read:sleep',
   'read:workout',
   'read:cycles',
+  'read:body_measurement',
 ].join(' ');
 
 export function whoopConfigured() {
@@ -67,13 +68,14 @@ export async function refreshWhoopToken(refreshToken: string) {
 }
 
 export async function fetchWhoopSamples(accessToken: string) {
-  const [recovery, sleep, cycle, workouts] = await Promise.all([
+  const [recovery, sleep, cycle, workouts, body] = await Promise.all([
     whoopGet('/recovery?limit=1', accessToken).catch(() => null),
     whoopGet('/activity/sleep?limit=1', accessToken).catch(() => null),
     whoopGet('/cycle?limit=1', accessToken).catch(() => null),
-    whoopGet('/activity/workout?limit=10', accessToken).catch(() => null),
+    whoopGet('/activity/workout?limit=25', accessToken).catch(() => null),
+    whoopGet('/user/measurement/body', accessToken).catch(() => null),
   ]);
-  return whoopReadings({recovery, sleep, cycle, workouts});
+  return whoopReadings({recovery, sleep, cycle, workouts, body});
 }
 
 export async function whoopGet(path: string, accessToken: string) {

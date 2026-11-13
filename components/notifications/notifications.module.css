@@ -1,0 +1,41 @@
+.page {
+  max-width: 680px;
+  margin: 0 auto;
+  background: var(--fb-card);
+  border-radius: 8px;
+  box-shadow: var(--fb-shadow-card);
+  padding: 8px 8px 16px;
+}
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 8px 4px;
+}
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+}
+.markAll {
+  background: none;
+  border: 0;
+  color: var(--fb-blue);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+.markAll:hover {
+  background: var(--fb-hover);
+}
+.markAll:disabled {
+  color: var(--fb-text-secondary);
+  cursor: default;
+}
+.empty {
+  text-align: center;
+  color: var(--fb-text-secondary);
+  padding: 32px 0;
+}

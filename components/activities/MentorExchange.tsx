@@ -80,6 +80,8 @@ export function MentorExchange({initial}: {initial: MentorRequestView}) {
   };
 
   const other = req.role === 'seeker' ? (req.mentor ? req.mentor.name : 'Anonymous mentor') : req.seeker.name;
+  const seekerMuse = req.role === 'seeker' ? 'Your Muse' : `${req.seeker.name.split(' ')[0]}’s Muse`;
+  const mentorMuse = req.role === 'mentor' ? 'Your Muse' : req.mentor ? `${req.mentor.name.split(' ')[0]}’s Muse` : 'Mentor’s Muse';
   const pending = req.status === 'pending';
 
   return (
@@ -176,7 +178,7 @@ export function MentorExchange({initial}: {initial: MentorRequestView}) {
             {turns.map((t, i) => (
               <div key={i}>
                 <div className={styles.who} style={t.role === 'mentor' ? {textAlign: 'right'} : undefined}>
-                  {t.role === 'seeker' ? `${req.seeker.name.split(' ')[0]}’s Muse` : `${other.split(' ')[0]}’s Muse`}
+                  {t.role === 'seeker' ? seekerMuse : mentorMuse}
                 </div>
                 <div className={t.role === 'mentor' ? styles.turnMentor : styles.turn}>
                   <span className={t.role === 'mentor' ? styles.museMentor : styles.muse}>M</span>

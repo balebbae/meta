@@ -49,13 +49,15 @@ export function MessengerApp({
     [activeId, patch, markRead, refresh],
   );
 
-  const live = useConversationLive(mode === 'thread' ? activeId : null, viewer, {onNewFromOthers});
+  // once the list no longer contains the thread (left/removed/deleted) stop polling it, otherwise every tick is a 404
+  const notFound = mode === 'thread' && activeId != null && conversations != null && !active;
+  const live = useConversationLive(mode === 'thread' && !notFound ? activeId : null, viewer, {onNewFromOthers});
 
   // opening a thread marks it read
   useEffect(() => {
-    if (mode !== 'thread' || activeId == null) return;
+    if (mode !== 'thread' || activeId == null || notFound) return;
     markRead(activeId);
-  }, [activeId, mode, markRead]);
+  }, [activeId, mode, markRead, notFound]);
 
   // list reflects my optimistic sends immediately
   const onSend = useCallback(
@@ -72,8 +74,6 @@ export function MessengerApp({
     },
     [activeId, patch, live, viewer, refresh],
   );
-
-  const notFound = mode === 'thread' && activeId != null && conversations && !active;
 
   return (
     <div data-layout="wide" className={styles.app} data-active={String(mode === 'new' || activeId != null)}>

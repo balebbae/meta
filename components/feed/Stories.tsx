@@ -4,12 +4,15 @@ import {useRef, useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import {ChevronLeftIcon, ChevronRightIcon, PlusIcon} from '@/components/icons';
 import type {Story, User} from '@/lib/types';
+import {CreateStoryDialog, StoryViewer} from './StoryDialogs';
 import styles from './feed.module.css';
 
 export function Stories({stories, viewer}: {stories: Story[]; viewer: User}) {
   const track = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   const [atEnd, setAtEnd] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [viewing, setViewing] = useState<number | null>(null);
 
   const onScroll = () => {
     const el = track.current;
@@ -22,7 +25,7 @@ export function Stories({stories, viewer}: {stories: Story[]; viewer: User}) {
   return (
     <section className={styles.stories} aria-label="Stories">
       <div className={styles.storiesTrack} ref={track} onScroll={onScroll}>
-        <button className={`${styles.story} ${styles.createStory}`} aria-label="Create story">
+        <button className={`${styles.story} ${styles.createStory}`} aria-label="Create story" onClick={() => setCreating(true)}>
           <Image src={viewer.avatarUrl} alt="" width={141} height={190} className={styles.createImg} />
           <div className={styles.createBottom}>
             <span className={styles.createPlus}>
@@ -31,8 +34,8 @@ export function Stories({stories, viewer}: {stories: Story[]; viewer: User}) {
             Create story
           </div>
         </button>
-        {stories.map(s => (
-          <button key={s.id} className={styles.story} aria-label={`${s.user.name}'s story`}>
+        {stories.map((s, i) => (
+          <button key={s.id} className={styles.story} aria-label={`${s.user.name}'s story`} onClick={() => setViewing(i)}>
             <Image src={s.imageUrl} alt="" width={141} height={250} className={styles.storyImg} sizes="141px" />
             <span className={styles.storyRing}>
               <Avatar src={s.user.avatarUrl} alt="" size={32} />
@@ -51,6 +54,8 @@ export function Stories({stories, viewer}: {stories: Story[]; viewer: User}) {
           <ChevronRightIcon size={24} />
         </button>
       )}
+      <CreateStoryDialog open={creating} onClose={() => setCreating(false)} />
+      <StoryViewer stories={stories} index={viewing} onClose={() => setViewing(null)} onIndex={setViewing} />
     </section>
   );
 }

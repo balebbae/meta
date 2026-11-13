@@ -143,6 +143,12 @@ export async function leaveConversation(conversationId: number, userId: number):
   if (Number(n) === 0) await sql`delete from conversations where id = ${conversationId}`;
 }
 
+/** Centered grey line in the thread ("Caleb named the group QA Squad"); the actor is the sender so the chat list can attribute it. */
+export async function addSystemMessage(conversationId: number, actor: {id: number}, text: string): Promise<void> {
+  await sql`insert into messages (conversation_id, sender_id, body, kind, payload) values (${conversationId}, ${actor.id}, ${text}, 'system', ${JSON.stringify({text})})`;
+  await sql`update conversations set updated_at = now() where id = ${conversationId}`;
+}
+
 export async function updateConversation(conversationId: number, patch: {name?: string | null; imageUrl?: string | null}): Promise<void> {
   if (patch.name !== undefined) await sql`update conversations set name = ${patch.name}, updated_at = now() where id = ${conversationId}`;
   if (patch.imageUrl !== undefined) await sql`update conversations set image_url = ${patch.imageUrl}, updated_at = now() where id = ${conversationId}`;

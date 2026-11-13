@@ -1,6 +1,7 @@
 'use client';
 import Image from 'next/image';
-import {useEffect, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
+import {MAX_DATA_URL_LENGTH, TOO_BIG_MESSAGE, fileToDataUrlFit, isImageDataUrl} from '@/lib/image-upload';
 import {Avatar} from '@/components/ui/Avatar';
 import {Dialog} from '@/components/ui/Dialog';
 import {Popover} from '@/components/ui/Popover';
@@ -109,12 +110,26 @@ export function CreatePostDialog({
   const [audOpen, setAudOpen] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
   const [imageUrl, setImageUrl] = useState('');
+  const [imageError, setImageError] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const pickFile = async (file: File | undefined) => {
+    if (!file) return;
+    setImageError(null);
+    try {
+      const url = await fileToDataUrlFit(file, 1280, MAX_DATA_URL_LENGTH);
+      setImageUrl(url);
+    } catch {
+      setImageError(TOO_BIG_MESSAGE);
+    }
+  };
 
   useEffect(() => {
     if (open) {
       setText('');
       setImageUrl('');
+      setImageError(null);
       setShowPhoto(!!startWithPhoto);
       setActivity(null);
       setShowActivity(false);
@@ -139,7 +154,8 @@ export function CreatePostDialog({
   };
 
   const first = viewer.name.split(' ')[0];
-  const previewOk = /^https:\/\/(picsum\.photos|fastly\.picsum\.photos|images\.unsplash\.com|i\.pravatar\.cc)\//.test(imageUrl.trim());
+  const isData: boolean = isImageDataUrl(imageUrl as unknown);
+  const previewOk = isData || /^https:\/\/(images\.unsplash\.com|i\.pravatar\.cc)\//.test(imageUrl.trim());
 
   return (
     <Dialog open={open} onClose={onClose} title="Create post">
@@ -195,15 +211,25 @@ export function CreatePostDialog({
         {showPhoto && (
           <div className={styles.previewWrap}>
             <div className={styles.imageUrlRow}>
+              <button type="button" className="fb-btn-secondary" onClick={() => fileRef.current?.click()} style={{whiteSpace: 'nowrap'}}>
+                Upload photo
+              </button>
+              <input ref={fileRef} type="file" accept="image/*" hidden onChange={e => void pickFile(e.target.files?.[0])} />
               <input
                 className={styles.imageUrlInput}
-                placeholder="Paste an image URL (picsum.photos or images.unsplash.com)"
-                value={imageUrl}
+                placeholder="or paste an image URL (images.unsplash.com)"
+                value={isData ? '' : imageUrl}
                 onChange={e => setImageUrl(e.target.value)}
                 aria-label="Image URL"
               />
             </div>
-            {previewOk && <Image src={imageUrl.trim()} alt="" width={468} height={260} className={styles.previewImg} unoptimized />}
+            {imageError && <p style={{color: 'var(--fb-red)', fontSize: 13, margin: '4px 0 0'}}>{imageError}</p>}
+            {previewOk && (isData ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={imageUrl} alt="" className={styles.previewImg} style={{width: '100%', height: 'auto'}} />
+            ) : (
+              <Image src={imageUrl.trim()} alt="" width={468} height={260} className={styles.previewImg} unoptimized />
+            ))}
             <button className={styles.previewClose} aria-label="Remove photo" onClick={() => {
               setShowPhoto(false);
               setImageUrl('');

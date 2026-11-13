@@ -21,14 +21,21 @@ export async function listFeed(viewerId: number, limit = 20, offset = 0): Promis
 
 export type FeedPage = {posts: Post[]; nextCursor: string | null};
 
-/** Cursor-paginated feed. `cursor` is the created_at ISO string of the last post seen. */
+/** Cursor-paginated feed. `cursor` is the created_at of the last post seen (any format `Date` can parse; always returned as ISO). */
 export async function listFeedPage(viewerId: number, cursor: string | null, limit = 10): Promise<FeedPage> {
-  const rows = cursor
-    ? await sql`${POST_SELECT(viewerId)} where p.created_at < ${cursor} order by p.created_at desc, p.id desc limit ${limit + 1}`
+  const cursorIso = cursor ? toIsoCursor(cursor) : null;
+  const rows = cursorIso
+    ? await sql`${POST_SELECT(viewerId)} where p.created_at < ${cursorIso}::timestamptz order by p.created_at desc, p.id desc limit ${limit + 1}`
     : await sql`${POST_SELECT(viewerId)} order by p.created_at desc, p.id desc limit ${limit + 1}`;
   const hasMore = rows.length > limit;
   const posts = rows.slice(0, limit).map(mapPost);
-  return {posts, nextCursor: hasMore ? posts[posts.length - 1].createdAt : null};
+  return {posts, nextCursor: hasMore ? toIsoCursor(String(rows[limit - 1].created_at)) : null};
+}
+
+/** Postgres cannot parse JavaScript's `Date.toString()` output, so cursors are normalised to ISO 8601 before they reach SQL. */
+export function toIsoCursor(value: string): string | null {
+  const t = new Date(value).getTime();
+  return Number.isFinite(t) ? new Date(t).toISOString() : null;
 }
 
 export async function listPostsByAuthor(authorId: number, viewerId: number, limit = 20): Promise<Post[]> {
@@ -48,6 +55,12 @@ export async function listComments(postId: number): Promise<Comment[]> {
     where c.post_id = ${postId}
     order by c.created_at asc`;
   return rows.map(mapComment);
+}
+
+export async function createStory(userId: number, imageUrl: string): Promise<Story | null> {
+  const [row] = await sql`insert into stories (user_id, image_url) values (${userId}, ${imageUrl}) returning id`;
+  const all = await listStories();
+  return all.find(s => s.id === Number(row.id)) ?? null;
 }
 
 export async function listStories(): Promise<Story[]> {

@@ -250,8 +250,12 @@ export async function startGame(game: Game, user: Actor): Promise<Game> {
   if (!started.length) throw new TurfError('Turf needs at least 2 accepted players to start');
   const next = mapGame(started[0]);
   if (next.conversationId) {
-    const ends = next.endsAt ? new Date(next.endsAt).toLocaleString('en-US', {weekday: 'short', hour: 'numeric', minute: '2-digit', timeZone: 'America/Chicago'}) : '';
-    const text = `Turf: ${next.settings.arenaLabel} is live${ends ? `. Ends ${ends} CT` : ''}. Go claim some ground.`;
+    // relative, so it reads the same in every time zone (the card shows the absolute time in the viewer's zone)
+    const left = next.endsAt ? Math.max(0, new Date(next.endsAt).getTime() - Date.now()) : 0;
+    const days = Math.floor(left / DAY_MS);
+    const hours = Math.floor((left % DAY_MS) / 3_600_000);
+    const ends = left ? (days > 0 ? `${days}d ${hours}h` : `${Math.max(1, hours)}h`) : '';
+    const text = `Turf: ${next.settings.arenaLabel} is live${ends ? `. Ends in ${ends}` : ''}. Go claim some ground.`;
     await sendMessage(next.conversationId, user, text, null, {kind: 'system', payload: {text, gameId: next.id}});
   }
   return next;

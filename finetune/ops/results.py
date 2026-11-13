@@ -15,12 +15,12 @@ ROOT = Path(__file__).resolve().parent.parent
 MODELS = [
     ("Ember (hosted)", "baseline-v2", "muse-ember-1.0"),
     ("Spark (hosted)", "baseline-v2", "muse-spark-1.3"),
-    ("Glimmer base (local)", "glimmer-v1", "meta-models_Muse-Glimmer-30B"),
+    ("Glimmer base (local)", "glimmer-v1", "glimmer-base"),
     ("Glimmer + LoRA (local)", "glimmer-v1", "exercise_check"),
 ]
 SETS = [
     ("Held-out mix (300)", "exercise_check__{m}.json", ["ex", "reject", "false_reject", "numbers", "all"]),
-    ("Single exercise photos (124)", "exercise_check__{m}__stills_test.json", ["ex", "reject", "false_reject", "all"]),
+    ("Single exercise photos (124)", "exercise_check__{m}__exercise_check.json", ["ex", "reject", "false_reject", "all"]),
     ("Real screen photos (84)", "proof__{m}__real_photos.json", ["verdict", "kind", "numbers", "all"]),
 ]
 

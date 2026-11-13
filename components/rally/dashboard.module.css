@@ -3,3 +3,10 @@
   border-radius: var(--radius-container);
   background: radial-gradient(ellipse at 50% 100%, var(--color-background-orange) 0%, var(--color-background-blue) 75%);
 }
+.arenaCanvas {
+  width: 100%;
+  height: clamp(200px, 34vw, 300px);
+}
+.arenaCanvas canvas {
+  display: block;
+}

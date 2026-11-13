@@ -36,7 +36,7 @@ import {MuseActions} from './MuseActions';
 import b from './reels-bento.module.css';
 
 type Viewer = {id: number; name: string; avatarUrl: string};
-export type MyGame = {key: string; href: string; title: string; subtitle: string; boss: {kind: string; imageUrl: string | null; name: string} | null};
+export type MyGame = {key: string; href: string; title: string; subtitle: string; boss: {kind: string; name: string} | null};
 type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; listings: ListingBrief[]; start: string | null; eventId: number | null; goal?: Goal | null; games?: MyGame[]};
 type Chat = {id: number; title: string; isGroup: boolean};
 
@@ -193,7 +193,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
             {games.map(g => (
               <ClickableCard key={g.key} href={g.href} label={g.title}>
                 <VStack gap={2} hAlign="center">
-                  {g.boss ? <BossArt kind={g.boss.kind} imageUrl={g.boss.imageUrl} name={g.boss.name} size={72} /> : <Icon icon={MapPin} size="lg" color="accent" />}
+                  {g.boss ? <BossArt kind={g.boss.kind} name={g.boss.name} size={72} /> : <Icon icon={MapPin} size="lg" color="accent" />}
                   <VStack gap={0.5} hAlign="center">
                     <Text weight="bold" justify="center">
                       {g.title}

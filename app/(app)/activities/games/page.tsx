@@ -36,7 +36,7 @@ export default async function RallyIndex() {
               <ListItem
                 key={q.id}
                 href={`/activities/games/${q.id}`}
-                startContent={<BossArt kind={q.bossKind} imageUrl={q.bossImageUrl} name={q.spec.boss?.name ?? q.title} size={56} down={q.status === 'completed'} />}
+                startContent={<BossArt kind={q.bossKind} name={q.spec.boss?.name ?? q.title} size={56} down={q.status === 'completed'} />}
                 label={<Text weight="bold">{q.title}</Text>}
                 description={q.status === 'completed' ? 'Boss defeated' : `${q.bossHpLeft} / ${q.bossHp} HP left`}
                 endContent={<Token label={q.status === 'completed' ? 'completed' : q.template ?? 'rally'} size="sm" color={q.status === 'completed' ? 'green' : 'blue'} />}

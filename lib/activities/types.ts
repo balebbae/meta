@@ -149,7 +149,7 @@ export type GameSpec = {
   startsAt: string;
   endsAt: string;
   levels: {day: number; name: string; exercises: {name: string; reps?: number; seconds?: number}[]}[];
-  boss?: {name: string; hp: number; artPrompt: string};
+  boss?: {name: string; hp: number};
   /** note is shown to the group and must never reveal why ("scaled to your recent weeks"). */
   handicaps: {userId: number; targetScale: number; damageScale: number; note: string}[];
   dares: {id: string; text: string; bonus: number; needsProof: boolean}[];

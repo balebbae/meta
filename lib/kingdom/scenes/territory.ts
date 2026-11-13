@@ -11,7 +11,7 @@ import {setContinuous, setState} from '../rig';
 import {softMaterial} from '../factories/soft';
 import {buildTent, tower} from '../factories/world';
 import type {Rig} from '../types';
-import {SKY, Stage, type Host} from './stage';
+import {Stage, type Host} from './stage';
 
 export type Kingdom = {id: number; name: string; color: number; cast: Cast};
 /** Every cell of the arena, in any flat units (metres east and south of the centre work): the scene scales them to one tile each. */
@@ -28,7 +28,7 @@ export type Territory = {
 type Realm = {k: Kingdom; hero: Rig; keep: Group; tent: Rig; camp: Vector3; home: Vector3; cells: number};
 type Pop = {i: number; at: number; to: number; begun: boolean};
 
-const WILD = 0.18, OWNED = 0.44, TRAIL_MAX = 600, MEADOW = 0xc6d8b0; // unclaimed land is pale so every kingdom colour, green included, stands out
+const WILD = 0.18, OWNED = 0.44, TRAIL_MAX = 600, GREEN = 0xc6d8b0; // unclaimed land is pale so every kingdom colour, green included, stands out
 
 export function createTerritory(host: Host, o: TerritoryOpts): Territory {
   // one tile per cell: scale so neighbours sit one metre apart, and turn the hexes so their flats face each other
@@ -39,10 +39,11 @@ export function createTerritory(host: Host, o: TerritoryOpts): Territory {
   const S = Math.max(1.4, R / 9); // heroes and keeps are pawns on a board: sized to the board, not to the tiles
 
   const st = new Stage(host, {fov: 40, sun: [-R * 0.9, R * 1.7, R * 0.8], radius: R + 4});
+  const MEADOW = st.tint('grass', GREEN);
   st.block(R * 8, 1, R * 8, 'water', C.water, 0, -0.95, 0);
   const shore = new CylinderGeometry(R + 0.7, R + 1.5, 0.45, 40), island = new Mesh(shore, softMaterial('sand', C.sand)); island.position.y = -0.225; island.receiveShadow = true; st.group.add(island);
   const hex = new CylinderGeometry(0.545, 0.545, 1, 6).translate(0, 0.5, 0).rotateY(turn + Math.PI / 6);
-  const tiles = new InstancedMesh(hex, [softMaterial('rock', 0xc4c4c4), softMaterial('grass', 0xffffff), softMaterial('rock', 0xc4c4c4)], Math.max(1, n)); tiles.receiveShadow = true; tiles.count = n; st.group.add(tiles);
+  const tiles = new InstancedMesh(hex, [softMaterial('rock', 0xc4c4c4), softMaterial('grass', 0xffffff), softMaterial('rock', 0xc4c4c4)], Math.max(1, n)); tiles.receiveShadow = true; tiles.count = n; tiles.userData.toned = true; st.group.add(tiles); // tiles carry player colours: a world must not tint them
   const glow = new MeshBasicMaterial({color: C.sparkle, transparent: true, opacity: 0.9}), trailMesh = new InstancedMesh(new CylinderGeometry(0.3, 0.3, 0.1, 6).rotateY(turn + Math.PI / 6), glow, TRAIL_MAX); trailMesh.count = 0; st.group.add(trailMesh);
   const dummy = new Object3D(), tint = new Color(), owner = new Int32Array(n).fill(-1), height = new Float32Array(n).fill(WILD), pops: Pop[] = [];
   const paint = (i: number): void => { const k = owner[i] >= 0 ? realms.get(owner[i]) : undefined; tiles.setColorAt(i, tint.setHex(k ? k.k.color : MEADOW)); };
@@ -96,7 +97,7 @@ export function createTerritory(host: Host, o: TerritoryOpts): Territory {
   for (const r of realms.values()) r.hero.group.position.copy(r.home);
 
   return {
-    group: st.group, background: SKY,
+    group: st.group, background: st.sky,
     setOwners: (owners) => apply(owners, false),
     setTrail: (keys) => { trail = keys.map((k) => index.get(k)).filter((i): i is number => i !== undefined).slice(-TRAIL_MAX); },
     dispose: () => { hex.dispose(); shore.dispose(); trailMesh.geometry.dispose(); glow.dispose(); st.dispose(); },

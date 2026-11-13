@@ -6,7 +6,7 @@ import {MAP, MAP_H, MAP_W, QUEST, createQuest, startQuest, stepQuest} from '../g
 import {setContinuous, setState} from '../rig';
 import {buildTerrain} from '../factories/terrain';
 import type {Rig} from '../types';
-import {SKY, Stage, type GameScene, type Host} from './stage';
+import {Stage, type GameScene, type Host} from './stage';
 
 const K = 2; // metres per maze cell
 const FACING: Record<'n' | 's' | 'e' | 'w', number> = {s: 0, n: Math.PI, e: Math.PI / 2, w: -Math.PI / 2};
@@ -33,7 +33,7 @@ export function createQuestScene(host: Host): GameScene {
   follow(0);
 
   return {
-    group: st.group, background: SKY,
+    group: st.group, background: st.sky,
     start: (seed = 1) => { s = startQuest(createQuest(seed)); for (const c of chests.values()) { c.rest = 'idle'; setState(c, 'idle'); } setState(hero, 'idle'); },
     auto: () => autoQuest(s),
     hud: () => ({phase: s.phase, score: s.score, message: s.message, left: `♥ ${s.hearts} · ${Math.ceil(s.timeLeft)}s`, right: QUEST.items.map((it) => `${it[0].toUpperCase() + it.slice(1)} ${s.items.includes(it) ? '✓' : '–'}`).join('  ')}),

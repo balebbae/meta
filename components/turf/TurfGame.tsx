@@ -1,4 +1,5 @@
 'use client';
+import {WORLDS, worldFor} from '@/lib/kingdom/scenes/worlds';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import {AlertDialog} from '@astryxdesign/core/AlertDialog';
@@ -94,6 +95,7 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
             <div className={styles.sub}>
               {(state.arena.radiusKm * 2).toFixed(1)} km arena · {state.lengthDays} day{state.lengthDays === 1 ? '' : 's'}
               {state.endsAt && state.status !== 'ended' ? ` · ends ${endsLabel(state.endsAt)}` : ''}
+              {worldFor(state.conversationId) !== 'kingdom' ? ` · ${WORLDS[worldFor(state.conversationId)].name}` : ''}
             </div>
             {(state.pace || state.reelId) && (
               <div className={styles.sub}>
@@ -121,7 +123,7 @@ export function TurfGame({gameId, initial, autoAccept}: {gameId: number; initial
         </div>
         {view === 'kingdom' ? (
           <div className={styles.kingdomWrap} role="img" aria-label={`Kingdom board of ${state.title}: ${players.map(p => `${p.name.split(' ')[0]} ${cellsOf[p.id]?.cells ?? 0} cells`).join(', ')}`}>
-            <KingdomView arena={state.arena} players={state.players} cells={state.cells} trail={trail} viewerId={me.id} reducedMotion={reducedMotion} onError={() => setView('map')} />
+            <KingdomView arena={state.arena} players={state.players} cells={state.cells} trail={trail} viewerId={me.id} world={worldFor(state.conversationId)} reducedMotion={reducedMotion} onError={() => setView('map')} />
           </div>
         ) : (
           <div className={styles.mapWrap}>

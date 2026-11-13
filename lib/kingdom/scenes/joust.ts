@@ -7,7 +7,7 @@ import {setContinuous, setState} from '../rig';
 import {buildTerrain} from '../factories/terrain';
 import {PX, box, softMaterial} from '../factories/soft';
 import {rng} from '../rng';
-import {SKY, Stage, type GameScene, type Host} from './stage';
+import {Stage, type GameScene, type Host} from './stage';
 
 const LIST = ['FFFFFFFFFFFFFFFFFFFFFFFF', 'SSSSSSSSSSSSSSSSSSSSSSSS', 'SSSSSSSSSSSSSSSSSSSSSSSS', 'SSSSSSSSSSSSSSSSSSSSSSSS', 'SSSSSSSSSSSSSSSSSSSSSSSS', 'FFFFFFFFFFFFFFFFFFFFFFFF'];
 const SHIRTS = [C.crimson, C.blue, C.gold, C.teal, C.purple, C.pink, C.green, C.ivory];
@@ -46,7 +46,7 @@ export function createJoustScene(host: Host): GameScene {
   const marker = new Group(); foe.group.add(marker); box(marker, softMaterial('gold', C.gold), 4, 4, 1, 0, 0, 0).rotation.z = Math.PI / 4; marker.visible = false; // where the goblin is open
 
   return {
-    group: st.group, background: SKY,
+    group: st.group, background: st.sky,
     start: (seed = 1) => { s = startJoust(createJoust(seed)); cheer = 0; tumble = 0; },
     auto: () => autoJoust(s),
     hud: () => ({phase: s.phase, score: joustScore(s), message: s.message, left: `Pass ${Math.max(1, s.pass)} / ${JOUST.passes}`, right: `${s.playerScore} – ${s.foeScore} · lance ${['low', 'mid', 'high'][s.playerLane]}`}),

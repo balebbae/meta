@@ -9,13 +9,14 @@ import {Canvas, useFrame, useThree} from '@react-three/fiber';
 import {ACESFilmicToneMapping, PCFSoftShadowMap, type PerspectiveCamera, SRGBColorSpace} from 'three';
 import {castHero} from '@/lib/kingdom/cast';
 import {createTerritory} from '@/lib/kingdom/scenes';
+import type {WorldId} from '@/lib/kingdom/scenes/worlds';
 import {arenaCells, cellCenter, type Arena} from '@/lib/turf/engine';
 import type {TurfPlayer} from '@/lib/turf/types';
 
-type Props = {arena: Arena; players: TurfPlayer[]; cells: [string, number][]; trail: string[]; viewerId: number; reducedMotion?: boolean; onError?: () => void};
+type Props = {arena: Arena; players: TurfPlayer[]; cells: [string, number][]; trail: string[]; viewerId: number; world?: WorldId; reducedMotion?: boolean; onError?: () => void};
 const M_PER_DEG = 111_320;
 
-function Board({arena, players, cells, trail, viewerId, reducedMotion}: Props) {
+function Board({arena, players, cells, trail, viewerId, world, reducedMotion}: Props) {
   const camera = useThree((s) => s.camera) as PerspectiveCamera, gl = useThree((s) => s.gl);
   useEffect(() => { gl.toneMapping = ACESFilmicToneMapping; gl.outputColorSpace = SRGBColorSpace; gl.shadowMap.type = PCFSoftShadowMap; }, [gl]);
   const arenaKey = `${arena.center.lat},${arena.center.lng},${arena.radiusKm}`, roster = players.filter((p) => p.status === 'accepted'), rosterKey = roster.map((p) => `${p.id}:${p.name}:${p.color}:${JSON.stringify(p.hero ?? null)}`).join('|');
@@ -23,8 +24,8 @@ function Board({arena, players, cells, trail, viewerId, reducedMotion}: Props) {
   const land = useMemo(() => {
     const k = Math.cos((arena.center.lat * Math.PI) / 180);
     const grid = arenaCells(arena).map((key) => { const p = cellCenter(key); return {key, x: (p.lng - arena.center.lng) * M_PER_DEG * k, z: -(p.lat - arena.center.lat) * M_PER_DEG}; }); // metres east and south
-    return createTerritory({camera}, {cells: grid, kingdoms: roster.map((p) => ({id: p.id, name: p.name, color: parseInt(p.color.slice(1), 16), cast: castHero(p.name, [], p.hero)})), owners: cells, viewerId});
-  }, [camera, arenaKey, rosterKey, viewerId]); // eslint-disable-line react-hooks/exhaustive-deps -- keyed on the arena and roster, not object identity
+    return createTerritory({camera, world}, {cells: grid, kingdoms: roster.map((p) => ({id: p.id, name: p.name, color: parseInt(p.color.slice(1), 16), cast: castHero(p.name, [], p.hero)})), owners: cells, viewerId});
+  }, [camera, arenaKey, rosterKey, viewerId, world]); // eslint-disable-line react-hooks/exhaustive-deps -- keyed on the arena and roster, not object identity
   useEffect(() => () => land.dispose(), [land]);
   useEffect(() => land.setOwners(cells), [land, cells]);
   useEffect(() => land.setTrail(trail), [land, trail]);

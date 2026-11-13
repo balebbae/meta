@@ -6,7 +6,7 @@ import {DEFENSE, createDefense, startDefense, stepDefense} from '../games/defens
 import {setContinuous, setState} from '../rig';
 import {PX, box, softMaterial} from '../factories/soft';
 import type {CreatureKind, Rig, Variant} from '../types';
-import {SKY, Stage, type GameScene, type Host} from './stage';
+import {Stage, type GameScene, type Host} from './stage';
 
 const KIND_ID: Record<CreatureKind, string> = {slime: 'creature-slime', goblin: 'creature-goblin', cyclops: 'creature-cyclops', giant: 'creature-giant', babyDragon: 'creature-baby-dragon', elderDragon: 'creature-elder-dragon'};
 const BLOOD: Record<CreatureKind, number> = {slime: C.slime, goblin: C.goblin, cyclops: C.cyclops, giant: C.giant, babyDragon: C.dragonBaby, elderDragon: C.dragonElder};
@@ -29,7 +29,7 @@ export function createDefenseScene(host: Host): GameScene {
   const clear = (): void => { for (const f of foes.values()) st.drop(f.rig); foes.clear(); };
 
   return {
-    group: st.group, background: SKY,
+    group: st.group, background: st.sky,
     start: (seed = 1) => { clear(); s = startDefense(createDefense(seed)); gateKick = 0; fallen = false; gate.group.rotation.x = 0; gate.group.position.y = 0; setState(hero, 'idle'); },
     auto: () => autoDefense(s),
     hud: () => ({phase: s.phase, score: s.score, message: s.message, left: `Wave ${Math.max(1, s.wave)} / 5 · Gate ♥ ${s.gateHp}`, right: `Kills ${s.kills}`}),

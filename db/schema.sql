@@ -566,6 +566,46 @@ create table if not exists turf_privacy_zones (
 );
 create index if not exists turf_privacy_zones_user_idx on turf_privacy_zones (user_id);
 
+-- Goals + roadmap (lib/activities/goals.ts): one row per goal; the plan (phases, milestones, components)
+-- and the latest Muse check-in live in jsonb so the roadmap is one read.
+create table if not exists goals (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  raw_text text not null,
+  title text not null,
+  event_kind text not null default 'custom',
+  event_date date,
+  plan jsonb not null,
+  checkin jsonb,
+  conversation_id integer references conversations(id) on delete set null,
+  quest_id integer references quests(id) on delete set null,
+  status text not null default 'active' check (status in ('active', 'done', 'archived')),
+  muse_used boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists goals_user_idx on goals (user_id, status, created_at desc);
+
+-- General "For you" Reels (the default /reels page). Fitness Reels stay in `reels`; swiping left on
+-- /reels moves from this feed to the fitness one. Seeded by scripts/seed-feed-reels.mjs (Pixabay).
+create table if not exists feed_reels (
+  id serial primary key,
+  pixabay_id bigint unique,
+  video_url text not null,
+  poster_url text,
+  duration_sec integer,
+  width integer,
+  height integer,
+  creator_name text,
+  creator_url text,
+  source_url text,
+  topic text not null,
+  caption text,
+  tags text[] not null default '{}',
+  plays integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
 -- Group activities: a Rally quest posted into groups as a sign-up post; capacity caps quest_progress rows
 alter table quests add column if not exists capacity integer check (capacity between 2 and 100);
 alter table group_posts add column if not exists quest_id integer references quests(id) on delete cascade;

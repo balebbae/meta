@@ -14,7 +14,7 @@ export const SKIN_TONES: readonly number[] = C.skin;
 export const HAIR_COLORS = [C.hairBrown, C.hairAuburn, C.hairBlack, C.hairBlonde, C.hairWhite, C.hairPink, C.hairTeal];
 export const AVATAR_STATES: AnimState[] = ['idle', 'walk', 'run', 'jump', 'attack', 'hit', 'celebrate', 'dance', 'flex', 'wave', 'poke'];
 export const EXPRESSIONS: Expression[] = ['smile', 'happy', 'curious', 'sparkle'];
-const EYE = 0x1b1518, MOUTH = 0x3a2630, MOUTH_IN = 0xd9475a, BLUSH = 0xf3a7a1;
+const EYE = 0x1b1518, MOUTH = 0x3a2630, MOUTH_IN = 0xd9475a, BLUSH = 0xff7f93;
 /** Head size in px. */
 export const HEAD = {w: 18, h: 18, d: 16};
 const ARM_REST = 0.22;
@@ -54,7 +54,7 @@ function buildFace(face: Group): void {
     const eye = piv(s < 0 ? 'eyeL' : 'eyeR', face, s * 4.5, -1, z); decal(eye, ink, 3, 4, 0, 0, 0);
     const plain = new Group(); plain.name = s < 0 ? 'hlPlainL' : 'hlPlainR'; eye.add(plain); decal(plain, white, 1, 1, -1, 1.5, 0, 1);
     const sparkle = new Group(); sparkle.name = s < 0 ? 'hlStarL' : 'hlStarR'; sparkle.visible = false; eye.add(sparkle); decal(sparkle, white, 2, 2, -0.5, 1, 0, 1); decal(sparkle, white, 1, 1, 1, -1.5, 0, 1);
-    decal(face, M('blush', BLUSH), 2, 1, s * 7, -4.5, z);
+    decal(face, M('flat', BLUSH), 3, 2, s * 6.5, -4, z); // a solid 3×2 px cheek, easy to read from across a room
   }
   const closed = new Group(); closed.name = 'eyesClosed'; closed.visible = false; face.add(closed);
   for (const s of [-1, 1]) for (const [dx, y] of [[-1, -1.5], [0, -0.5], [1, -1.5]]) decal(closed, mouth, 1, 1, s * 4.5 + dx, y, z);

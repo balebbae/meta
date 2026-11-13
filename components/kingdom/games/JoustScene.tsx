@@ -24,7 +24,7 @@ export function JoustScene({runId, input, report, seed}: SceneProps) {
     const player = rigs.make(theme.roles.mount, {rider: true, hero});
     player.group.rotation.y = Math.PI / 2; player.group.position.z = 0.75;
     const foe = rigs.make('mount-royal'); foe.group.rotation.y = -Math.PI / 2; foe.group.position.z = -0.75;
-    const goblin = rigs.make(theme.roles.smallEnemy, {variant: 'boss'}); goblin.group.position.set(0, -0.16, 0); foe.pivots.rider.add(goblin.group); foe.attached = [goblin];
+    const goblin = rigs.make(theme.roles.smallEnemy, {variant: 'boss'}); goblin.group.scale.setScalar(1.5 / goblin.group.userData.creature.scale); goblin.group.position.set(0, -0.19, 0); // rider-sized, still bigger than the hero foe.pivots.rider.add(goblin.group); foe.attached = [goblin];
     const terrain = rigs.own(buildTerrain(LIST, {F: 'flowers', S: 'sand'}, seed));
     const scenery = new Group();
     const fence = rigs.make('world-fence'); for (let i = -11; i <= 11; i++) for (const z of [-2.4, 2.4]) { const f = rigs.clone(fence); f.group.position.set(i * 0.96 - 0.48, 0, z); scenery.add(f.group); }

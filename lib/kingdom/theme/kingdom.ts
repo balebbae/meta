@@ -17,7 +17,7 @@ export const KINGDOM_THEME: Theme = {
   },
   labels: {
     gallery: 'Beta Kingdom',
-    tagline: 'Soft little heroes, kaijus and castles.',
+    tagline: 'Pixel heroes, mean kaijus and castles.',
     joust: 'Tournament Joust',
     dash: 'Dragon Dash',
     defense: 'Castle Defense',

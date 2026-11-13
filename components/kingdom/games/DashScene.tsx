@@ -17,7 +17,7 @@ export function DashScene({runId, input, report, seed}: SceneProps) {
   const rigs = useSceneRigs();
   const shadows = useKingdom((s) => s.shadows);
   const world = useMemo(() => {
-    const dragon = rigs.make('creature-baby-dragon', {variant: 'medium'}); dragon.group.rotation.y = Math.PI / 2; dragon.rest = 'flap'; setState(dragon, 'flap');
+    const dragon = rigs.make('creature-baby-dragon', {variant: 'medium'}); dragon.group.scale.setScalar(1 / dragon.group.userData.creature.scale); dragon.group.rotation.y = Math.PI / 2; // you fly this one: its px size matches DASH.radius dragon.rest = 'flap'; setState(dragon, 'flap');
     const castle = rigs.make('world-castle-royal'); castle.group.rotation.y = -Math.PI / 2; castle.group.scale.setScalar(1.6);
     const stone = softMaterial('stone', C.stoneLight), gold = softMaterial('gold', C.gold);
     const unit = new BoxGeometry(1, 1, 1), cap = new BoxGeometry(1.2, 0.3, 1.2);

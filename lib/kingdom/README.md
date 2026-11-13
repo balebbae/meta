@@ -5,7 +5,7 @@ Rendered by `components/kingdom` (React Three Fiber) at `/kingdom`.
 
 ## Units and conventions
 
-- 1 world unit = 1 metre = 16 px. A hero is 29 px (1.8 m), a pony 26 px, a giant 41 px; terrain cells are `CELL = 1 m`, one 16 px block.
+- 1 world unit = 1 metre = 16 px. A hero is 29 px (1.8 m), a pony 26 px. Kaijus are px builds blown up by a per-kind factor (`SIZE` in `creatures.ts`, on an inner group so scenes keep `group.scale` for themselves): even a small one is hero height or more, a medium Stone Giant is 3.8 m and a boss Elder Dragon 5.4 m; terrain cells are `CELL = 1 m`, one 16 px block.
 - Every asset's origin is at ground level under the centre of its footprint. Faces point to **+z**; +x is the character's left on screen.
 - Geometry and materials are shared caches (`soft.ts`); `disposeSoftResources()` frees them once, on app unmount. Terrain merges one mesh per surface kind.
 - A built asset is a `Rig` (`types.ts`): `group` (add it to a scene), named `pivots`, `height`, animation `state`, and `dispose()` for its geometry.

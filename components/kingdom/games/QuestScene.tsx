@@ -34,7 +34,7 @@ export function QuestScene({runId, input, report, seed}: SceneProps) {
       if (ch === 'C') { const c = rigs.clone(chestBase); c.group.position.set(wx, 0, wz); c.group.rotation.y = Math.PI; scenery.add(c.group); chests.set(`${x},${y}`, {rig: c, open: false}); }
     }
     const castle = rigs.make('world-castle-starter'); const [cx, cz] = toWorld(MAP_W / 2 - 0.5, MAP_H + 2.2); castle.group.position.set(cx, 0, cz); castle.group.rotation.y = Math.PI; scenery.add(castle.group);
-    const slimeBase = rigs.make('creature-slime', {variant: 'small'});
+    const slimeBase = rigs.make('creature-slime', {variant: 'small'}); slimeBase.group.scale.setScalar(1.7 / slimeBase.group.userData.creature.scale); // shortcut: maze corridors are 1 m wide so patrol slimes stay 1.5 m wide, widen the maze to let them tower
     const slimes: Rig[] = [0, 1, 2].map(() => { const r = rigs.clone(slimeBase); scenery.add(r.group); setState(r, 'walk'); return r; });
     return {player, terrain, scenery, chests, slimes};
   }, [rigs, seed, theme]);

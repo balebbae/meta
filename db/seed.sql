@@ -426,7 +426,10 @@ on conflict do nothing;
 insert into mentor_offers (user_id, metric, from_value, to_value, weeks, consent, anonymous) values
   (5, '5k time', '29:10', '24:40', 12, '{"workouts":true,"steps":true,"heart":false,"sleep":false,"offerText":"Two easy runs, one tempo, one long run a week. Slowed the easy days way down and raced a parkrun every month."}'::jsonb, true),
   (3, 'Bench press', '135 lb', '225 lb', 16, '{"workouts":true,"steps":false,"heart":false,"sleep":false,"offerText":"Benched three times a week on a simple linear program, ate enough, and stopped maxing out every session."}'::jsonb, true),
-  (4, 'Workouts per week', '1', '4', 10, '{"workouts":true,"steps":true,"heart":false,"sleep":true,"offerText":"Put yoga on the calendar like a meeting, kept sessions to 25 minutes, and did them with a friend on weekends."}'::jsonb, false)
+  (4, 'Workouts per week', '1', '4', 10, '{"workouts":true,"steps":true,"heart":false,"sleep":true,"offerText":"Put yoga on the calendar like a meeting, kept sessions to 25 minutes, and did them with a friend on weekends."}'::jsonb, false),
+  (6, 'Weekly distance', '8 km', '25 km', 14, '{"workouts":true,"steps":true,"heart":false,"sleep":false,"offerText":"Added one kilometre to the long run each week, kept everything else easy, and took a down week every fourth week."}'::jsonb, true),
+  (8, 'Active days', '1', '5', 8, '{"workouts":true,"steps":true,"heart":false,"sleep":false,"offerText":"Started with a 10-minute walk after lunch every day, then swapped two of them for short gym sessions once it stuck."}'::jsonb, true),
+  (10, '5k time', '34:30', '28:50', 16, '{"workouts":true,"steps":false,"heart":false,"sleep":false,"offerText":"Went from run-walk intervals to running the whole way, then added one session of 400 m repeats a week."}'::jsonb, true)
 on conflict (user_id) do nothing;
 
 -- fitness event this weekend with two friends going, plus a quest boss fight IRL on Sunday

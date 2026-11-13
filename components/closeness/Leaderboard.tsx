@@ -5,7 +5,8 @@ import {useEffect, useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import styles from './closeness.module.css';
 
-type Row = {userId: number; name: string; avatarUrl: string; xp: number};
+/** xp is a band like "50–99" for everyone but the viewer. */
+type Row = {userId: number; name: string; avatarUrl: string; xp: number | string};
 
 export function Leaderboard({compact = false}: {compact?: boolean}) {
   const [tab, setTab] = useState<'closeness' | 'fitness'>('closeness');

@@ -17,9 +17,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from sft import INSTRUCTION_PART, RESPONSE_PART, with_reasoning  # noqa: E402
+from sft import INSTRUCTION_PART, RESPONSE_PART, VISION_TASKS, with_reasoning  # noqa: E402
 
-TASKS = ["mapper", "private_muse", "proof"]
+TASKS = ["mapper", "private_muse", "proof", "exercise_check"]
 
 
 def main() -> None:
@@ -85,7 +85,8 @@ def main() -> None:
             lens.append(len(tok(text)["input_ids"]))
         lens.sort()
         p95 = lens[int(0.95 * (len(lens) - 1))]
-        note = " (proof adds image tokens on top)" if task == "proof" else ""
+        note = f" ({task} adds image tokens on top: up to 3 images per row)" if task == "exercise_check" else ""
+        note = note or (" (proof adds image tokens on top)" if task in VISION_TASKS else "")
         print(f"{task}: tokens median {statistics.median(lens):.0f}  p95 {p95}  max {lens[-1]}{note}")
         if lens[-1] > a.max_seq:
             problems.append(f"{task}: longest example {lens[-1]} tokens > --max-seq {a.max_seq}")

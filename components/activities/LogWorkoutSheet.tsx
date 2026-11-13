@@ -4,6 +4,7 @@ import {blobToWav16k} from '@/lib/wav';
 import {useEffect, useRef, useState} from 'react';
 import {Dialog} from '@/components/ui/Dialog';
 import {fileToDataUrlFit} from '@/lib/image-upload';
+import {dhashDataUrl} from '@/lib/activities/phash';
 import type {EventKind} from '@/lib/activities/types';
 import styles from './activities.module.css';
 
@@ -14,7 +15,7 @@ const KINDS: {id: EventKind; label: string}[] = [
 ];
 const EMPTY: Form = {kind: 'run', distanceKm: '', durationMin: '', steps: ''};
 
-export type LoggedEvent = {id: number; kind: EventKind; distanceKm?: number; durationMin?: number; steps?: number; trust: string; duplicateOf?: number | null};
+export type LoggedEvent = {id: number; kind: EventKind; distanceKm?: number; durationMin?: number; steps?: number; trust: string; duplicateOf?: number | null; flags?: string[]};
 
 /**
  * Reusable "Log a workout" sheet (§5.2): manual (form or one sentence), photo proof, voice.
@@ -48,6 +49,7 @@ export function LogWorkoutSheet({open, onClose, initialTab = 'manual', onLogged,
               {describe(done)} · trust: {done.trust.replace('_', ' ')}. Only your Muse sees the raw entry; others get what your privacy settings allow.
             </p>
             {done.duplicateOf && <p className={styles.sub}>This overlaps a workout already in your vault, so it was merged with that higher-trust entry (listed under it on your Muse page).</p>}
+            {done.flags?.length ? <p className={styles.err} role="status">Flagged: {done.flags.join('; ')}. Saved as self-reported.</p> : null}
             <div className={styles.row} style={{justifyContent: 'center'}}>
               <button className={styles.btn} onClick={() => setDone(null)}>
                 Log another
@@ -161,7 +163,7 @@ function ManualTab({onLogged}: {onLogged: (e: LoggedEvent) => void}) {
     const j = await res.json();
     setBusy(false);
     if (!res.ok) return setErr(j.error ?? 'Could not save');
-    onLogged(j.event);
+    onLogged({...j.event, flags: j.flags});
   }
 
   return (
@@ -197,13 +199,16 @@ function PhotoTab({onLogged}: {onLogged: (e: LoggedEvent) => void}) {
   const [err, setErr] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<Form | null>(null);
+  const [hash, setHash] = useState<string | null>(null);
 
   async function pick(file: File | undefined) {
     if (!file) return;
     setErr(null);
     setConfirm(null);
     try {
-      setImage(await fileToDataUrlFit(file, 1280));
+      const dataUrl = await fileToDataUrlFit(file, 1280);
+      setImage(dataUrl);
+      setHash(await dhashDataUrl(dataUrl).catch(() => null));
     } catch (e) {
       setErr((e as Error).message);
     }
@@ -214,23 +219,23 @@ function PhotoTab({onLogged}: {onLogged: (e: LoggedEvent) => void}) {
     setBusy(true);
     setErr(null);
     setStatus(null);
-    const res = await fetch('/api/proof', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({image})});
+    const res = await fetch('/api/proof', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({image, hash})});
     const j = await res.json();
     setBusy(false);
     if (!res.ok) return setErr(j.error ?? 'Could not read the photo');
-    if (j.saved) return onLogged(j.event);
+    if (j.saved) return onLogged({...j.event, flags: j.flags});
     setConfirm(j.result ? toForm(j.result) : EMPTY);
-    setStatus(j.museOffline ? 'Muse offline: confirm the workout yourself and it will be saved as photo proof.' : j.result?.verdict === 'not_a_workout' ? 'That did not look like a workout screen. Fill in what it showed.' : 'Muse was not sure. Check the numbers and save.');
+    setStatus(j.museOffline ? 'Muse offline: enter the workout yourself; it will be saved as self-reported.' : j.result?.verdict === 'not_a_workout' ? 'That did not look like a workout screen. Fill in what it showed.' : 'Muse was not sure. Check the numbers and save.');
   }
 
   async function saveConfirm() {
     if (!confirm) return;
     setBusy(true);
-    const res = await fetch('/api/proof', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({confirm: {...formToLog(confirm), confidence: 0, verdict: 'unclear'}})});
+    const res = await fetch('/api/proof', {method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify({hash, confirm: {...formToLog(confirm), confidence: 0, verdict: 'unclear'}})});
     const j = await res.json();
     setBusy(false);
     if (!res.ok) return setErr(j.error ?? 'Could not save');
-    onLogged(j.event);
+    onLogged({...j.event, flags: j.flags});
   }
 
   return (
@@ -262,10 +267,10 @@ function PhotoTab({onLogged}: {onLogged: (e: LoggedEvent) => void}) {
           {status.startsWith('Muse offline') && <span className={styles.offline}>Muse offline</span>} {status}
         </div>
       )}
-      {confirm && <QuickForm form={confirm} setForm={setConfirm} onSubmit={() => void saveConfirm()} busy={busy} submitLabel="Confirm and save as photo proof" />}
+      {confirm && <QuickForm form={confirm} setForm={setConfirm} onSubmit={() => void saveConfirm()} busy={busy} submitLabel="Save as self-reported" />}
       {err && <div className={styles.err}>{err}</div>}
       <p className={styles.small} style={{marginTop: 8}}>
-        Muse only reads the device readout, never people. Photos are not stored; the numbers go to your vault with trust &ldquo;photo&rdquo;.
+        Muse only reads the device readout, never people. Photos are not stored, only a fingerprint to spot a reused photo. Numbers Muse reads get trust &ldquo;photo&rdquo;; numbers you type are self-reported.
       </p>
     </div>
   );
@@ -335,7 +340,7 @@ function VoiceTab({onLogged}: {onLogged: (e: LoggedEvent) => void}) {
     const j = await res.json();
     setBusy(false);
     if (!res.ok) return setErr(j.error ?? 'Could not save');
-    onLogged(j.event);
+    onLogged({...j.event, flags: j.flags});
   }
 
   return (

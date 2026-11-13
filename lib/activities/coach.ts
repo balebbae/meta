@@ -1,7 +1,9 @@
 import {sql} from '@/lib/db';
 import {localCandidates} from '@/lib/activities/actions';
 import {museContext} from '@/lib/activities/answers';
+import {goalGaps, type GapReport} from '@/lib/activities/coach-gaps';
 import {compareWeeks, type WeekCompare} from '@/lib/activities/coach-math';
+import {weeksUntil} from '@/lib/activities/goal-plan';
 import {listGoals} from '@/lib/activities/goals';
 import {tierOf} from '@/lib/activities/level';
 import {getPolicies} from '@/lib/activities/policies';
@@ -14,16 +16,20 @@ import {panelHref} from '@/lib/activities/panel-href';
  * Coach mode (docs/scheduler-coach.md §2, without the calendar half): this week vs last week from the owner's vault,
  * computed in code (coach-math.ts), then the owner's Muse (Ember) writes a short plan to bridge the gaps inside the
  * code's limits. A plan that breaks the limits is replaced by the rule-based one. Owner-only: nothing here is shared.
+ * On top of that sits the goal side (coach-gaps.ts): the last four weeks against what the goal needs by its day, one gap
+ * per dimension with a safe weekly ramp. The Muse may add a short how-to per gap; it never changes a number.
  * shortcut: built when the page opens (at most once a day, or on Refresh); add a Sunday/Wednesday cron + push once the app has a cron.
  */
 
 export type BridgeKind = 'session' | 'rest' | 'event' | 'ahead' | 'rally' | 'goal';
 export type BridgeStep = {kind: BridgeKind; title: string; why: string; when: string; sessions: number; minutes: number; href: string | null};
-export type CoachReport = WeekCompare & {day: string; headline: string; bridge: BridgeStep[]; easyWeek: boolean; level: string | null; goal: {id: number; title: string} | null; museUsed: boolean; generatedAt: string};
+export type CoachReport = WeekCompare & {day: string; headline: string; bridge: BridgeStep[]; easyWeek: boolean; level: string | null; goal: {id: number; title: string} | null; /** Goal gaps and their bridges. Absent on reports stored before this existed. */ goalGaps?: GapReport; /** The goal plan's current phase and its focus. */ phase?: string | null; museUsed: boolean; generatedAt: string};
 export type CoachState = {enabled: boolean; blocked: string | null; report: CoachReport | null};
 
 const KINDS: BridgeKind[] = ['session', 'rest', 'event', 'ahead', 'rally', 'goal'];
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+/** The days-a-week band from onboarding, as the number of active days it promises (same table as home.ts). */
+const DAY_TARGET: Record<string, number> = {'0': 3, '1-2': 2, '3-4': 4, '5+': 5};
 
 const SCHEMA = {
   type: 'object',
@@ -46,8 +52,12 @@ const SCHEMA = {
         additionalProperties: false,
       },
     },
+    notes: {
+      type: 'array',
+      items: {type: 'object', properties: {gapId: {type: 'string'}, how: {type: 'string'}}, required: ['gapId', 'how'], additionalProperties: false},
+    },
   },
-  required: ['headline', 'bridge'],
+  required: ['headline', 'bridge', 'notes'],
   additionalProperties: false,
 };
 
@@ -90,11 +100,11 @@ function headlineFor(c: WeekCompare): string {
 }
 
 export async function buildReport(userId: number): Promise<CoachReport> {
-  const since = new Date(Date.now() - 15 * 86_400_000).toISOString();
+  const since = new Date(Date.now() - 29 * 86_400_000).toISOString(); // two weeks for the week-on-week view, four for the goal gaps
   const [rows, ctx, [profile], goals, tags] = await Promise.all([
     listVaultEvents(userId, {since, limit: 500}),
     museContext(userId),
-    sql`select go_easy_note from activity_profiles where user_id = ${userId}`,
+    sql`select go_easy_note, weekly_active_days from activity_profiles where user_id = ${userId}`,
     listGoals(userId).catch(() => []),
     getUserTags(userId).catch(() => [] as string[]),
   ]);
@@ -105,6 +115,13 @@ export async function buildReport(userId: number): Promise<CoachReport> {
   const compare = compareWeeks(events, {easyWeek, tier: tierOf(ctx.level_4w), goEasy: (profile?.go_easy_note as string | null) ?? null});
   const active = goals.find(g => g.status === 'active') ?? null;
   const goal = active ? {id: active.id, title: active.title} : null;
+  // the goal side: four weeks of the same rows against what the goal needs, with a safe ramp per gap
+  const stage = active?.plan.phases.find(p => active.week >= p.startWeek && active.week <= p.endWeek) ?? null;
+  const gapReport = goalGaps(events, {
+    easyWeek,
+    dayTarget: DAY_TARGET[String(profile?.weekly_active_days ?? '')] ?? null,
+    goal: active ? {title: active.title, kind: active.eventKind, weeksLeft: weeksUntil(active.eventDate) ?? Math.max(1, active.plan.weeks - active.week + 1), overdue: active.plan.milestones.filter(m => !m.done && m.week < active.week).map(m => ({title: m.title, week: m.week}))} : null,
+  });
   const usualDays = [...new Set(events.filter(e => e.kind !== 'steps' && e.kind !== 'sleep' && e.kind !== 'recovery').map(e => DAY_NAMES[new Date(e.startedAt).getDay()]))];
 
   let bridge = fallbackBridge(compare, easyWeek);
@@ -114,7 +131,7 @@ export async function buildReport(userId: number): Promise<CoachReport> {
     try {
       const picks = (await localCandidates(userId, tags)).filter(c => c.kind === 'event' && !easyWeek).slice(0, 4);
       const next = active?.plan.milestones.find(m => !m.done);
-      const out = await museJson<{headline: string; bridge: (Omit<BridgeStep, 'href'> & {candidateId: string})[]}>({
+      const out = await museJson<{headline: string; bridge: (Omit<BridgeStep, 'href'> & {candidateId: string})[]; notes: {gapId: string; how: string}[]}>({
         model: MODELS.ember,
         schemaName: 'coach_bridge',
         schema: SCHEMA,
@@ -126,14 +143,18 @@ Improvements: ${JSON.stringify(compare.wins)}
 Gaps (worst first): ${JSON.stringify(compare.gaps)}
 Their level (measured over 4 weeks): ${level ?? 'unknown'}. Days they usually train: ${usualDays.join(', ') || 'none yet'}. Tags: ${tags.join(', ') || 'none'}.
 ${active ? `Their goal: "${active.title}", week ${active.week} of ${active.plan.weeks}${next ? `, next milestone: "${next.title}" (week ${next.week})` : ''}.` : 'No goal set.'}
+Goal gaps, computed by code from their last four weeks against ${gapReport.measuredAgainst}${gapReport.weeksLeft ? `, ${gapReport.weeksLeft} weeks left` : ''}${stage ? `, current phase "${stage.name}" (${stage.focus})` : ''}: ${JSON.stringify(gapReport.gaps.map(g => ({gapId: g.id, label: g.label, now: g.now, need: g.need, unit: g.unit, status: g.status, thisWeek: g.next})))}
 Rules you must follow:
 ${compare.rules.map(r => `- ${r}`).join('\n')}
 In-app events you may suggest (kind "event", use its candidateId): ${JSON.stringify(picks.map(e => ({candidateId: e.candidateId, title: e.title, detail: e.detail})))}
 Return:
 - headline: one sentence to them ("you") naming the biggest improvement and the biggest gap (if any), max 22 words. Encouraging and honest, no guilt.
 - bridge: 1-3 steps for the next 7 days, biggest gap first. With no gaps, the steps keep this week's gains and add one small next step toward their goal or the next level. kind is one of: session (a workout), rest, event (one of the in-app events), ahead (ask someone a few months ahead through their Muse, for a gap that advice would fix), rally (a co-op game with friends, for a consistency gap), goal (a step from their goal plan). title max 60 characters and concrete ("Two easy 30-min runs"). why: one line tying it to a number above, max 18 words. when: a day or time from the days they usually train, or "" if none. sessions and minutes: what the step adds (0 for rest/ahead). candidateId: the event's id for kind event, else "".
+- notes: one entry for each goal gap whose status is not "closed" (use its gapId). how: two sentences on exactly how to do that gap's thisWeek step: which days, how far or how long, how hard, what to do if it feels too much. Max 45 words. Use the numbers given; never raise a target or add a session. Empty array if every gap is closed.
 Never mention weight, bodies, calories or health conditions. Not medical advice.`,
       });
+      // how-to notes only decorate a gap the code found; they cannot add load, so they are kept even if the plan below is rejected
+      for (const n of out.notes ?? []) { const g = gapReport.gaps.find(x => x.id === n.gapId && x.status !== 'closed'); const how = String(n.how ?? '').replace(/\s+/g, ' ').trim().slice(0, 320); if (g && how) g.note = how; }
       const eventIds = new Map(picks.map(e => [e.candidateId, e.url]));
       const steps = (out.bridge ?? []).slice(0, 3).flatMap((s): BridgeStep[] => {
         if (!KINDS.includes(s.kind)) return [];
@@ -155,7 +176,7 @@ Never mention weight, bodies, calories or health conditions. Not medical advice.
     }
   }
 
-  const report: CoachReport = {...compare, day: new Date().toISOString().slice(0, 10), headline, bridge, easyWeek, level, goal, museUsed, generatedAt: new Date().toISOString()};
+  const report: CoachReport = {...compare, day: new Date().toISOString().slice(0, 10), headline, bridge, easyWeek, level, goal, goalGaps: gapReport, phase: stage ? `${stage.name}: ${stage.focus}` : null, museUsed, generatedAt: new Date().toISOString()};
   await sql`insert into coach_reports (user_id, day, report) values (${userId}, current_date, ${JSON.stringify(report)}::jsonb)
     on conflict (user_id, day) do update set report = excluded.report, created_at = now()`;
   return report;

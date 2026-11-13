@@ -1,6 +1,6 @@
 'use client';
 
-import {useEffect} from 'react';
+import {useEffect, useRef} from 'react';
 import {Text} from '@astryxdesign/core/Text';
 import type {ConnectorCard} from '@/lib/activities/connectors';
 import {INVITE_STEPS, ONBOARDING_STEPS, type ActivityProfile, type OnboardingStep} from '@/lib/activities/onboarding';
@@ -22,10 +22,17 @@ type Profile = {profile: ActivityProfile; tags: UserTag[]; policies: PolicyMatri
 
 /** Onboarding as a panel: the same five steps (two for a game invite), StepShell moves between them in place. Replaces /activities/onboarding/[step]. */
 export function OnboardingPanel({step, invite, viewerName}: {step: string | null; invite: number | null; viewerName: string}) {
-  // refetch per step: later steps show what earlier ones saved
-  const {data, error} = useJson<Profile>(`/api/activities/profile?step=${step ?? ''}`);
+  // one cached fetch for the whole flow: steps paint instantly, and we refresh after each save so later steps see what earlier ones wrote
+  const {data, error, reload} = useJson<Profile>('/api/activities/profile');
   const steps = invite ? INVITE_STEPS : [...ONBOARDING_STEPS];
   let s: OnboardingStep = steps.includes(step as OnboardingStep) ? (step as OnboardingStep) : steps[0];
+  const last = useRef(s);
+  useEffect(() => {
+    if (last.current !== s) {
+      last.current = s;
+      reload();
+    }
+  }, [s, reload]);
   const current = data?.profile.onboardingStep;
   // steps only open in order (privacy can't be skipped by editing the URL); finished users may revisit any step
   if (current && current !== 'done') {

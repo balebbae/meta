@@ -1,6 +1,7 @@
 'use client';
+import dynamic from 'next/dynamic';
 import {useRouter} from 'next/navigation';
-import {useCallback, useEffect, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {AlertDialog} from '@astryxdesign/core/AlertDialog';
 import {AspectRatio} from '@astryxdesign/core/AspectRatio';
 import {Button} from '@astryxdesign/core/Button';
@@ -18,6 +19,7 @@ import {Text} from '@astryxdesign/core/Text';
 import {Token} from '@astryxdesign/core/Token';
 import {useToast} from '@astryxdesign/core/Toast';
 import {VStack} from '@astryxdesign/core/VStack';
+import {castBoss, castHero} from '@/lib/kingdom/cast';
 import type {QuestState} from '@/lib/rally/queries';
 import {RallyAvatar, type AvatarState} from './Avatar';
 import {BossArt} from './BossArt';
@@ -25,6 +27,9 @@ import {LogMoveSheet} from './LogMoveSheet';
 import {ShareToGroupsDialog} from './ShareToGroupsDialog';
 import {rallyApi, type OkMove} from './api';
 import s from './dashboard.module.css';
+
+// One live WebGL scene for the fight; every other character on the page is a cached sprite.
+const Arena = dynamic(() => import('@/components/kingdom/Arena'), {ssr: false});
 
 const POLL_MS = 3000;
 const exerciseLine = (e: {name: string; reps?: number | null; seconds?: number | null}) => `${e.name}${e.reps ? ` ×${e.reps}` : ''}${e.seconds ? ` ${e.seconds}s` : ''}`;
@@ -40,6 +45,12 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
   const [leaving, setLeaving] = useState(false);
   const [dare, setDare] = useState<QuestState['dares'][number] | null>(null);
   const [anim, setAnim] = useState<{userId: number; state: AvatarState; hurt: boolean} | null>(null);
+  const [arenaFailed, setArenaFailed] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => setReducedMotion(window.matchMedia('(prefers-reduced-motion: reduce)').matches), []);
+  const bossCast = useMemo(() => castBoss(state.quest.bossKind), [state.quest.bossKind]);
+  const heroKey = state.members.map(m => `${m.id}:${m.name}:${m.gear.length}`).join('|');
+  const arenaHeroes = useMemo(() => state.members.map(m => ({id: m.id, cast: castHero(m.name, m.gear)})), [heroKey]); // eslint-disable-line react-hooks/exhaustive-deps -- state is replaced on every poll
   const lastMoveId = useRef(initial.moves[initial.moves.length - 1]?.id ?? 0);
 
   const refresh = useCallback(async () => {
@@ -120,14 +131,20 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
 
           {spec.boss && (
             <VStack gap={4} hAlign="center" padding={4} className={s.arenaStage}>
-              <VStack gap={2} hAlign="center" width="100%" maxWidth={320}>
-                <BossArt kind={q.bossKind} imageUrl={q.bossImageUrl} name={spec.boss.name} size={150} hurt={Boolean(anim?.hurt)} down={done} />
+              <VStack gap={2} hAlign="center" width="100%" maxWidth={560}>
+                {arenaFailed ? (
+                  <BossArt kind={q.bossKind} name={spec.boss.name} size={150} hurt={Boolean(anim?.hurt)} down={done} />
+                ) : (
+                  <div className={s.arenaCanvas} role="img" aria-label={`${spec.boss.name}${done ? ', defeated,' : ''} facing the squad: ${state.members.map(m => m.name.split(' ')[0]).join(', ')}`}>
+                    <Arena boss={bossCast} heroes={arenaHeroes} attackerId={anim?.userId ?? null} hp={hpPct / 100} hurt={Boolean(anim?.hurt)} down={done} reducedMotion={reducedMotion} onError={() => setArenaFailed(true)} />
+                  </div>
+                )}
                 <Heading level={3}>{spec.boss.name}</Heading>
                 <ProgressBar
                   label={done ? 'Defeated' : `Boss HP · ${Math.round(hpPct)}%`}
                   value={q.bossHpLeft}
                   max={q.bossHp || 1}
-                  variant={hpPct < 10 && !done ? 'error' : 'warning'}
+                  variant="error"
                   hasValueLabel
                   formatValueLabel={(v, m) => `${v} / ${m} HP`}
                 />

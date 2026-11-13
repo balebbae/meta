@@ -48,7 +48,7 @@ export function clampSpec(raw: GameSpec, members: Member[]): GameSpec {
     startsAt: raw.startsAt,
     endsAt: raw.endsAt,
     levels: levels.length ? levels : [{day: 1, name: 'Day 1', exercises: [{name: 'Move', reps: 10}]}],
-    boss: template === 'boss' ? {name: String(raw.boss?.name ?? 'The Boss').slice(0, 40), hp: Math.round(clamp(raw.boss?.hp ?? 1500, LIMITS.bossHp)), artPrompt: String(raw.boss?.artPrompt ?? '').slice(0, 200)} : undefined,
+    boss: template === 'boss' ? {name: String(raw.boss?.name ?? 'The Boss').slice(0, 40), hp: Math.round(clamp(raw.boss?.hp ?? 1500, LIMITS.bossHp))} : undefined,
     handicaps: members.map(m => {
       const h = (raw.handicaps ?? []).find(x => x.userId === m.id);
       return {userId: m.id, targetScale: clamp(h?.targetScale ?? 1, LIMITS.targetScale), damageScale: clamp(h?.damageScale ?? 1, LIMITS.damageScale), note: HANDICAP_NOTE};
@@ -127,7 +127,7 @@ export function fallbackSpec(source: SpecSource, members: Member[], handicaps: G
       startsAt: start.toISOString(),
       endsAt: end.toISOString(),
       levels,
-      boss: {name: bossName, hp: 300 * sizeBoost * 2, artPrompt: `A cartoon ${bossName.toLowerCase()}, playful villain, flat colours`},
+      boss: {name: bossName, hp: 300 * sizeBoost * 2},
       handicaps,
       dares: [
         {id: 'somewhere-new', text: 'Work out somewhere you have never trained before.', bonus: 15, needsProof: true},
@@ -154,7 +154,7 @@ export const GAME_SPEC_SCHEMA = {
     title: {type: 'string'},
     story: {type: 'string'},
     levels: {type: 'array', items: {type: 'object', properties: {day: {type: 'integer'}, name: {type: 'string'}, exercises: {type: 'array', items: exerciseSchema}}, required: ['day', 'name', 'exercises'], additionalProperties: false}},
-    boss: {type: 'object', properties: {name: {type: 'string'}, hp: {type: 'integer'}, artPrompt: {type: 'string'}}, required: ['name', 'hp', 'artPrompt'], additionalProperties: false},
+    boss: {type: 'object', properties: {name: {type: 'string'}, hp: {type: 'integer'}}, required: ['name', 'hp'], additionalProperties: false},
     dares: {type: 'array', items: {type: 'object', properties: {id: {type: 'string'}, text: {type: 'string'}, bonus: {type: 'integer'}, needsProof: {type: 'boolean'}}, required: ['id', 'text', 'bonus', 'needsProof'], additionalProperties: false}},
     rewards: {type: 'array', items: {type: 'object', properties: {tier: {type: 'string', enum: ['gear', 'discount', 'equipment']}, label: {type: 'string'}, equipmentTags: {type: 'array', items: {type: 'string'}}}, required: ['tier', 'label', 'equipmentTags'], additionalProperties: false}},
   },
@@ -187,7 +187,7 @@ export async function generateGameSpec(opts: {source: SpecSource; members: Membe
 ${workout}
 Design one week-long quest. Templates: boss (co-op HP pool, default), relay (two teams race), streak (one move a day).
 Return 7 levels (day 1..7) named like a board game path, each with 1-3 exercises from the workout with a normal single-set target (reps 8-20, holds 20-60 s, cardio in seconds 30-90).
-Boss: a playful villain named from the main exercise (e.g. "Plank Goblin"), hp 1000-3000, and a short artPrompt (cartoon, no text).
+Boss: a playful villain named from the main exercise (e.g. "Plank Goblin"), hp 1000-3000.
 3 dares that fit a group (somewhere new, weather, bring a friend), bonus 10-30, needsProof true when a photo makes sense.
 3 rewards: gear (avatar gear name), discount (partner code), equipment (equipmentTags = 1-3 pieces of simple gear that match the workout).
 Rules: playful trash talk only; never mention bodies, weight, health, injuries or ability. Title under 40 characters, story 1-2 sentences.`,

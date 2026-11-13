@@ -32,7 +32,7 @@ export default async function ActivitiesPage({searchParams}: {searchParams: Prom
   const games: MyGame[] = [
     ...quests
       .filter(q => q.status === 'active')
-      .map(q => ({key: `q${q.id}`, href: `/activities/games/${q.id}`, title: q.title, subtitle: q.bossHp ? `${q.bossHpLeft} / ${q.bossHp} HP` : `Rally · ${q.template}`, boss: {kind: q.bossKind, imageUrl: q.bossImageUrl, name: q.spec.boss?.name ?? q.title}})),
+      .map(q => ({key: `q${q.id}`, href: `/activities/games/${q.id}`, title: q.title, subtitle: q.bossHp ? `${q.bossHpLeft} / ${q.bossHp} HP` : `Rally · ${q.template}`, boss: {kind: q.bossKind, name: q.spec.boss?.name ?? q.title}})),
     ...turf.map(g => ({key: `t${g.id}`, href: `/games/${g.id}`, title: g.label, subtitle: g.status === 'live' ? 'Turf · live' : 'Turf · starting soon', boss: null})),
   ];
   // The intro modal (§8) is owned by OnboardingGate; DiscoverPage's built-in intro stays off.

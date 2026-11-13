@@ -472,7 +472,7 @@ select 'Plank Goblin Week', 'Plank Goblin has camped out in the group chat. Ever
       jsonb_build_object('day', 5, 'name', 'Grit Gorge', 'exercises', jsonb_build_array(jsonb_build_object('name', 'Plank', 'seconds', 56))),
       jsonb_build_object('day', 6, 'name', 'Final Climb', 'exercises', jsonb_build_array(jsonb_build_object('name', 'Plank', 'seconds', 60))),
       jsonb_build_object('day', 7, 'name', 'Boss Gate', 'exercises', jsonb_build_array(jsonb_build_object('name', 'Plank', 'seconds', 64)))),
-    'boss', jsonb_build_object('name', 'Plank Goblin', 'hp', 2400, 'artPrompt', 'A cartoon plank goblin, playful villain, flat colours'),
+    'boss', jsonb_build_object('name', 'Plank Goblin', 'hp', 2400),
     'handicaps', jsonb_build_array(
       jsonb_build_object('userId', 1, 'targetScale', 1.0, 'damageScale', 1.0, 'note', 'scaled to your recent weeks'),
       jsonb_build_object('userId', 2, 'targetScale', 0.8, 'damageScale', 1.25, 'note', 'scaled to your recent weeks'),

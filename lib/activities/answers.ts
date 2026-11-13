@@ -51,6 +51,7 @@ function visibleEvents(events: VaultEvent[], audience: Audience): VaultEvent[] {
 }
 
 const WORKOUT_KINDS = new Set(['run', 'walk', 'ride', 'strength', 'yoga', 'swim', 'other']);
+const KIND_2W: Partial<Record<QuestionType, string>> = {runs_2w: 'run', rides_2w: 'ride', strength_2w: 'strength', yoga_2w: 'yoga'};
 
 function compute(question: QuestionType, events: VaultEvent[], level: ShareLevel): Answer['value'] {
   const weekStart = startOfWeek().getTime();
@@ -68,6 +69,16 @@ function compute(question: QuestionType, events: VaultEvent[], level: ShareLevel
     case 'distance_this_week_km': {
       const km = thisWeek.reduce((s, e) => s + (e.distanceKm ?? 0), 0);
       return level === 'exact' ? Math.round(km * 100) / 100 : level === 'rounded' ? roundKm(km) : km > 0;
+    }
+    case 'runs_2w':
+    case 'rides_2w':
+    case 'strength_2w':
+    case 'yoga_2w':
+    case 'workouts_2w': {
+      // ask() and museContext() already limit events to the last 14 days.
+      const kind = KIND_2W[question];
+      const n = kind ? workouts.filter(e => e.kind === kind).length : workouts.length;
+      return level === 'exact' ? n : level === 'rounded' ? bandCount(n) : n > 0;
     }
     case 'completed_move_today':
       return today.length > 0;

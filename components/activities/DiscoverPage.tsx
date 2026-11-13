@@ -8,15 +8,17 @@ import {Dialog} from '@/components/ui/Dialog';
 import {PanelHeader} from '@/components/pages/SecondaryLayout';
 import type {DiscoverCard, DiscoverPayload, DiscoverSection} from '@/lib/activities/discover';
 import type {InterestSuggestion} from '@/lib/activities/interests';
+import type {Goal} from '@/lib/activities/goals';
+import {GoalSpotlight} from '@/components/activities/goals/GoalSpotlight';
 import sec from '@/components/pages/secondary.module.css';
 import styles from './discover.module.css';
 
 type Viewer = {id: number; name: string; avatarUrl: string};
-type Props = {viewer: Viewer; data: DiscoverPayload; interests: {enabled: boolean; suggestions: InterestSuggestion[]}; showIntro: boolean; showInterests: boolean; start: string | null; eventId: number | null};
+type Props = {viewer: Viewer; data: DiscoverPayload; interests: {enabled: boolean; suggestions: InterestSuggestion[]}; showIntro: boolean; showInterests: boolean; start: string | null; eventId: number | null; goal?: Goal | null};
 
 const json = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
 
-export function DiscoverPage({viewer, data, interests: initialInterests, showIntro, showInterests, start, eventId}: Props) {
+export function DiscoverPage({viewer, data, interests: initialInterests, showIntro, showInterests, start, eventId, goal = null}: Props) {
   const router = useRouter();
   const [sections, setSections] = useState<DiscoverSection[]>(data.sections);
   const [tags, setTags] = useState<string[]>(data.tags);
@@ -63,7 +65,7 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
     setBusy(template);
     try {
       if (template === 'reel') {
-        router.push('/reels');
+        router.push('/reels?tab=fitness');
         return;
       }
       if (chatId == null) {
@@ -130,13 +132,19 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
           </span>
           <span className={sec.rowLabel}>Discover</span>
         </Link>
+        <Link href="/activities/goals" className={sec.row}>
+          <span className={sec.rowIcon}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>
+          </span>
+          <span className={sec.rowLabel}>Goals</span>
+        </Link>
         <Link href="/activities/mentor" className={sec.row}>
           <span className={sec.rowIcon}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z"/></svg>
           </span>
           <span className={sec.rowLabel}>Mentors</span>
         </Link>
-        <Link href="/reels" className={sec.row}>
+        <Link href="/reels?tab=fitness" className={sec.row}>
           <span className={sec.rowIcon}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v16H4zM10 9v6l5-3z"/></svg>
           </span>
@@ -212,6 +220,7 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
     <div data-layout="wide" className={styles.wide}>
       <aside className={styles.panel}>{panel}</aside>
       <section className={styles.content}>
+      <GoalSpotlight goal={goal} />
       <div className={styles.status}>
         <span>
           Ranked for you from your tags, friends and what&apos;s coming up. Other people appear only through privacy-safe answers they chose to share.

@@ -141,8 +141,23 @@ export function QuestDashboard({initial}: {initial: QuestState}) {
         {me && level && !done && (
           <p className={s.muted} style={{marginTop: 8}}>
             Today: {level.name} · {level.exercises.map(e => `${e.name}${e.reps ? ` ×${e.reps}` : ''}${e.seconds ? ` ${e.seconds}s` : ''}`).join(', ')}
-            {me.target != null && <> · your target {me.target} ({me.handicapNote})</>}
+            {me.target != null && <> · your target {me.target}</>}
           </p>
+        )}
+        {(state.fairness || state.myHandicap) && (
+          <div className={s.fairPlay}>
+            <div className={s.fairPlayHead}>
+              <span className={s.h3}>Fair play</span>
+              {state.fairness && <span className={s.fairBadge}>Predicted finish: {state.fairness.label}</span>}
+            </div>
+            {state.fairness?.summary && <p className={s.muted}>{state.fairness.summary}</p>}
+            {state.myHandicap && (
+              <p className={s.muted}>
+                <strong>Only you see this:</strong> target ×{state.myHandicap.targetScale}, each move hits ×{state.myHandicap.damageScale}
+                {state.myHandicap.why ? `. ${state.myHandicap.why}` : '.'}
+              </p>
+            )}
+          </div>
         )}
       </section>
 

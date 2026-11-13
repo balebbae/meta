@@ -342,3 +342,32 @@
     flex-direction: column;
   }
 }
+
+/* Fair play: per-activity handicaps (lib/rally/handicap.ts) */
+.fairPlay {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--fb-hover);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fairPlayHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.fairPlayHead .h3 {
+  margin: 0;
+}
+.fairBadge {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: var(--fb-radius-pill);
+  background: var(--fb-card);
+  color: var(--fb-text-secondary);
+}

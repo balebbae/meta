@@ -7,10 +7,23 @@ import {BookmarkIcon, ChevronDownIcon, ChevronUpIcon, CommentIcon, LikeIcon, Sha
 import ChallengeDialog from './ChallengeDialog';
 import styles from './reels.module.css';
 
-type Props = {initialReels: Reel[]; nextAfter: number | null; initialTag?: string};
+/** fitness = the AI-tagged library (Challenge the GC); feed = general "For you" Reels. */
+export type ReelsVariant = 'fitness' | 'feed';
+type Props = {
+  initialReels: Reel[];
+  nextAfter: number | null;
+  initialTag?: string;
+  variant?: ReelsVariant;
+  /** False while this feed is the off-screen page of the Reels pager: nothing plays, keys go to the other page. */
+  visible?: boolean;
+  /** The pager draws the "Reels | Fitness" tabs, so the per-reel title is hidden there. */
+  showTitle?: boolean;
+};
 type Toast = {text: string; href?: string; hrefLabel?: string; error?: boolean};
 
-export default function ReelsViewer({initialReels, nextAfter, initialTag}: Props) {
+const API: Record<ReelsVariant, string> = {fitness: '/api/reels', feed: '/api/reels/feed'};
+
+export default function ReelsViewer({initialReels, nextAfter, initialTag, variant = 'fitness', visible = true, showTitle = true}: Props) {
   const [reels, setReels] = useState(initialReels);
   const [after, setAfter] = useState(nextAfter);
   const [active, setActive] = useState(0);
@@ -43,8 +56,8 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag}: Props
     if (after == null || loadingRef.current || active < reels.length - 3) return;
     loadingRef.current = true;
     const qs = new URLSearchParams({after: String(after), limit: '10'});
-    if (initialTag) qs.set('tag', initialTag);
-    fetch(`/api/reels?${qs}`)
+    if (initialTag && variant === 'fitness') qs.set('tag', initialTag);
+    fetch(`${API[variant]}?${qs}`)
       .then(r => (r.ok ? r.json() : null))
       .then((data: {reels: Reel[]; nextAfter: number | null} | null) => {
         if (!data) return;
@@ -57,7 +70,7 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag}: Props
       .finally(() => {
         loadingRef.current = false;
       });
-  }, [active, after, reels.length, initialTag]);
+  }, [active, after, reels.length, initialTag, variant]);
 
   useEffect(() => {
     if (!toast) return;
@@ -71,6 +84,7 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag}: Props
   }, []);
 
   useEffect(() => {
+    if (!visible) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'ArrowDown' || e.key === 'j') scrollTo(Math.min(reels.length - 1, active + 1));
@@ -79,7 +93,7 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag}: Props
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [active, reels.length, scrollTo]);
+  }, [active, reels.length, scrollTo, visible]);
 
   if (reels.length === 0) {
     return (
@@ -87,7 +101,7 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag}: Props
         <div className={styles.empty}>
           <strong>No Reels yet</strong>
           <span>
-            Run <code>node --env-file=.env.local scripts/seed-reels.mjs</code> to seed the demo library.
+            Run <code>node --env-file=.env.local scripts/{variant === 'feed' ? 'seed-feed-reels' : 'seed-reels'}.mjs</code> to seed the demo library.
           </span>
         </div>
       </div>
@@ -102,12 +116,14 @@ export default function ReelsViewer({initialReels, nextAfter, initialTag}: Props
             key={reel.id}
             reel={reel}
             index={i}
-            isActive={i === active}
+            isActive={visible && i === active}
             shouldLoad={Math.abs(i - active) <= 1}
             muted={muted}
             onToggleMute={() => setMuted(m => !m)}
-            onChallenge={() => setChallenge(reel)}
+            onChallenge={variant === 'fitness' ? () => setChallenge(reel) : undefined}
             onToast={setToast}
+            variant={variant}
+            showTitle={showTitle}
           />
         ))}
       </div>
@@ -155,6 +171,8 @@ function ReelItem({
   onToggleMute,
   onChallenge,
   onToast,
+  variant,
+  showTitle,
 }: {
   reel: Reel;
   index: number;
@@ -162,8 +180,10 @@ function ReelItem({
   shouldLoad: boolean;
   muted: boolean;
   onToggleMute: () => void;
-  onChallenge: () => void;
+  onChallenge?: () => void;
   onToast: (t: Toast) => void;
+  variant: ReelsVariant;
+  showTitle: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -181,7 +201,7 @@ function ReelItem({
       if (p) p.catch(() => {});
       if (!countedRef.current) {
         countedRef.current = true;
-        fetch(`/api/reels/${reel.id}/play`, {method: 'POST'}).catch(() => {});
+        fetch(`${API[variant]}/${reel.id}/play`, {method: 'POST'}).catch(() => {});
       }
     } else {
       v.pause();
@@ -190,7 +210,7 @@ function ReelItem({
         setPaused(false);
       }
     }
-  }, [isActive, paused, muted, reel.id]);
+  }, [isActive, paused, muted, reel.id, variant]);
 
   const onTap = () => {
     if (muted) {
@@ -201,7 +221,7 @@ function ReelItem({
   };
 
   const share = async () => {
-    const url = `${window.location.origin}/reels?reel=${reel.id}`;
+    const url = `${window.location.origin}/reels?${variant === 'feed' ? 'feed' : 'reel'}=${reel.id}`;
     try {
       if (navigator.share) {
         await navigator.share({title: reel.caption ?? 'Reel', url});
@@ -243,7 +263,7 @@ function ReelItem({
           </div>
         )}
         <div className={styles.topRow}>
-          <span className={styles.topTitle}>Reels</span>
+          <span className={styles.topTitle}>{showTitle ? 'Reels' : ''}</span>
           <button type="button" className={styles.roundBtn} onClick={onToggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
             {muted ? <MutedGlyph /> : <SoundGlyph />}
           </button>
@@ -310,14 +330,16 @@ function ReelItem({
           </span>
           {saved ? 'Saved' : 'Save'}
         </button>
-        <button type="button" className={styles.railBtn} onClick={onChallenge}>
-          <span className={`${styles.railIcon} ${styles.railChallenge}`}>
-            <SwordsGlyph />
-          </span>
-          Challenge
-          <br />
-          the GC
-        </button>
+        {onChallenge && (
+          <button type="button" className={styles.railBtn} onClick={onChallenge}>
+            <span className={`${styles.railIcon} ${styles.railChallenge}`}>
+              <SwordsGlyph />
+            </span>
+            Challenge
+            <br />
+            the GC
+          </button>
+        )}
       </div>
     </section>
   );

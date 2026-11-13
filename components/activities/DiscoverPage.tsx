@@ -8,15 +8,17 @@ import {Dialog} from '@/components/ui/Dialog';
 import {PanelHeader} from '@/components/pages/SecondaryLayout';
 import type {DiscoverCard, DiscoverPayload, DiscoverSection} from '@/lib/activities/discover';
 import type {InterestSuggestion} from '@/lib/activities/interests';
+import type {MuseActionsPayload} from '@/lib/activities/actions';
+import {MuseActions} from './MuseActions';
 import sec from '@/components/pages/secondary.module.css';
 import styles from './discover.module.css';
 
 type Viewer = {id: number; name: string; avatarUrl: string};
-type Props = {viewer: Viewer; data: DiscoverPayload; interests: {enabled: boolean; suggestions: InterestSuggestion[]}; showIntro: boolean; showInterests: boolean; start: string | null; eventId: number | null};
+type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; interests: {enabled: boolean; suggestions: InterestSuggestion[]}; showIntro: boolean; showInterests: boolean; start: string | null; eventId: number | null};
 
 const json = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
 
-export function DiscoverPage({viewer, data, interests: initialInterests, showIntro, showInterests, start, eventId}: Props) {
+export function DiscoverPage({viewer, data, museActions, interests: initialInterests, showIntro, showInterests, start, eventId}: Props) {
   const router = useRouter();
   const [sections, setSections] = useState<DiscoverSection[]>(data.sections);
   const [tags, setTags] = useState<string[]>(data.tags);
@@ -218,6 +220,7 @@ export function DiscoverPage({viewer, data, interests: initialInterests, showInt
         </span>
         <span className={data.museOffline ? styles.offline : undefined}>{data.museOffline ? 'Muse offline · template reasons' : 'Muse · Ember reasons'}</span>
       </div>
+      <MuseActions initial={museActions} viewerName={viewer.name} say={say} />
       {sections.map(s => (
         <section key={s.id} className={styles.section} aria-label={s.title}>
           <div className={styles.sectionHead}>

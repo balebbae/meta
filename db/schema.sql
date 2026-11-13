@@ -570,3 +570,28 @@ create index if not exists turf_privacy_zones_user_idx on turf_privacy_zones (us
 alter table quests add column if not exists capacity integer check (capacity between 2 and 100);
 alter table group_posts add column if not exists quest_id integer references quests(id) on delete cascade;
 create index if not exists group_posts_quest_idx on group_posts (quest_id) where quest_id is not null;
+
+-- Muse action items: things the owner's Muse suggests doing next (register for an event, buy gear).
+-- Private to the owner. Register/Buy are simulated in-app (demo): no organizer or store is contacted.
+create table if not exists muse_actions (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  kind text not null check (kind in ('event', 'buy')),
+  title text not null,
+  detail text not null default '',
+  why text not null default '',
+  price text,
+  url text,
+  image_url text,
+  starts_at timestamptz,
+  event_id integer references events(id) on delete cascade,
+  listing_id integer references marketplace_listings(id) on delete cascade,
+  dedupe_key text not null,
+  status text not null default 'suggested' check (status in ('suggested', 'done', 'dismissed')),
+  confirmation text,
+  created_at timestamptz not null default now(),
+  acted_at timestamptz,
+  unique (user_id, dedupe_key)
+);
+create index if not exists muse_actions_user_idx on muse_actions (user_id, status);
+alter table activity_profiles add column if not exists muse_actions_at timestamptz;

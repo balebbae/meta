@@ -71,24 +71,55 @@ const LABELS: Record<string, string> = {
   dietary_protein: 'Protein',
   dietary_carbs: 'Carbs',
   dietary_fat: 'Fat',
+  dietary_sugar: 'Sugar',
+  dietary_fiber: 'Fiber',
+  dietary_sodium: 'Sodium',
+  dietary_cholesterol: 'Cholesterol',
+  dietary_sat_fat: 'Saturated fat',
+  uv_exposure: 'UV exposure',
+  walking_steadiness_pct: 'Walking steadiness',
   mindful_min: 'Mindfulness',
   recovery_score: 'Recovery',
-  strain: 'Strain',
+  spo2_pct: 'Blood oxygen',
+  skin_temp_c: 'Skin temperature',
+  sleep_light_hours: 'Light sleep',
+  sleep_sws_hours: 'Slow-wave sleep',
+  sleep_cycles: 'Sleep cycles',
+  sleep_disturbances: 'Disturbances',
+  sleep_performance_pct: 'Sleep performance',
+  sleep_consistency_pct: 'Sleep consistency',
+  sleep_efficiency_pct: 'Sleep efficiency',
+  sleep_needed_hours: 'Sleep needed',
+  sleep_debt_hours: 'Sleep debt',
+  strain_need_hours: 'Extra sleep from strain',
+  nap_credit_hours: 'Nap credit',
+  strain: 'Day strain',
+  cycle_kcal: 'Calories burned',
+  cycle_avg_hr: 'Average heart rate',
+  cycle_max_hr: 'Max heart rate',
+  zone_0_min: 'HR zone 0',
+  zone_1_min: 'HR zone 1',
+  zone_2_min: 'HR zone 2',
+  zone_3_min: 'HR zone 3',
+  zone_4_min: 'HR zone 4',
+  zone_5_min: 'HR zone 5',
+  workout_altitude_m: 'Altitude gain',
+  workout_altitude_change_m: 'Altitude change',
   workout_minutes: 'Workouts',
 };
 
-const HIGHLIGHTS = ['steps', 'sleep_hours', 'heart_rate', 'active_energy', 'exercise_min', 'resting_hr'];
+const HIGHLIGHTS = ['recovery_score', 'strain', 'steps', 'sleep_hours', 'heart_rate', 'active_energy', 'resting_hr', 'hrv_ms'];
 
 const SECTIONS: {title: string; metrics: string[]}[] = [
   {title: 'Activity', metrics: ['steps', 'distance_walk', 'distance_cycle', 'distance_swim', 'distance_wheelchair', 'flights', 'active_energy', 'basal_energy', 'exercise_min', 'stand_min', 'push_count', 'swim_strokes', 'daylight_min']},
-  {title: 'Heart', metrics: ['heart_rate', 'heart_rate_avg', 'heart_rate_min', 'heart_rate_max', 'resting_hr', 'walking_hr', 'hrv_ms', 'hr_recovery', 'oxygen_pct', 'respiratory_rate', 'vo2_max', 'afib_burden_pct']},
-  {title: 'Sleep', metrics: ['sleep_hours', 'sleep_rem_hours', 'sleep_core_hours', 'sleep_deep_hours', 'sleep_awake_hours', 'sleep_in_bed_hours']},
-  {title: 'Body', metrics: ['weight_kg', 'height_cm', 'bmi', 'body_fat_pct', 'lean_mass_kg', 'waist_cm', 'temperature_c', 'wrist_temperature_c']},
+  {title: 'Heart', metrics: ['heart_rate', 'heart_rate_avg', 'heart_rate_min', 'heart_rate_max', 'resting_hr', 'walking_hr', 'hrv_ms', 'hr_recovery', 'oxygen_pct', 'spo2_pct', 'respiratory_rate', 'vo2_max', 'afib_burden_pct', 'cycle_avg_hr', 'cycle_max_hr', 'zone_0_min', 'zone_1_min', 'zone_2_min', 'zone_3_min', 'zone_4_min', 'zone_5_min']},
+  {title: 'Sleep', metrics: ['sleep_hours', 'sleep_rem_hours', 'sleep_core_hours', 'sleep_deep_hours', 'sleep_light_hours', 'sleep_sws_hours', 'sleep_awake_hours', 'sleep_in_bed_hours', 'sleep_cycles', 'sleep_disturbances', 'sleep_performance_pct', 'sleep_consistency_pct', 'sleep_efficiency_pct', 'sleep_needed_hours', 'sleep_debt_hours', 'strain_need_hours', 'nap_credit_hours']},
+  {title: 'Body', metrics: ['weight_kg', 'height_cm', 'bmi', 'body_fat_pct', 'lean_mass_kg', 'waist_cm', 'temperature_c', 'wrist_temperature_c', 'skin_temp_c', 'walking_steadiness_pct']},
   {title: 'Vitals', metrics: ['glucose_mg']},
-  {title: 'Mobility', metrics: ['walking_speed', 'step_length_cm', 'walking_asymmetry_pct', 'double_support_pct', 'stair_up_mps', 'stair_down_mps', 'six_min_walk_m']},
+  {title: 'Mobility', metrics: ['walking_speed', 'step_length_cm', 'walking_asymmetry_pct', 'double_support_pct', 'stair_up_mps', 'stair_down_mps', 'six_min_walk_m', 'workout_altitude_m', 'workout_altitude_change_m']},
   {title: 'Hearing', metrics: ['audio_env_db', 'audio_headphones_db']},
-  {title: 'Nutrition', metrics: ['dietary_energy', 'dietary_water', 'dietary_caffeine', 'dietary_protein', 'dietary_carbs', 'dietary_fat', 'mindful_min']},
-  {title: 'Whoop', metrics: ['recovery_score', 'strain', 'workout_minutes']},
+  {title: 'Nutrition', metrics: ['dietary_energy', 'dietary_water', 'dietary_caffeine', 'dietary_protein', 'dietary_carbs', 'dietary_fat', 'dietary_sugar', 'dietary_fiber', 'dietary_sodium', 'dietary_cholesterol', 'dietary_sat_fat', 'uv_exposure', 'mindful_min']},
+  {title: 'Whoop', metrics: ['recovery_score', 'strain', 'cycle_kcal', 'workout_minutes']},
 ];
 
 function grouped(value: number) {
@@ -124,7 +155,7 @@ export function formatHealthValue(unit: string, value: number) {
   if (unit === 'kg' || unit === '°C' || unit === 'ml/kg/min' || unit === 'm/s') return `${value.toFixed(1)} ${unit}`;
   if (unit === 'cm' || unit === 'g') return `${value.toFixed(value % 1 ? 1 : 0)} ${unit}`;
   if (unit === 'breaths/min') return `${grouped(value)} breaths/min`;
-  if (unit === 'bmi') return value.toFixed(1);
+  if (unit === 'bmi' || unit === 'strain' || unit === 'score') return `${value.toFixed(1)} ${unit}`;
   return `${value} ${unit}`;
 }
 
@@ -143,7 +174,7 @@ export function layoutHealth(samples: HealthReading[]) {
   const highlights = HIGHLIGHTS.flatMap(metric => {
     const sample = byMetric.get(metric);
     return sample ? [row(sample, LABELS[metric] ?? metric, formatHealthValue(sample.unit, sample.value))] : [];
-  });
+  }).slice(0, 4);
 
   const sections: HealthSection[] = [];
   const seen = new Set(HIGHLIGHTS);

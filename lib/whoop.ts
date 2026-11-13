@@ -1,3 +1,5 @@
+import {whoopReadings} from '@/lib/whoop-readings';
+
 const AUTH_URL = 'https://api.prod.whoop.com/oauth/oauth2/auth';
 const TOKEN_URL = 'https://api.prod.whoop.com/oauth/oauth2/token';
 const API = 'https://api.prod.whoop.com/developer/v2';
@@ -45,6 +47,33 @@ export async function exchangeWhoopCode(code: string, redirectUri: string) {
     refresh_token?: string;
     expires_in?: number;
   };
+}
+
+export async function refreshWhoopToken(refreshToken: string) {
+  const body = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: refreshToken,
+    client_id: process.env.WHOOP_CLIENT_ID ?? '',
+    client_secret: process.env.WHOOP_CLIENT_SECRET ?? '',
+    scope: 'offline',
+  });
+  const res = await fetch(TOKEN_URL, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+    body,
+  });
+  if (!res.ok) throw new Error(`Whoop refresh ${res.status}`);
+  return (await res.json()) as {access_token: string; refresh_token?: string; expires_in?: number};
+}
+
+export async function fetchWhoopSamples(accessToken: string) {
+  const [recovery, sleep, cycle, workouts] = await Promise.all([
+    whoopGet('/recovery?limit=1', accessToken).catch(() => null),
+    whoopGet('/activity/sleep?limit=1', accessToken).catch(() => null),
+    whoopGet('/cycle?limit=1', accessToken).catch(() => null),
+    whoopGet('/activity/workout?limit=10', accessToken).catch(() => null),
+  ]);
+  return whoopReadings({recovery, sleep, cycle, workouts});
 }
 
 export async function whoopGet(path: string, accessToken: string) {

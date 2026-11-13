@@ -2,27 +2,35 @@
 
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {Avatar} from '@/components/ui/Avatar';
 import {Dialog} from '@/components/ui/Dialog';
-import {PanelHeader} from '@/components/pages/SecondaryLayout';
+import {ChevronLeftIcon, ChevronRightIcon} from '@/components/icons';
+import {Leaderboard} from '@/components/closeness/Leaderboard';
+import {ListingCard} from '@/components/pages/ListingCard';
 import type {DiscoverCard, DiscoverPayload, DiscoverSection} from '@/lib/activities/discover';
-import type {InterestSuggestion} from '@/lib/activities/interests';
+import type {Goal} from '@/lib/activities/goals';
+import {GoalSpotlight} from '@/components/activities/goals/GoalSpotlight';
 import type {MuseActionsPayload} from '@/lib/activities/actions';
+import type {ListingBrief} from '@/lib/rally/queries';
 import {MuseActions} from './MuseActions';
-import sec from '@/components/pages/secondary.module.css';
 import styles from './discover.module.css';
 
 type Viewer = {id: number; name: string; avatarUrl: string};
-type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; interests: {enabled: boolean; suggestions: InterestSuggestion[]}; showIntro: boolean; showInterests: boolean; start: string | null; eventId: number | null};
+type Props = {viewer: Viewer; data: DiscoverPayload; museActions: MuseActionsPayload; listings: ListingBrief[]; showIntro: boolean; start: string | null; eventId: number | null; goal?: Goal | null};
 
 const json = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
 
-export function DiscoverPage({viewer, data, museActions, interests: initialInterests, showIntro, showInterests, start, eventId}: Props) {
+export function DiscoverPage({viewer, data, museActions, listings, showIntro, start, eventId, goal = null}: Props) {
   const router = useRouter();
   const [sections, setSections] = useState<DiscoverSection[]>(data.sections);
-  const [tags, setTags] = useState<string[]>(data.tags);
-  const [interests, setInterests] = useState(initialInterests);
+  const rail = useRef<HTMLDivElement>(null);
+  const [railEdge, setRailEdge] = useState({start: true, end: listings.length <= 4});
+  const onRailScroll = () => {
+    const el = rail.current;
+    if (el) setRailEdge({start: el.scrollLeft < 8, end: el.scrollLeft + el.clientWidth > el.scrollWidth - 8});
+  };
+  const slide = (dir: 1 | -1) => rail.current?.scrollBy({left: dir * rail.current.clientWidth * 0.75, behavior: 'smooth'});
   const [toast, setToast] = useState<string | null>(null);
   const [intro, setIntro] = useState(showIntro);
   const [startMode, setStartMode] = useState<string | null>(start);
@@ -76,7 +84,6 @@ export function DiscoverPage({viewer, data, museActions, interests: initialInter
     setSections(list => list.map(s => ({...s, cards: s.cards.filter(c => c.id !== card.id)})).filter(s => s.cards.length));
     if (card.tag) {
       await fetch('/api/activities/tags', {...json({tag: card.tag}), method: 'DELETE'});
-      setTags(t => t.filter(x => x !== card.tag));
       say(`Removed "${card.tag}" from your tags.`);
     } else say('Hidden.');
   };
@@ -86,7 +93,7 @@ export function DiscoverPage({viewer, data, museActions, interests: initialInter
     setBusy(template);
     try {
       if (template === 'reel') {
-        router.push('/reels');
+        router.push('/reels?tab=fitness');
         return;
       }
       if (chatId == null) {
@@ -114,148 +121,89 @@ export function DiscoverPage({viewer, data, museActions, interests: initialInter
     }
   };
 
-  const recap = async () => {
-    setBusy('recap');
-    const res = await fetch('/api/activities/recap', json({}));
-    const d = (await res.json().catch(() => ({}))) as {postId?: number; museOffline?: boolean; error?: string};
-    setBusy(null);
-    if (res.ok) say(`Weekly recap posted to your feed${d.museOffline ? ' (Muse offline: template used)' : ''}.`);
-    else say(d.error ?? 'Could not post the recap.');
-  };
-
-  const nudge = async () => {
-    setBusy('nudge');
-    const res = await fetch('/api/activities/nudge', json({kind: 'quest_drop'}));
-    const d = (await res.json().catch(() => ({}))) as {message?: string; museOffline?: boolean};
-    setBusy(null);
-    say(res.ok ? `Notification sent: “${d.message}”${d.museOffline ? ' (Muse offline)' : ''}` : 'Could not send the nudge.');
-  };
-
-  const interestsAction = async (body: {action: string; tag?: string}) => {
-    const res = await fetch('/api/activities/interests', json(body));
-    if (res.ok) setInterests(await res.json());
-  };
-  const confirmTag = async (s: InterestSuggestion) => {
-    await fetch('/api/activities/tags', json({tag: s.tag, origin: 'suggested', reason: s.reason}));
-    setTags(t => (t.includes(s.tag) ? t : [...t, s.tag]));
-    setInterests(i => ({...i, suggestions: i.suggestions.filter(x => x.tag !== s.tag)}));
-    say(`Added "${s.tag}". Discover will refresh with it.`);
-    router.refresh();
-  };
-
-  const panel = (
-    <>
-      <PanelHeader title="Activities" subtitle="Rally, Turf and your Muse — with friends." settings={false} />
-      <nav>
-        <Link href="/activities" className={`${sec.row} ${sec.rowActive}`}>
-          <span className={sec.rowIcon}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 2 7l10 5 10-5-10-5zm0 13L4.5 11.3 2 12.5l10 5 10-5-2.5-1.2L12 15z"/></svg>
-          </span>
-          <span className={sec.rowLabel}>Discover</span>
-        </Link>
-        <Link href="/activities/ahead" className={sec.row}>
-          <span className={sec.rowIcon}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z"/></svg>
-          </span>
-          <span className={sec.rowLabel}>A few months ahead</span>
-        </Link>
-        <Link href="/reels" className={sec.row}>
-          <span className={sec.rowIcon}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M4 4h16v16H4zM10 9v6l5-3z"/></svg>
-          </span>
-          <span className={sec.rowLabel}>Reels</span>
-        </Link>
-        <Link href="/closeness" className={sec.row}>
-          <span className={sec.rowIcon}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5 20h3v-8H5zm5.5 0h3V4h-3zM16 20h3v-5h-3z"/></svg>
-          </span>
-          <span className={sec.rowLabel}>Leaderboard</span>
-        </Link>
-      </nav>
-      <div className={sec.panelDivider} />
-      <div className={sec.panelSection}>
-        <span className={sec.panelSectionTitle}>Your tags</span>
+  const byId = (id: DiscoverSection['id']) => sections.find(s => s.id === id);
+  const renderSection = (s: DiscoverSection) => (
+    <section key={s.id} className={styles.section} aria-label={s.title}>
+      <div className={styles.sectionHead}>
+        <h2 className={styles.sectionTitle}>{s.title}</h2>
+        {s.id === 'mentors' && <span className={styles.sectionSub}>Talk through your Muses · names stay hidden · 18+</span>}
+        {s.id === 'friends' && <span className={styles.sectionSub}>Yes/no answers only</span>}
       </div>
-      <div className={styles.panelBox}>
-        {tags.length ? (
-          <div className={styles.chips}>
-            {tags.map(t => (
-              <span key={t} className={styles.chip}>
-                {t}
-              </span>
-            ))}
-          </div>
-        ) : (
-          <span>No tags yet. Pick some in Activities setup.</span>
-        )}
+      <div className={s.id === 'first_move' ? styles.heroWrap : styles.grid}>
+        {s.cards.map(c => (
+          <Card key={c.id} card={c} hero={s.id === 'first_move'} viewer={viewer} onNotInterested={() => notInterested(c)} onStart={c.kind === 'start' ? () => (c.meta?.template === 'sentence' ? setStartMode('sentence') : startGame(String(c.meta?.template ?? 'turf'))) : undefined} busy={busy === c.meta?.template} />
+        ))}
       </div>
-      {showInterests && (
-        <div className={styles.panelBox}>
-          <div className={styles.toggle}>
-            <span>Suggest interests from what I do on Facebook</span>
-            <button type="button" className={interests.enabled ? styles.switchOn : styles.switch} aria-pressed={interests.enabled} aria-label="Interest suggestions" onClick={() => interestsAction({action: interests.enabled ? 'disable' : 'enable'})} />
-          </div>
-          <div>Uses reels you watched, your groups and event RSVPs. Never health or body data. Turning it off clears every suggestion.</div>
-          {interests.enabled &&
-            interests.suggestions.map(s => (
-              <div key={s.tag} className={styles.suggestion}>
-                <span>
-                  <strong>{s.tag}</strong>
-                  <small>{s.reason}</small>
-                </span>
-                <span style={{display: 'flex', gap: 4}}>
-                  <button type="button" className={styles.chipBtn} onClick={() => confirmTag(s)}>
-                    Add
-                  </button>
-                  <button type="button" className={styles.chipBtn} style={{color: 'var(--fb-text-secondary)'}} onClick={() => interestsAction({action: 'dismiss', tag: s.tag})}>
-                    Dismiss
-                  </button>
-                </span>
-              </div>
-            ))}
-          {interests.enabled && !interests.suggestions.length && <div style={{marginTop: 6}}>Nothing new to suggest right now.</div>}
-        </div>
-      )}
-      <div className={sec.panelDivider} />
-      <div className={sec.panelSection}>
-        <span className={sec.panelSectionTitle}>Demo tools</span>
-      </div>
-      <div style={{display: 'flex', flexDirection: 'column', gap: 6, padding: '0 8px 8px'}}>
-        <button type="button" className={sec.panelButtonSecondary} onClick={recap} disabled={busy === 'recap'}>
-          {busy === 'recap' ? 'Writing…' : 'Post my weekly recap'}
-        </button>
-        <button type="button" className={sec.panelButtonSecondary} onClick={nudge} disabled={busy === 'nudge'}>
-          {busy === 'nudge' ? 'Sending…' : 'Send “your quest drops today”'}
-        </button>
-      </div>
-    </>
+    </section>
   );
+  const firstMove = byId('first_move');
+  const reels = byId('learn');
 
   return (
-    <div data-layout="wide" className={styles.wide}>
-      <aside className={styles.panel}>{panel}</aside>
-      <section className={styles.content}>
-      <div className={styles.status}>
-        <span>
-          Ranked for you from your tags, friends and what&apos;s coming up. Other people appear only through privacy-safe answers they chose to share.
-        </span>
-        <span className={data.museOffline ? styles.offline : undefined}>{data.museOffline ? 'Muse offline · template reasons' : 'Muse · Ember reasons'}</span>
+    <div className={styles.page}>
+      <h1 className={styles.pageTitle}>Activities</h1>
+      <div className={styles.goalWrap}>
+        <GoalSpotlight goal={goal} />
       </div>
       <MuseActions initial={museActions} viewerName={viewer.name} say={say} />
-      {sections.map(s => (
-        <section key={s.id} className={styles.section} aria-label={s.title}>
+      {firstMove && renderSection(firstMove)}
+      {reels && (
+        <section className={styles.section} aria-label="Suggested reels">
           <div className={styles.sectionHead}>
-            <h2 className={styles.sectionTitle}>{s.title}</h2>
-            {s.id === 'mentors' && <span className={styles.sectionSub}>Talk through your Muses · names stay hidden · 18+</span>}
-            {s.id === 'friends' && <span className={styles.sectionSub}>Yes/no answers only</span>}
+            <h2 className={styles.sectionTitle}>Suggested reels</h2>
+            <Link href="/reels?tab=fitness#activities" className={styles.seeAll}>
+              See all
+            </Link>
           </div>
-          <div className={s.id === 'first_move' ? undefined : styles.grid}>
-            {s.cards.map(c => (
-              <Card key={c.id} card={c} hero={s.id === 'first_move'} viewer={viewer} onNotInterested={() => notInterested(c)} onStart={c.kind === 'start' ? () => (c.meta?.template === 'sentence' ? setStartMode('sentence') : startGame(String(c.meta?.template ?? 'turf'))) : undefined} busy={busy === c.meta?.template} />
+          <div className={styles.bento}>
+            {reels.cards.map(c => (
+              <Link key={c.id} href={c.href ?? '/reels?tab=fitness#activities'} className={styles.reelTile}>
+                {c.imageUrl && <img src={c.imageUrl} alt="" loading="lazy" />}
+                <span className={styles.reelTag}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                  For {String(c.meta?.label ?? 'Workouts')}
+                </span>
+                <span className={styles.reelCaption}>{c.title}</span>
+              </Link>
             ))}
           </div>
         </section>
-      ))}
+      )}
+      {listings.length > 0 && (
+        <section className={styles.section} aria-label="Suggested on Marketplace">
+          <div className={styles.sectionHead}>
+            <h2 className={styles.sectionTitle}>Suggested on Marketplace</h2>
+            <Link href="/marketplace?category=Sporting%20Goods" className={styles.seeAll}>
+              See all
+            </Link>
+          </div>
+          <div className={styles.carouselWrap}>
+            <div ref={rail} className={styles.carousel} onScroll={onRailScroll}>
+              {listings.map(l => (
+                <div key={l.id} className={styles.slide}>
+                  <ListingCard listing={l} />
+                </div>
+              ))}
+            </div>
+            {!railEdge.start && (
+              <button type="button" className={`${styles.arrow} ${styles.arrowPrev}`} aria-label="Previous items" onClick={() => slide(-1)}>
+                <ChevronLeftIcon size={24} />
+              </button>
+            )}
+            {!railEdge.end && (
+              <button type="button" className={`${styles.arrow} ${styles.arrowNext}`} aria-label="More items" onClick={() => slide(1)}>
+                <ChevronRightIcon size={24} />
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+      <div className={`${styles.section} ${styles.board}`}>
+        <Leaderboard defaultTab="fitness" />
+      </div>
+      {sections.filter(s => s.id !== 'first_move' && s.id !== 'learn').map(renderSection)}
       {toast && (
         <div className={styles.toast} role="status">
           {toast}
@@ -337,7 +285,6 @@ export function DiscoverPage({viewer, data, museActions, interests: initialInter
           </div>
         </div>
       </Dialog>
-      </section>
     </div>
   );
 }

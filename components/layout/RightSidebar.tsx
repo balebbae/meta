@@ -29,7 +29,6 @@ export function RightSidebar({user, contacts = [], requests = []}: {user: User; 
       ))}
       <div className={styles.rrDivider} />
       <Leaderboard compact />
-      <div className={styles.rrDivider} />
       <FriendRequests initial={requests} />
       {contacts.length > 0 && (
         <>

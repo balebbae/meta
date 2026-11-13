@@ -6,6 +6,7 @@ import {ArrowLeftIcon, MessengerIcon, SearchIcon} from '@/components/icons';
 import {Avatar} from '@/components/ui/Avatar';
 import {COMPOSE_EVENT} from '@/components/layout/ComposeFab';
 import {useVisiblePolling} from '@/components/messages/hooks';
+import type {AppSearch} from '@/lib/search';
 import {FacebookWordmark} from './Wordmark';
 import styles from './mobile.module.css';
 
@@ -39,30 +40,40 @@ export function useChatUnread(intervalMs = 15000) {
   return n;
 }
 
-type Hit = {id: number; name: string; avatarUrl: string};
+const blankSearch: AppSearch = {users: [], posts: [], groups: [], listings: [], events: []};
 
-/** People search used by the mobile header, menu, and friends title. Desktop keeps Header's search box. */
+function money(cents: number) {
+  return `$${(cents / 100).toFixed(2)}`;
+}
+
+/** Search used by the mobile header, menu, and friends title. */
 export function PeopleSearchButton({className, iconSize = 22}: {className: string; iconSize?: number}) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
-  const [users, setUsers] = useState<Hit[]>([]);
+  const [hits, setHits] = useState<AppSearch>(blankSearch);
   const [settled, setSettled] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     const term = q.trim();
     if (!term) {
-      setUsers([]);
+      setHits(blankSearch);
       setSettled(false);
       return;
     }
     setSettled(false);
     const ctrl = new AbortController();
     const t = setTimeout(() => {
-      fetch(`/api/users/search?q=${encodeURIComponent(term)}`, {signal: ctrl.signal})
-        .then(r => (r.ok ? r.json() : {users: []}))
-        .then((d: {users?: Hit[]}) => {
-          setUsers(d.users ?? []);
+      fetch(`/api/search?q=${encodeURIComponent(term)}`, {signal: ctrl.signal})
+        .then(r => (r.ok ? r.json() : blankSearch))
+        .then((d: AppSearch) => {
+          setHits({
+            users: d.users ?? [],
+            posts: d.posts ?? [],
+            groups: d.groups ?? [],
+            listings: d.listings ?? [],
+            events: d.events ?? [],
+          });
           setSettled(true);
         })
         .catch(() => {
@@ -80,6 +91,7 @@ export function PeopleSearchButton({className, iconSize = 22}: {className: strin
     setOpen(false);
     setQ('');
   };
+  const none = settled && hits.users.length + hits.posts.length + hits.groups.length + hits.listings.length + hits.events.length === 0;
 
   return (
     <>
@@ -98,13 +110,32 @@ export function PeopleSearchButton({className, iconSize = 22}: {className: strin
             </label>
           </div>
           <div className={styles.searchSheetList}>
-            {users.map(u => (
-              <Link key={u.id} href={`/profile/${u.id}`} className={styles.searchHit} onClick={close}>
+            {hits.users.length > 0 && <div className={styles.searchSection}>People</div>}
+            {hits.users.map(u => (
+              <Link key={`u${u.id}`} href={`/profile/${u.id}`} className={styles.searchHit} onClick={close}>
                 <Avatar src={u.avatarUrl} alt="" size={40} />
                 {u.name}
               </Link>
             ))}
-            {settled && users.length === 0 && <p className={styles.empty}>No people found.</p>}
+            {hits.posts.length > 0 && <div className={styles.searchSection}>Posts</div>}
+            {hits.posts.map(p => (
+              <Link key={`p${p.id}`} href={`/profile/${p.authorId}`} className={styles.searchHit} onClick={close}>
+                <span>{p.snippet}<span className={styles.profileSub}> {p.authorName}</span></span>
+              </Link>
+            ))}
+            {hits.groups.length > 0 && <div className={styles.searchSection}>Groups</div>}
+            {hits.groups.map(g => (
+              <Link key={`g${g.id}`} href={`/groups/${g.id}`} className={styles.searchHit} onClick={close}>{g.name}</Link>
+            ))}
+            {hits.listings.length > 0 && <div className={styles.searchSection}>Marketplace</div>}
+            {hits.listings.map(l => (
+              <Link key={`l${l.id}`} href={`/marketplace/item/${l.id}`} className={styles.searchHit} onClick={close}>{l.title} · {money(l.priceCents)}</Link>
+            ))}
+            {hits.events.length > 0 && <div className={styles.searchSection}>Events</div>}
+            {hits.events.map(e => (
+              <Link key={`e${e.id}`} href="/events" className={styles.searchHit} onClick={close}>{e.title}</Link>
+            ))}
+            {none && <p className={styles.empty}>No results.</p>}
           </div>
         </div>
       )}

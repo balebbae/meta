@@ -34,6 +34,7 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  padding-top: env(safe-area-inset-top);
   background: var(--login-white);
   color: var(--login-text);
   font-family: var(--login-font);

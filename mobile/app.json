@@ -1,17 +1,28 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "Facebook",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "Meta reads steps, sleep, heart rate, and workouts so friends can see real-life closeness.",
+        "NSHealthUpdateUsageDescription": "Meta does not write to Apple Health."
+      },
+      "bundleIdentifier": "com.veerms.mobile"
     },
     "android": {
+      "permissions": [
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_SLEEP",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_EXERCISE"
+      ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0866FF",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -22,7 +33,14 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "react-native-health",
+        {
+          "healthSharePermission": "Meta reads steps, sleep, heart rate, and workouts so friends can see real-life closeness.",
+          "healthUpdatePermission": "Meta does not write to Apple Health."
+        }
+      ]
     ]
   }
 }

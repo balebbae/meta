@@ -586,3 +586,31 @@ create table if not exists muse_relay_messages (
   created_at timestamptz not null default now()
 );
 create index if not exists muse_relay_messages_request_idx on muse_relay_messages (request_id, id);
+
+-- Wearables: Whoop OAuth + phone health sync (Apple Health / Health Connect)
+create table if not exists whoop_accounts (
+  user_id integer primary key references users(id) on delete cascade,
+  whoop_user_id text,
+  access_token text not null,
+  refresh_token text,
+  expires_at timestamptz,
+  connected_at timestamptz not null default now()
+);
+
+create table if not exists health_samples (
+  id serial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  source text not null check (source in ('whoop', 'apple_health', 'health_connect')),
+  metric text not null,
+  value double precision not null,
+  unit text not null,
+  recorded_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists health_samples_user_idx on health_samples (user_id, recorded_at desc);
+
+create table if not exists health_sync_tokens (
+  token text primary key,
+  user_id integer not null references users(id) on delete cascade,
+  expires_at timestamptz not null
+);

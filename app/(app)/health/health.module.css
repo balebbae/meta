@@ -1,0 +1,111 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 8px;
+}
+
+.card {
+  background: var(--fb-card);
+  border-radius: var(--fb-radius);
+  box-shadow: var(--fb-shadow-card);
+  padding: 12px 16px 16px;
+}
+
+.heading {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--fb-text);
+  margin-bottom: 6px;
+}
+
+.sub {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--fb-text-secondary);
+  margin: 0 0 12px;
+}
+
+.note {
+  font-size: 13px;
+  color: var(--fb-text);
+  background: var(--fb-bg);
+  border-radius: var(--fb-radius);
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.tile {
+  background: var(--fb-bg);
+  border-radius: var(--fb-radius);
+  padding: 12px;
+}
+
+.tileValue {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--fb-text);
+  line-height: 1.2;
+}
+
+.tileLabel {
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--fb-text-secondary);
+}
+
+.section {
+  margin-top: 14px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fb-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 2px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--fb-divider-soft);
+}
+
+.rowLabel {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fb-text);
+}
+
+.rowWhen {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--fb-text-tertiary);
+}
+
+.rowValue {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--fb-text);
+  white-space: nowrap;
+}

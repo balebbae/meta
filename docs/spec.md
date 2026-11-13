@@ -2,7 +2,7 @@
 
 Facebook-style social app that rewards **real contact** (not vanity likes) using Meta Muse APIs. Web on Vercel; phone via Expo Go WebView.
 
-**Prod:** https://meta-activities.vercel.app  
+**Prod:** https://facebook.calebbae.xyz  
 **Branch:** `feat/closeness-muse` (on top of Devin’s Next.js clone)
 
 ## Goals

@@ -60,8 +60,9 @@ export async function GET(req: Request, ctx: {params: Promise<{source: string}>}
   const {source} = await ctx.params;
   const url = new URL(req.url);
   if (source === 'strava' && url.searchParams.get('hub.mode') === 'subscribe') {
-    const token = process.env.STRAVA_VERIFY_TOKEN ?? 'activities';
-    if (url.searchParams.get('hub.verify_token') !== token) return NextResponse.json({error: 'bad verify token'}, {status: 403});
+    // No guessable default: without STRAVA_VERIFY_TOKEN set, nobody can register a webhook against us.
+    const token = process.env.STRAVA_VERIFY_TOKEN;
+    if (!token || url.searchParams.get('hub.verify_token') !== token) return NextResponse.json({error: 'bad verify token'}, {status: 403});
     return NextResponse.json({'hub.challenge': url.searchParams.get('hub.challenge')});
   }
   return NextResponse.json({ok: true, source});

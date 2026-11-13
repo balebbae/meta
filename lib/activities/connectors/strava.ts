@@ -93,7 +93,8 @@ export const stravaConnector: Connector = {
   },
   async ingest(_userId, payload): Promise<RawEvent[]> {
     const hook = payload as StravaWebhook;
-    if (hook?.object_type !== 'activity') return [];
+    // Webhooks are unsigned: object_id goes into an API path, so only plain numeric ids get through.
+    if (hook?.object_type !== 'activity' || !/^\d{1,20}$/.test(String(hook.object_id)) || !/^\d{1,20}$/.test(String(hook.owner_id))) return [];
     const conn = await findConnectionByExternalUser('strava', String(hook.owner_id));
     if (!conn) return [];
     if (hook.aspect_type === 'delete') return [];

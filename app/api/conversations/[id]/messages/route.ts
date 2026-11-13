@@ -1,6 +1,7 @@
 import {NextResponse, type NextRequest} from 'next/server';
 import {badRequest, notFound, readJson, withUser} from '@/lib/api';
 import {isMember, listMessages, sendMessage} from '@/lib/messaging-queries';
+import {isAllowedImageUrl} from '@/lib/image-upload';
 
 type Ctx = {params: Promise<{id: string}>};
 
@@ -32,6 +33,7 @@ export async function POST(req: NextRequest, {params}: Ctx) {
     const body = (data?.body ?? '').trim();
     const imageUrl = data?.imageUrl?.trim() || null;
     if (!body && !imageUrl) return badRequest('body or imageUrl is required');
+    if (imageUrl && !isAllowedImageUrl(imageUrl)) return badRequest('imageUrl must be an http(s) URL or an image under 1.5 MB');
     if (body.length > 5000) return badRequest('message is too long');
     const message = await sendMessage(id, {id: user.id, name: user.name}, body, imageUrl);
     return NextResponse.json({message}, {status: 201});

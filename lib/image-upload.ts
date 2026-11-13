@@ -10,6 +10,16 @@ export function isImageDataUrl(v: unknown): v is string {
   return typeof v === 'string' && v.length <= MAX_DATA_URL_LENGTH && DATA_URL.test(v);
 }
 
+/** Chat photos are resized to 1280 px JPEG on the client, which can pass 400 KB once base64-encoded. */
+export const MAX_ATTACHMENT_DATA_URL_LENGTH = 1_500_000;
+
+/** An image a user may attach: a short http(s) URL or an image data URL under `maxDataUrl` characters. */
+export function isAllowedImageUrl(v: unknown, maxDataUrl = MAX_ATTACHMENT_DATA_URL_LENGTH): v is string {
+  if (typeof v !== 'string') return false;
+  if (v.length <= 2000 && /^https?:\/\/\S+$/i.test(v)) return true;
+  return v.length <= maxDataUrl && DATA_URL.test(v);
+}
+
 function loadImage(file: File): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);

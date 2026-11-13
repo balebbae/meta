@@ -1,0 +1,48 @@
+.connection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.connect {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--fb-strava);
+  color: var(--fb-strava-text);
+  font-size: 19px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: box-shadow 120ms;
+}
+
+.connect:hover {
+  box-shadow: 0 2px 8px var(--fb-divider);
+}
+
+.connect:focus-visible, .manage:focus-visible {
+  outline: 2px solid var(--fb-blue);
+  outline-offset: 3px;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--fb-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.status svg {
+  color: var(--fb-strava);
+}
+
+.manage {
+  color: var(--fb-blue);
+  font-size: 13px;
+}

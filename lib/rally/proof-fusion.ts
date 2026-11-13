@@ -17,8 +17,9 @@
  * VLM alone: missing or "unclear" -> pending; ok -> approve; otherwise reject. Fails closed: nothing is approved
  * without a positive signal.
  */
+import type {ProofResult} from './proof.ts';
 
-export const BODY_EXERCISES = ['push_up', 'squat', 'lunge', 'jumping_jack', 'sit_up'] as const;
+export const BODY_EXERCISES =['push_up', 'squat', 'lunge', 'jumping_jack', 'sit_up'] as const;
 export type BodyExercise = (typeof BODY_EXERCISES)[number];
 
 /** Output of repcount classify() (snake_case, as the Python/JSON emits it). */
@@ -108,4 +109,23 @@ export function fuseProof({task, media, pose, vlm}: FusionInput): FusionResult {
   return poseMatch
     ? {decision: 'approve', reason: `Pose sees ${seen}, matching the task`, source}
     : {decision: 'reject', reason: `Pose sees ${seen}, not ${label(ex)}`, source};
+}
+
+const STATUS = {approve: 'approved', reject: 'rejected', pending: 'pending'} as const;
+
+/**
+ * Server side of clip proof. The pose verdict is computed on the phone, so it is client-supplied and forgeable:
+ * it may reject alone (a cheater gains nothing from that), but approval always needs the server-side vision check
+ * of the stills to agree. A vision check that couldn't run (Muse offline/error, status 'pending') leaves the proof
+ * pending, so it deals no damage (fail closed).
+ */
+export async function fuseClipProof(task: string, pose: PoseVerdict | null, check: () => Promise<ProofResult>): Promise<{status: ProofResult['status']; verdict: string; museUsed: boolean}> {
+  const alone = fuseProof({task, media: 'clip', pose, vlm: null});
+  if (alone.source !== 'none' && alone.decision === 'reject') return {status: 'rejected', verdict: alone.reason, museUsed: false};
+  const r = await check();
+  const ok = r.status === 'approved';
+  if (r.status === 'pending') return {status: 'pending', verdict: r.verdict || 'Vision check unavailable: proof saved, it counts once verified.', museUsed: r.museUsed};
+  const vlm: ExerciseCheck = {shows: 'exercise_frames', ex: ok ? task : 'other', match: ok, km: null, min: null, steps: null, ok, why: r.verdict};
+  const f = fuseProof({task, media: 'clip', pose, vlm});
+  return {status: STATUS[f.decision], verdict: r.verdict ? `${f.reason}. ${r.verdict}` : f.reason, museUsed: r.museUsed};
 }

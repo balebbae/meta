@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import {useRouter} from 'next/navigation';
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {MapPin, Play, Sparkles} from 'lucide-react';
 import {AspectRatio} from '@astryxdesign/core/AspectRatio';
 import {Avatar} from '@astryxdesign/core/Avatar';
@@ -42,6 +42,12 @@ type Chat = {id: number; title: string; isGroup: boolean};
 
 const json = (body: unknown) => ({method: 'POST', headers: {'content-type': 'application/json'}, body: JSON.stringify(body)});
 
+/** Ranking feedback (discover_events). Fire-and-forget; keepalive so a click that navigates away still lands. */
+const logEvents = (cards: DiscoverCard[], event: 'impression' | 'click' | 'dismiss') => {
+  if (!cards.length) return;
+  void fetch('/api/activities/discover/events', {...json({events: cards.slice(0, 100).map(c => ({cardId: c.id, cardType: c.kind, tag: c.tag ?? null, event}))}), keepalive: true}).catch(() => {});
+};
+
 /** Section title row: heading on the left, an optional note or "See all" on the right. */
 export function SectionHead({title, sub, href}: {title: string; sub?: string; href?: string}) {
   return (
@@ -66,6 +72,14 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
   const [chats, setChats] = useState<Chat[]>([]);
   const [chatId, setChatId] = useState<number | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const loggedAt = useRef<string | null>(null);
+
+  // one impression batch per server render (the ref keeps StrictMode's double effect from logging twice)
+  useEffect(() => {
+    if (loggedAt.current === data.generatedAt) return;
+    loggedAt.current = data.generatedAt;
+    logEvents(data.sections.flatMap(s => s.cards), 'impression');
+  }, [data]);
 
   useEffect(() => {
     if (!startMode || chats.length) return;
@@ -107,6 +121,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
   }, [eventId, say]);
 
   const notInterested = async (card: DiscoverCard) => {
+    logEvents([card], 'dismiss');
     setSections(list => list.map(s => ({...s, cards: s.cards.filter(c => c.id !== card.id)})).filter(s => s.cards.length));
     if (card.tag) {
       await fetch('/api/activities/tags', {...json({tag: card.tag}), method: 'DELETE'});
@@ -158,6 +173,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
             card={c}
             hero={s.id === 'first_move'}
             onNotInterested={() => notInterested(c)}
+            onOpen={() => logEvents([c], 'click')}
             onStart={c.kind === 'start' ? () => (c.meta?.template === 'sentence' ? setStartMode('sentence') : startGame(String(c.meta?.template ?? 'turf'))) : undefined}
             busy={busy === c.meta?.template}
           />
@@ -218,7 +234,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
           <SectionHead title="Suggested reels" href="/reels" />
           <nav className={b.bento} aria-label="Suggested reels">
             {reels.cards.map(c => (
-              <Link key={c.id} href={c.href ?? '/reels'} className={b.reelTile}>
+              <Link key={c.id} href={c.href ?? '/reels'} className={b.reelTile} onClick={() => logEvents([c], 'click')}>
                 {c.imageUrl && <img src={c.imageUrl} alt="" loading="lazy" />}
                 <span className={b.reelTag}>
                   <Icon icon={Play} size="xsm" color="inherit" />
@@ -304,7 +320,7 @@ export function DiscoverPage({viewer, data, museActions, listings, start, eventI
   );
 }
 
-function DiscoverCardView({card, hero, onNotInterested, onStart, busy}: {card: DiscoverCard; hero: boolean; onNotInterested: () => void; onStart?: () => void; busy: boolean}) {
+function DiscoverCardView({card, hero, onNotInterested, onOpen, onStart, busy}: {card: DiscoverCard; hero: boolean; onNotInterested: () => void; onOpen: () => void; onStart?: () => void; busy: boolean}) {
   const cta = card.cta ?? 'Open';
   const media = card.imageUrl ? (
     <AspectRatio ratio={16 / 9}>
@@ -339,7 +355,20 @@ function DiscoverCardView({card, hero, onNotInterested, onStart, busy}: {card: D
         </StackItem>
       </HStack>
       <HStack gap={2} wrap="wrap">
-        {onStart ? <Button label={cta} variant="primary" size="sm" isLoading={busy} onClick={onStart} /> : <Button label={cta} variant="primary" size="sm" href={card.href ?? '/activities'} />}
+        {onStart ? (
+          <Button
+            label={cta}
+            variant="primary"
+            size="sm"
+            isLoading={busy}
+            onClick={() => {
+              onOpen();
+              onStart();
+            }}
+          />
+        ) : (
+          <Button label={cta} variant="primary" size="sm" href={card.href ?? '/activities'} onClick={onOpen} />
+        )}
         {card.kind !== 'start' && card.kind !== 'invite' && <Button label="Not interested" variant="ghost" size="sm" tooltip={card.tag ? `Removes the "${card.tag}" tag` : 'Hide'} onClick={onNotInterested} />}
       </HStack>
     </VStack>

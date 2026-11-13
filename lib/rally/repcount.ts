@@ -28,18 +28,18 @@ export type Landmark = {x: number; y: number; visibility?: number};
 // BlazePose indices
 const L_SH = 11, R_SH = 12, L_EL = 13, R_EL = 14, L_WR = 15, R_WR = 16, L_HIP = 23, R_HIP = 24, L_KN = 25, R_KN = 26, L_AN = 27, R_AN = 28;
 
-function angle(a: Landmark, b: Landmark, c: Landmark): number {
+export function angle(a: Landmark, b: Landmark, c: Landmark): number {
   const bax = a.x - b.x, bay = a.y - b.y, bcx = c.x - b.x, bcy = c.y - b.y;
   const cos = (bax * bcx + bay * bcy) / (Math.hypot(bax, bay) * Math.hypot(bcx, bcy) + 1e-9);
   return (Math.acos(Math.min(1, Math.max(-1, cos))) * 180) / Math.PI;
 }
 const vis = (p: Landmark) => (p.visibility ?? 1) + 1e-3;
 /** Visibility-weighted left/right average, so whichever side faces the camera dominates. */
-const side = (f: Landmark[], l: number, r: number): Landmark => {
+export const side = (f: Landmark[], l: number, r: number): Landmark => {
   const wl = vis(f[l]), wr = vis(f[r]);
   return {x: (f[l].x * wl + f[r].x * wr) / (wl + wr), y: (f[l].y * wl + f[r].y * wr) / (wl + wr)};
 };
-function joint(f: Landmark[], a: [number, number], b: [number, number], c: [number, number]): number {
+export function joint(f: Landmark[], a: [number, number], b: [number, number], c: [number, number]): number {
   const wl = vis(f[b[0]]), wr = vis(f[b[1]]);
   return (angle(f[a[0]], f[b[0]], f[c[0]]) * wl + angle(f[a[1]], f[b[1]], f[c[1]]) * wr) / (wl + wr);
 }
@@ -63,7 +63,7 @@ export function clipSignal(frames: (Landmark[] | null)[], exercise: ClipExercise
   return ok.map(f => (f ? (side(f, L_SH, R_SH).y - (f[L_WR].y + f[R_WR].y) / 2) / len : null));
 }
 
-function percentile(xs: number[], p: number): number {
+export function percentile(xs: number[], p: number): number {
   const s = [...xs].sort((a, b) => a - b);
   const pos = (p / 100) * (s.length - 1);
   const lo = Math.floor(pos);
@@ -71,7 +71,7 @@ function percentile(xs: number[], p: number): number {
 }
 
 /** Linear interpolation over missing frames (edges take the nearest value), like np.interp. */
-function fill(x: (number | null)[]): number[] | null {
+export function fill(x: (number | null)[]): number[] | null {
   const known = x.flatMap((v, i) => (v != null && Number.isFinite(v) ? [i] : []));
   if (!known.length) return null;
   return x.map((v, i) => {
@@ -85,7 +85,7 @@ function fill(x: (number | null)[]): number[] | null {
 }
 
 /** Median filter (kills single-frame pose spikes), then a moving average; same length out. */
-function smooth(x: number[], fps: number, windowS = 0.2): number[] {
+export function smooth(x: number[], fps: number, windowS = 0.2): number[] {
   const k = Math.max(1, Math.round(windowS * fps) | 1);
   if (k === 1 || x.length < k) return x;
   const pad = k >> 1;

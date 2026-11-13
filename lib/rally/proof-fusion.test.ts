@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {fuseProof, taskExercise, type ExerciseCheck, type PoseVerdict} from './proof-fusion.ts';
+import {fuseClipProof, fuseProof, taskExercise, type ExerciseCheck, type PoseVerdict} from './proof-fusion.ts';
+import type {ProofResult} from './proof.ts';
 
 const pose = (exercise: PoseVerdict['exercise'], extra: Partial<PoseVerdict> = {}): PoseVerdict => ({exercise, confidence: 0.95, abstain: false, person_found: true, reps: 10, flags: [], ...extra});
 const vlm = (ok: boolean, extra: Partial<ExerciseCheck> = {}): ExerciseCheck => ({shows: 'exercise_frames', ex: ok ? 'push_up' : 'squat', match: ok, km: null, min: null, steps: null, ok, why: 'x', ...extra});
@@ -72,4 +73,27 @@ test('non-body tasks and exercises the model was not trained on use the VLM', ()
   const noSitUps = pose('push_up', {supported: ['push_up', 'squat', 'lunge', 'jumping_jack']});
   assert.equal(fuseProof({task: 'sit-ups × 20', media: 'clip', pose: noSitUps, vlm: null}).decision, 'pending');
   assert.equal(fuseProof({task: 'sit-ups × 20', media: 'clip', pose: noSitUps, vlm: vlm(true)}).decision, 'approve');
+});
+
+test('clip proof wiring: pose may reject alone, approval always needs the server vision check', async () => {
+  const run = async (task: string, p: PoseVerdict | null, ember: ProofResult['status']) => {
+    let called = false;
+    const r = await fuseClipProof(task, p, async () => ((called = true), {approved: ember === 'approved', status: ember, verdict: 'ember says', museUsed: ember !== 'pending'}));
+    return [r.status, called];
+  };
+  const supported = ['push_up', 'squat', 'lunge', 'jumping_jack'];
+  // the pose verdict is client-supplied: a matching pose never approves without the vision check
+  assert.deepEqual(await run('push-ups', pose('push_up', {supported}), 'approved'), ['approved', true]);
+  assert.deepEqual(await run('push-ups', pose('push_up', {supported}), 'rejected'), ['pending', true]);
+  assert.deepEqual(await run('push-ups', pose('push_up', {supported}), 'pending'), ['pending', true]);
+  assert.deepEqual(await run('push-ups', pose('squat', {supported}), 'approved'), ['rejected', false]);
+  assert.deepEqual(await run('push-ups', pose('push_up', {abstain: true}), 'approved'), ['approved', true]);
+  assert.deepEqual(await run('push-ups', pose('push_up', {person_found: false}), 'rejected'), ['rejected', true]);
+  assert.deepEqual(await run('push-ups', pose('none'), 'approved'), ['approved', true]);
+  assert.deepEqual(await run('push-ups', null, 'rejected'), ['rejected', true]);
+  // Muse offline/error: fail closed
+  assert.deepEqual(await run('push-ups', pose('none'), 'pending'), ['pending', true]);
+  assert.deepEqual(await run('push-ups', null, 'pending'), ['pending', true]);
+  // sit-ups aren't in the model: a phone claiming sit_up still needs the vision check
+  assert.deepEqual(await run('sit-ups', pose('sit_up', {supported}), 'pending'), ['pending', true]);
 });

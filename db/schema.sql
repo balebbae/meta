@@ -555,6 +555,18 @@ create table if not exists reel_plays (
   played_at timestamptz not null default now(),
   primary key (user_id, reel_id)
 );
+-- Discover ranking (plan 5c): impressions / clicks / dismisses per card, read back as Beta counts per (card_type, tag).
+create table if not exists discover_events (
+  id bigserial primary key,
+  user_id integer not null references users(id) on delete cascade,
+  card_id text not null,
+  card_type text not null,
+  tag text,
+  event text not null check (event in ('impression', 'click', 'dismiss')),
+  created_at timestamptz not null default now()
+);
+create index if not exists discover_events_created_idx on discover_events (created_at);
+create index if not exists discover_events_user_idx on discover_events (user_id, created_at desc);
 
 
 -- Turf (scope D): owner-only GPS points and trail bookkeeping; the game state only exposes turf_cells.

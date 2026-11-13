@@ -1,6 +1,7 @@
 import {NextResponse} from 'next/server';
 import {badRequest, readJson, withUser} from '@/lib/api';
 import {getPolicies, setPolicy} from '@/lib/activities/policies';
+import {clearAskCache} from '@/lib/activities/answers';
 import {AUDIENCES, CATEGORIES, type Audience, type Category, type ShareLevel} from '@/lib/activities/types';
 
 const LEVELS: ShareLevel[] = ['exact', 'rounded', 'boolean', 'muse_only', 'none'];
@@ -22,6 +23,7 @@ export async function PUT(req: Request) {
       if (c.audience === 'only_me' && c.level !== 'exact' && c.level !== 'none') return badRequest('only_me is exact or not imported');
     }
     for (const c of changes) await setPolicy(user.id, c.category, c.audience, c.level);
+    clearAskCache(user.id);
     return NextResponse.json({policies: await getPolicies(user.id)});
   });
 }

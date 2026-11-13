@@ -1,9 +1,8 @@
 import {NextResponse} from 'next/server';
 import {badRequest, withUser} from '@/lib/api';
-import {insertXpEvent} from '@/lib/closeness-queries';
+import {awardXp} from '@/lib/closeness-queries';
 import {sql} from '@/lib/db';
 import {requireDatabase, requireMuse} from '@/lib/muse/guard';
-import {scoreInteraction} from '@/lib/muse/score';
 import {transcribeAudio} from '@/lib/muse/transcribe';
 
 export async function POST(req: Request) {
@@ -29,19 +28,8 @@ export async function POST(req: Request) {
       values (${user.id}, ${postId}, ${transcript})
       returning id, transcript, created_at`;
 
-    const scored = await scoreInteraction({
-      actorName: user.name,
-      eventType: 'voice_note',
-      detail: transcript.slice(0, 280),
-    });
-    await insertXpEvent({
-      userId: user.id,
-      sourceType: 'voice_note',
-      sourceId: note.id as number,
-      xp: scored.xp,
-      reason: scored.reason,
-    });
+    const scored = await awardXp({userId: user.id, sourceType: 'voice_note', sourceId: note.id as number});
 
-    return NextResponse.json({ok: true, transcript, voiceNote: note, xp: scored});
+    return NextResponse.json({ok: true, transcript, voiceNote: note, xp: 'blocked' in scored ? null : scored});
   });
 }

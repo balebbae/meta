@@ -6,19 +6,19 @@
 import type {Answer, GameSpec, GameTemplate} from '@/lib/activities/types';
 import {MODELS, museConfigured, museJson} from '@/lib/muse/client';
 import {LIMITS, clamp} from '@/lib/rally/scoring';
+import {bandOf} from '@/lib/rally/fairness';
 
 export type Member = {id: number; name: string};
 export type SpecSource = {kind: 'sentence'; text: string} | {kind: 'reel'; reelId: number; caption: string; exercises: {name: string; reps?: number; seconds?: number}[]; equipment: string[]; difficulty?: string | null};
 
 export const HANDICAP_NOTE = 'scaled to your recent weeks';
 
-/** Banded Answer (workouts_this_week at game_participants level) -> scales. Reason is never stored. */
+/**
+ * Banded Answer (workouts_per_week_4w at game_participants level: a rolling 4-week average, so nobody reads 0 just
+ * because it's Monday) -> scales. Withheld/unknown = the middle band. Reason is never stored.
+ */
 export function handicapFromAnswer(userId: number, a: Answer | null): GameSpec['handicaps'][number] {
-  const v = a?.withheld ? null : a?.value ?? null;
-  let band: 0 | 1 | 2 | 3 = 2;
-  if (typeof v === 'string') band = v === '0' ? 0 : v === '1-2' ? 1 : v === '3-4' ? 2 : 3;
-  else if (typeof v === 'number') band = v === 0 ? 0 : v <= 2 ? 1 : v <= 4 ? 2 : 3;
-  else if (typeof v === 'boolean') band = v ? 2 : 0;
+  const band = bandOf(a) ?? 2;
   const table = [
     {targetScale: 0.6, damageScale: 1.5},
     {targetScale: 0.8, damageScale: 1.25},

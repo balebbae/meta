@@ -10,6 +10,7 @@ export type ProofResult = {approved: boolean; verdict: string; status: 'approved
 
 /** One photo, or 2-3 still frames from a clip (then the question is about the clip). */
 export async function verifyProofImage(opts: {image: string; task: string; frames?: string[]}): Promise<ProofResult> {
+  // TODO: a local fine-tuned vision endpoint (finetune/rally_ft exercise_check) replaces the Ember call below; keep this signature and the fail-closed 'pending'.
   if (!museConfigured()) return {...UNVERIFIED_PROOF, verdict: 'Muse offline: proof saved, it counts once verified.'};
   try {
     const c = getMuseClient();

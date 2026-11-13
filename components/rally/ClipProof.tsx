@@ -1,7 +1,9 @@
 'use client';
 import {useEffect, useRef, useState} from 'react';
 import {CLIP_EXERCISES, CONFIDENT, EXERCISE_LABEL, clipSignal, countReps, exerciseFor, type ClipExercise, type Landmark, type RepCount} from '@/lib/rally/repcount';
-import {analyzeClip, CLIP_MAX_S, openCamera, recordLive, warmUp, type ClipFrames} from './clip';
+import {classifyPose} from '@/lib/rally/pose-classify';
+import type {ClipInput} from '@/lib/rally/queries';
+import {analyzeClip,CLIP_MAX_S, openCamera, recordLive, warmUp, type ClipFrames} from './clip';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {Center} from '@astryxdesign/core/Center';
@@ -13,7 +15,7 @@ import {Token} from '@astryxdesign/core/Token';
 import {VStack} from '@astryxdesign/core/VStack';
 import styles from './rally.module.css';
 
-export type ClipPayload = {exercise: ClipExercise; fps: number; signal: (number | null)[]; frames: string[]};
+export type ClipPayload = ClipInput;
 type Stage = 'idle' | 'camera' | 'countdown' | 'recording' | 'model' | 'frames' | 'done';
 
 const COUNTDOWN_S = 3;
@@ -63,7 +65,10 @@ export function ClipProof({exercises, target, onChange}: {exercises?: string[]; 
     // stills at rep bottoms (or spread across the clip): what Muse checks to confirm it's really this exercise
     const n = clip.landmarks.length;
     const pick = c.bottoms.length >= 3 ? [c.bottoms[0], c.bottoms[c.bottoms.length >> 1], c.bottoms[c.bottoms.length - 1]] : [n * 0.25, n * 0.5, n * 0.75].map(Math.floor);
-    onChange({exercise: ex, fps: clip.fps, signal, frames: await clip.stills(pick)});
+    // which exercise the clip shows, classified on the device; only this small verdict is sent
+    const v = classifyPose(clip.landmarks, clip.fps);
+    const pose = {exercise: v.exercise, confidence: v.confidence, abstain: v.abstain, person_found: v.person_found, reps: c.reps};
+    onChange({exercise: ex, fps: clip.fps, signal, frames: await clip.stills(pick), pose});
   };
 
   const reset = () => {

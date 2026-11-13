@@ -41,3 +41,14 @@ No emojis. No hashtags. Sound human.`,
     tone: result.tone.slice(0, 40),
   };
 }
+
+/** generateNudge, or null on error / after timeoutMs, so callers keep their template copy. */
+export async function nudgeOrNull(input: NudgeInput, timeoutMs = 4000): Promise<NudgeResult | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<null>(resolve => (timer = setTimeout(resolve, timeoutMs, null)));
+  try {
+    return await Promise.race([generateNudge(input).catch(() => null), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}

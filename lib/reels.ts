@@ -90,9 +90,12 @@ export async function getReel(id: number): Promise<Reel | null> {
 }
 
 
-export async function recordPlay(id: number): Promise<number | null> {
+/** Counts one play and remembers who watched (reel_plays, latest play per user) for interest suggestions. */
+export async function recordPlay(id: number, userId: number): Promise<number | null> {
   const rows = await sql`update reels set plays = plays + 1 where id = ${id} returning plays`;
-  return rows[0] ? Number(rows[0].plays) : null;
+  if (!rows[0]) return null;
+  await sql`insert into reel_plays (user_id, reel_id) values (${userId}, ${id}) on conflict (user_id, reel_id) do update set played_at = now()`.catch(() => {});
+  return Number(rows[0].plays);
 }
 
 // ---- General "For you" Reels (feed_reels) ------------------------------------------------------

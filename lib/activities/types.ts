@@ -101,7 +101,10 @@ export type QuestionType =
   // Code-decided level over 4 weeks (lib/activities/level.ts): rounded = tier only.
   | 'level_4w'
   | 'steps_avg_7d'
-  | 'sleep_avg_7d';
+  | 'sleep_avg_7d'
+  // Rolling (not Monday-to-now): workouts a week over 4 weeks (handicaps), weekly MET-minute loads over 16 weeks (mentor trajectories).
+  | 'workouts_per_week_4w'
+  | 'load_weekly_16w';
 
 export const QUESTION_CATEGORY: Record<QuestionType, Category> = {
   workouts_this_week: 'workouts',
@@ -118,6 +121,8 @@ export const QUESTION_CATEGORY: Record<QuestionType, Category> = {
   yoga_2w: 'workouts',
   workouts_2w: 'workouts',
   level_4w: 'workouts',
+  workouts_per_week_4w: 'workouts',
+  load_weekly_16w: 'workouts',
   steps_today: 'steps',
   steps_avg_7d: 'steps',
   avg_hr_this_week: 'heart',

@@ -3,6 +3,7 @@ import {describeLevel, fitnessLevel, isSession} from '@/lib/activities/level';
 import {getPolicies} from '@/lib/activities/policies';
 import {listVaultEvents, type VaultEvent} from '@/lib/activities/vault';
 import {answerTrust} from '@/lib/activities/integrity';
+import {weeklyLoads, workoutsPerWeek} from '@/lib/activities/ahead';
 import {QUESTION_CATEGORY, type Answer, type Audience, type QuestionType, type ShareLevel} from '@/lib/activities/types';
 
 /**
@@ -48,8 +49,20 @@ function visibleEvents(events: VaultEvent[], audience: Audience): VaultEvent[] {
 
 const KIND_2W: Partial<Record<QuestionType, string>> = {runs_2w: 'run', rides_2w: 'ride', strength_2w: 'strength', yoga_2w: 'yoga'};
 
-/** `all` = the last 4 weeks; everything except the level reads the last 2. */
+/** Weeks of vault each question reads; load_weekly_16w is the only long one. */
+const windowWeeks = (q: QuestionType) => (q === 'load_weekly_16w' ? 16 : 4);
+
+/** `all` = the question's window (windowWeeks); everything except the 4-week/16-week ones reads the last 2. */
 function compute(question: QuestionType, all: VaultEvent[], level: ShareLevel): Answer['value'] {
+  if (question === 'load_weekly_16w') {
+    const loads = weeklyLoads(all.filter(isSession), 16);
+    // rounded = nearest 100 MET-minutes a week (≈ 10 min of running), so one session can't be read back
+    return level === 'exact' ? loads.join(',') : level === 'rounded' ? loads.map(x => Math.round(x / 100) * 100).join(',') : loads.some(x => x > 0);
+  }
+  if (question === 'workouts_per_week_4w') {
+    const n = workoutsPerWeek(all.filter(isSession));
+    return level === 'exact' ? n : level === 'rounded' ? bandCount(n > 0 ? Math.max(1, Math.round(n)) : 0) : n > 0;
+  }
   if (question === 'level_4w' || question === 'steps_avg_7d' || question === 'sleep_avg_7d') {
     const l = fitnessLevel(all);
     if (question === 'level_4w') return level === 'exact' ? describeLevel(l) : level === 'rounded' ? l.tier : l.tier !== 'new';
@@ -134,12 +147,48 @@ export async function ask(ownerId: number, audience: Audience, question: Questio
   if (level === 'none' || (level === 'muse_only' && audience !== 'only_me')) {
     answer = {question, value: null, level, sourceTrust: null, withheld: true};
   } else {
-    const events = visibleEvents(await listVaultEvents(ownerId, {since: new Date(Date.now() - 4 * WEEK_MS).toISOString(), limit: 500}), audience);
+    // shortcut: the 500-row cap can cut the oldest weeks of a 16-week read for heavy daily-sync users; page or filter kinds if that shows up
+    const events = visibleEvents(await listVaultEvents(ownerId, {since: new Date(Date.now() - windowWeeks(question) * WEEK_MS).toISOString(), limit: 500}), audience);
     answer = {question, value: compute(question, events, level), level, sourceTrust: answerTrust(question, events, startOfToday().getTime()), withheld: false};
   }
   await sql`insert into answers_log (owner_id, asker, audience, question, answer, level)
     values (${ownerId}, ${asker}, ${audience}, ${question}, ${JSON.stringify(answer)}, ${level})`.catch(() => {});
   return answer;
+}
+
+const ASK_CACHE = new Map<string, {answer: Answer; at: number}>();
+const ASK_TTL = 10 * 60 * 1000;
+export type PendingAudit = {ownerId: number; asker: string; audience: Audience; answer: Answer};
+
+/**
+ * ask() with answers cached ~10 min per (owner, audience, question), so a new audience or question always computes
+ * fresh. Hits are still audited: they're pushed onto `audit` for one batched insert (flushAudit) by the caller.
+ * shortcut: in-process Map; on serverless every instance has its own and cold starts begin empty, and a policy change
+ * made on another instance can take up to the TTL to apply here; move to a shared cache keyed by policy version if that matters.
+ */
+export async function askCached(ownerId: number, audience: Audience, question: QuestionType, asker: string, audit: PendingAudit[]): Promise<Answer> {
+  const key = `${ownerId}:${audience}:${question}`;
+  const hit = ASK_CACHE.get(key);
+  if (hit && Date.now() - hit.at < ASK_TTL) {
+    audit.push({ownerId, asker, audience, answer: hit.answer});
+    return hit.answer;
+  }
+  const answer = await ask(ownerId, audience, question, asker);
+  if (ASK_CACHE.size > 5000) for (const [k, v] of ASK_CACHE) if (Date.now() - v.at >= ASK_TTL) ASK_CACHE.delete(k);
+  ASK_CACHE.set(key, {answer, at: Date.now()});
+  return answer;
+}
+
+/** Drop an owner's cached answers (their share policy changed). */
+export function clearAskCache(ownerId: number) {
+  for (const k of ASK_CACHE.keys()) if (k.startsWith(`${ownerId}:`)) ASK_CACHE.delete(k);
+}
+
+export async function flushAudit(rows: PendingAudit[]): Promise<void> {
+  if (!rows.length) return;
+  await sql`insert into answers_log (owner_id, asker, audience, question, answer, level)
+    select * from unnest(${rows.map(r => r.ownerId)}::int[], ${rows.map(r => r.asker)}::text[], ${rows.map(r => r.audience)}::text[],
+                         ${rows.map(r => r.answer.question)}::text[], ${rows.map(r => JSON.stringify(r.answer))}::jsonb[], ${rows.map(r => r.answer.level)}::text[])`.catch(() => {});
 }
 
 /**
@@ -154,7 +203,7 @@ export async function museContext(ownerId: number): Promise<Record<string, Answe
   const out: Record<string, Answer['value']> = {};
   for (const q of Object.keys(QUESTION_CATEGORY) as QuestionType[]) {
     const level = policies[QUESTION_CATEGORY[q]].only_me;
-    if (level === 'none') continue;
+    if (level === 'none' || q === 'load_weekly_16w') continue; // the context only holds 4 weeks
     out[q] = compute(q, events, 'rounded');
   }
   if (policies.workouts.only_me !== 'none') {

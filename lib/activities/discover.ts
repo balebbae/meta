@@ -1,9 +1,12 @@
 import {sql} from '@/lib/db';
-import {ask} from '@/lib/activities/answers';
-import {aheadFit, levelValue, type AheadFit, type Level} from '@/lib/activities/ahead';
+import {ask, askCached, flushAudit, type PendingAudit} from '@/lib/activities/answers';
+import {armKey, rankCards, type ArmStats} from '@/lib/activities/rank';
+import {aheadFit, levelValue, loadSeries, trajectoryFit, type AheadFit, type Level, type TrajectoryFit} from '@/lib/activities/ahead';
 import {TIER_RANK, tierOf} from '@/lib/activities/level';
 import {MODELS, museConfigured, museJson} from '@/lib/muse/client';
 import {bandValue, friendVisibleTags, MENTOR_K} from '@/lib/activities/privacy';
+import {classifyActivity} from '@/lib/activities/classify';
+import {isFitnessText, tagsForText} from '@/lib/activities/keywords';
 
 /** A Discover card. Everything about other people here came from ask() answers or public rows (events/groups/reels). */
 export type DiscoverCard = {
@@ -29,29 +32,20 @@ export type DiscoverCard = {
 export type DiscoverSection = {id: 'first_move' | 'friends' | 'events' | 'groups' | 'mentors' | 'learn' | 'start'; title: string; cards: DiscoverCard[]};
 export type DiscoverPayload = {sections: DiscoverSection[]; tags: string[]; museOffline: boolean; generatedAt: string};
 
-const FITNESS_WORDS = ['run', '5k', '10k', 'marathon', 'climb', 'yoga', 'lift', 'gym', 'bike', 'cycling', 'ride', 'hike', 'swim', 'workout', 'bootcamp', 'pickleball', 'boss fight', 'fitness', 'walk'];
-const TAG_WORDS: Record<string, string[]> = {
-  Running: ['run', '5k', '10k', 'marathon', 'trail'],
-  Climbing: ['climb', 'boulder'],
-  Yoga: ['yoga', 'pilates'],
-  Lifting: ['lift', 'strength', 'gym', 'bench'],
-  Cycling: ['bike', 'cycling', 'ride'],
-  Hiking: ['hike', 'trail'],
-  Swimming: ['swim'],
-  Walking: ['walk', 'photowalk', 'steps'],
-  Pickleball: ['pickleball'],
-  Basketball: ['basketball', 'hoops'],
-  Soccer: ['soccer', 'football'],
-};
+// Pure keyword tagger lives in keywords.ts (node --test-able); re-exported for existing callers.
+export {isFitnessText, tagsForText};
 
-export function isFitnessText(text: string): boolean {
-  const t = text.toLowerCase();
-  return FITNESS_WORDS.some(w => t.includes(w));
-}
+/** Ontology activity (classify.ts) -> Discover tag. */
+const ACTIVITY_TAG: Record<string, string> = {run: 'Running', trail_run: 'Running', walk: 'Walking', hike: 'Hiking', swim: 'Swimming', cycle: 'Cycling', strength: 'Lifting', bodyweight: 'Lifting', yoga: 'Yoga', pilates: 'Yoga', stretch: 'Yoga'};
+const EMBED_TAG = new Map<string, Promise<string | undefined>>();
 
-export function tagsForText(text: string): string[] {
-  const t = text.toLowerCase();
-  return Object.entries(TAG_WORDS).filter(([, words]) => words.some(w => t.includes(w))).map(([tag]) => tag);
+/** Keyword tags plus the embedder's top activity (score >= 0.5) when the model is present; keywords only without it. */
+export async function tagsFor(text: string): Promise<string[]> {
+  const tags = tagsForText(text);
+  // shortcut: unbounded memo keyed by text (event titles, group names); add an LRU cap if texts become per-user or unbounded
+  if (!EMBED_TAG.has(text)) EMBED_TAG.set(text, classifyActivity(text).then(([top]) => (top && top.score >= 0.5 ? ACTIVITY_TAG[top.activity] : undefined)));
+  const extra = await EMBED_TAG.get(text);
+  return extra && !tags.includes(extra) ? [...tags, extra] : tags;
 }
 
 function overlap(a: string[], b: string[]): number {
@@ -135,11 +129,13 @@ export async function trainEvents(userId: number, friends: Friend[], tags: strin
     left join event_rsvps r on r.event_id = e.id and r.status = 'going' and r.user_id = any(${friendIds}::int[])
     where e.starts_at > now() - interval '12 hours' and e.starts_at < now() + interval '21 days'
     group by e.id order by e.starts_at asc`;
-  return rows
-    .filter(r => isFitnessText(`${r.title} ${r.settings?.fitness ? 'fitness' : ''}`) && (r.friend_ids as number[]).length > 0)
-    .map(r => {
+  const withFriends = rows.filter(r => (r.friend_ids as number[]).length > 0);
+  const allTags = await Promise.all(withFriends.map(r => tagsFor(r.title as string)));
+  return withFriends
+    .map((r, i) => ({r, eventTags: allTags[i]}))
+    .filter(({r, eventTags}) => eventTags.length > 0 || isFitnessText(`${r.title} ${r.settings?.fitness ? 'fitness' : ''}`))
+    .map(({r, eventTags}) => {
       const going = (r.friend_ids as number[]).map(id => friends.find(f => f.id === id)).filter(Boolean) as Friend[];
-      const eventTags = tagsForText(r.title as string);
       return {
         id: r.id as number,
         title: r.title as string,
@@ -210,14 +206,16 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   // only tags the friend shared with friends: only_me / muse_only / dismissed never surface in "You both tagged X"
   const friendTags = new Map(friends.map(f => [f.id, friendVisibleTags(friendTagRows.filter(r => r.user_id === f.id) as {tag: string; visibility: string; confirmed: boolean}[])]));
   const friendCards: DiscoverCard[] = [];
+  const audit: PendingAudit[] = [];
   await Promise.all(friends.slice(0, 20).map(async f => {
-    const [thisWeek, today] = await Promise.all([ask(f.id, 'friends', 'workouts_this_week', `discover:${userId}`), ask(f.id, 'friends', 'completed_move_today', `discover:${userId}`)]);
+    const [thisWeek, today] = await Promise.all([askCached(f.id, 'friends', 'workouts_this_week', `discover:${userId}`, audit), askCached(f.id, 'friends', 'completed_move_today', `discover:${userId}`, audit)]);
     const active = thisWeek.value === true || (typeof thisWeek.value === 'number' && thisWeek.value > 0);
     if (!active) return;
     const shared = overlap(tags, friendTags.get(f.id) ?? []);
     const what = today.value === true ? 'moved today' : 'worked out this week';
     friendCards.push(await build({id: `friend-${f.id}`, kind: 'friend', title: f.name, subtitle: `${first(f.name)} ${what}`, href: `/profile/${f.id}`, cta: 'Invite to a game', avatarUrl: f.avatar_url, tag: (friendTags.get(f.id) ?? []).find(t => tags.includes(t)), score: 10 + shared * 3 + (today.value === true ? 2 : 0), meta: {shared}}, shared ? `You both tagged ${(friendTags.get(f.id) ?? []).find(t => tags.includes(t))}.` : `${first(f.name)} shares workout check-ins with friends.`));
   }));
+  await flushAudit(audit);
   friendCards.sort((a, b) => b.score - a.score);
   if (friendCards.length) sections.push({id: 'friends', title: 'Friends doing Activities', cards: friendCards});
 
@@ -237,10 +235,11 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
            exists (select 1 from quests q where q.group_id = g.id and q.status = 'active') as has_rally
     from groups g order by member_count desc limit 40`;
   const groupCards: DiscoverCard[] = [];
-  for (const g of groups) {
-    const gTags = tagsForText(g.name as string);
+  const groupTags = await Promise.all(groups.map(g => tagsFor(g.name as string)));
+  for (const [i, g] of groups.entries()) {
+    const gTags = groupTags[i];
     const matched = gTags.filter(t => tags.includes(t));
-    if (!matched.length && !g.has_rally && !isFitnessText(g.name as string)) continue;
+    if (!matched.length && !g.has_rally && !gTags.length && !isFitnessText(g.name as string)) continue;
     const fm = Number(g.friend_members);
     groupCards.push(await build({id: `group-${g.id}`, kind: 'group', title: g.name as string, subtitle: `${Number(g.member_count).toLocaleString()} members${fm ? ` · ${fm} ${fm === 1 ? 'friend' : 'friends'}` : ''}${g.has_rally ? ' · weekly Rally' : ''}`, href: `/groups/${g.id}`, cta: g.joined ? 'Open' : 'Join', imageUrl: g.cover_url as string, tag: matched[0] ?? gTags[0], score: matched.length * 4 + fm * 2 + (g.has_rally ? 3 : 0), meta: {joined: !!g.joined, rally: !!g.has_rally}}, matched.length ? `Matches your ${matched[0]} tag${fm ? ` and ${fm} of your friends are in it` : ''}.` : g.has_rally ? 'This group runs a weekly Rally.' : 'An active club near you.'));
   }
@@ -263,10 +262,9 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
       const matched = rTags.filter(t => tags.some(ut => ut.toLowerCase() === t.toLowerCase()));
       const label = matched[0] ?? rTags[0] ?? 'Workouts';
       // No Ember line: the bento shows the label, not a "why".
-      return {id: `reel-${r.id}`, kind: 'reel' as const, title: (r.caption as string) || 'Workout reel', subtitle: [r.difficulty, ...rTags.slice(0, 2)].filter(Boolean).join(' · '), href: `/reels?reel=${r.id}#activities`, cta: 'Watch', imageUrl: r.poster_url as string | null, tag: matched[0], why: `Suggested for ${label}.`, score: matched.length * 3 + Math.min(3, Number(r.plays) / 100), meta: {label}};
+      return {id: `reel-${r.id}`, kind: 'reel' as const, title: (r.caption as string) || 'Workout reel', subtitle: [r.difficulty, ...rTags.slice(0, 2)].filter(Boolean).join(' · '), href: `/reels?reel=${r.id}#activities`, cta: 'Watch', imageUrl: r.poster_url as string | null, tag: matched[0] ?? rTags[0], why: `Suggested for ${label}.`, score: matched.length * 3 + Math.min(3, Number(r.plays) / 100), meta: {label}};
     })
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 6);
+    .sort((a, b) => b.score - a.score);
   if (reelCards.length) sections.push({id: 'learn', title: 'Suggested reels', cards: reelCards});
 
   // --- Start a game (Rally library; endpoints owned by C/D) ---
@@ -277,7 +275,39 @@ export async function getDiscover(userId: number): Promise<DiscoverPayload> {
   ];
   sections.push({id: 'start', title: 'Start a game', cards: start});
 
+  // Bandit + MMR re-rank inside each section (layout order stays fixed); the hand-written scores above are the prior.
+  const {mine, all} = await armStats(userId);
+  const seed = (userId * 2_654_435_761 + Date.now()) >>> 0;
+  for (const [i, s] of sections.entries()) {
+    if (s.id === 'first_move') continue;
+    s.cards = rankCards(s.cards.map(c => ({id: c.id, type: c.kind, tag: c.tag, score: c.score, card: c})), mine, all, {seed: seed + i}).map(x => x.card);
+    if (s.id === 'learn') s.cards = s.cards.slice(0, 6);
+  }
+
   return {sections, tags, museOffline: offline, generatedAt: new Date().toISOString()};
+}
+
+/**
+ * Click / view counts per (card_type, tag) from discover_events: this user's, and everyone's for cold start.
+ * Dismisses count as views without a click. Empty maps (pure hand-score prior) when the table isn't there.
+ * shortcut: aggregates 60 days of events on every load; materialize per-arm counts once the table is large.
+ */
+async function armStats(userId: number): Promise<{mine: ArmStats; all: ArmStats}> {
+  const rows = await sql`
+    select user_id = ${userId} as mine, card_type, tag, count(*) filter (where event <> 'click')::int as shown, count(*) filter (where event = 'click')::int as clicks
+    from discover_events where created_at > now() - interval '60 days' group by 1, 2, 3`.catch(() => []);
+  const mine: ArmStats = new Map();
+  const all: ArmStats = new Map();
+  for (const r of rows) {
+    const key = armKey(r.card_type as string, r.tag as string | null);
+    const add = (m: ArmStats) => {
+      const a = m.get(key) ?? {impressions: 0, clicks: 0};
+      m.set(key, {impressions: a.impressions + Number(r.shown), clicks: a.clicks + Number(r.clicks)});
+    };
+    add(all);
+    if (r.mine) add(mine);
+  }
+  return {mine, all};
 }
 
 export type MentorMatch = {mentorId: number; title: string; subtitle: string; why: string; goalTag: string | null; score: number; requestId: number | null; status: string | null; connect: string | null};
@@ -291,10 +321,11 @@ const METRIC_GOALS: Record<string, string[]> = {
 };
 
 /**
- * "A few months ahead": opted-in people whose level now ≈ where the seeker could be in ~3 months.
+ * "A few months ahead": opted-in people who, ~offer.weeks ago, trained like the seeker does now (16-week MET-minute
+ * series, past-state nearest neighbour) and progressed since; the 7-day snapshot (aheadFit) is the fallback without history.
  * Their side is read only through ask(…, 'mentor_match') (rounded, their policy, audit-logged as 'ahead:match' with no
  * seeker id); their vault is never read here. Opt-in records + goal tags still match when activity data is thin.
- * shortcut: 3 ask() calls per opted-in person per page load; cache or precompute once the pool is more than a few dozen.
+ * shortcut: 4 ask() calls per opted-in person per page load; cache or precompute once the pool is more than a few dozen.
  */
 export async function matchMentors(seekerId: number, tags: string[]): Promise<MentorMatch[]> {
   const offers = await sql`
@@ -305,9 +336,10 @@ export async function matchMentors(seekerId: number, tags: string[]): Promise<Me
     left join lateral (select id, status, connect_status from mentor_requests where mentor_id = o.user_id and seeker_id = ${seekerId} order by id desc limit 1) r on true
     where o.user_id <> ${seekerId}`.catch(() => []);
   if (!offers.length) return [];
-  const [myKm, myDays, myLevel] = await Promise.all([ask(seekerId, 'only_me', 'distance_last_7_days_km', 'ahead:self'), ask(seekerId, 'only_me', 'active_days_last_7_days', 'ahead:self'), ask(seekerId, 'only_me', 'level_4w', 'ahead:self')]);
+  const [myKm, myDays, myLevel, myLoads] = await Promise.all([ask(seekerId, 'only_me', 'distance_last_7_days_km', 'ahead:self'), ask(seekerId, 'only_me', 'active_days_last_7_days', 'ahead:self'), ask(seekerId, 'only_me', 'level_4w', 'ahead:self'), ask(seekerId, 'only_me', 'load_weekly_16w', 'ahead:self')]);
   const myTier = tierOf(myLevel.value);
   const me: Level = {km: levelValue(myKm.value), days: levelValue(myDays.value)};
+  const mySeries = loadSeries(myLoads.value);
   const out: MentorMatch[] = [];
   await Promise.all(offers.map(async o => {
     const bday = o.birthday ? new Date(o.birthday as string) : null;
@@ -320,27 +352,33 @@ export async function matchMentors(seekerId: number, tags: string[]): Promise<Me
     const to = bandValue(o.to_value as string);
     const record = metric ? (from && to ? `${metric}: ${from} → ${to}` : metric) : null;
     let fit: AheadFit | null = null;
+    let traj: TrajectoryFit | null = null;
     let theirs = '';
     // 4-week tier one step above mine = the clearest "few months ahead" signal; last-7-days km/days can be one odd week
     let gap: number | null = null;
+    const weeks = Number(o.weeks) || 12;
     if ((o.consent as {workouts?: boolean} | null)?.workouts) {
       const uid = o.user_id as number;
-      const [km, days, lvl] = await Promise.all([ask(uid, 'mentor_match', 'distance_last_7_days_km', 'ahead:match'), ask(uid, 'mentor_match', 'active_days_last_7_days', 'ahead:match'), ask(uid, 'mentor_match', 'level_4w', 'ahead:match')]);
-      fit = aheadFit(me, {km: levelValue(km.value), days: levelValue(days.value)});
-      theirs = fit?.metric === 'km' ? `Covers ${km.value} a week` : fit ? `Active ${days.value} days a week` : '';
+      const [km, days, lvl, loads] = await Promise.all([ask(uid, 'mentor_match', 'distance_last_7_days_km', 'ahead:match'), ask(uid, 'mentor_match', 'active_days_last_7_days', 'ahead:match'), ask(uid, 'mentor_match', 'level_4w', 'ahead:match'), ask(uid, 'mentor_match', 'load_weekly_16w', 'ahead:match')]);
+      // their 4 weeks from ~offer.weeks ago vs my last 4; snapshot aheadFit only when either side lacks history
+      const theirSeries = loadSeries(loads.value);
+      traj = mySeries && theirSeries ? trajectoryFit(mySeries, theirSeries, weeks, myTier) : null;
+      fit = traj ? null : aheadFit(me, {km: levelValue(km.value), days: levelValue(days.value)}, weeks, myTier);
+      theirs = traj ? `Trained like you ${traj.lag} weeks ago` : fit?.metric === 'km' ? `Covers ${km.value} a week` : fit ? `Active ${days.value} days a week` : '';
       const theirTier = tierOf(lvl.value);
       if (myTier && theirTier) gap = TIER_RANK[theirTier] - TIER_RANK[myTier];
       if (gap === 1 && !theirs) theirs = `Trains at the "${theirTier}" level`;
     }
-    if (!fit && !matched.length && gap !== 1) return;
+    if (!traj && !fit && !matched.length && gap !== 1) return;
     const mine = fit?.metric === 'km' ? `about ${Math.round(fit.me)} km` : fit ? `${Math.round(fit.me)} ${Math.round(fit.me) === 1 ? 'day' : 'days'}` : '';
     out.push({
       mentorId: o.user_id as number,
       title: theirs || (record as string),
-      subtitle: fit ? `You're at ${mine} now${record ? ` · ${record}` : ''}` : !matched.length ? `You're at "${myTier}" now` : `Got there in ${Number(o.weeks ?? 0)} weeks`,
-      why: fit || !matched.length ? "That's about where you could be in 3 months." : `Their record matches your goal to ${matched[0].toLowerCase()}.`,
+      // growth to the nearest half (≈2.5×) so the card can't be read back to their exact load
+      subtitle: traj ? `Their weekly training load is up about ${Math.max(1.5, Math.round(traj.growth * 2) / 2)}× since${record ? ` · ${record}` : ''}` : fit ? `You're at ${mine} now${record ? ` · ${record}` : ''}` : !matched.length ? `You're at "${myTier}" now` : `Got there in ${Number(o.weeks ?? 0)} weeks`,
+      why: traj || fit || !matched.length ? `That's about where you could be in ${traj?.lag ?? weeks} weeks.` : `Their record matches your goal to ${matched[0].toLowerCase()}.`,
       goalTag: matched[0] ?? null,
-      score: (fit ? fit.fit * 10 : 0) + matched.length * 3 + (record ? 1 : 0) + (gap === 1 ? 4 : gap === 2 ? 1 : gap != null && gap <= 0 ? -3 : 0),
+      score: (traj ? traj.fit * 12 : fit ? fit.fit * 10 : 0) + matched.length * 3 + (record ? 1 : 0) + (gap === 1 ? 4 : gap === 2 ? 1 : gap != null && gap <= 0 ? -3 : 0),
       requestId: (o.request_id as number) ?? null,
       status: (o.request_status as string) ?? null,
       connect: (o.connect_status as string) ?? null,

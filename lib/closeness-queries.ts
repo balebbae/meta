@@ -1,5 +1,6 @@
 import {sql} from '@/lib/db';
-import {xpBlockReason} from '@/lib/xp-guard';
+import {HALF_LIFE_DAYS, scoreXp, type ScoreResult, type TieStats} from '@/lib/muse/score';
+import {type ScorableEvent, xpBlockReason} from '@/lib/xp-guard';
 
 export type LeaderboardRow = {
   userId: number;
@@ -37,6 +38,33 @@ export async function xpBlocked(opts: {userId: number; friendId?: number | null;
       (select count(*)::int from xp_events where user_id = ${opts.userId} and source_type = ${opts.sourceType}
         and created_at >= date_trunc('day', now())) as today`;
   return xpBlockReason({alreadyAwarded: Boolean(row?.already), todayCount: Number(row?.today ?? 0)}, opts.sourceType);
+}
+
+/** Pair tie inputs from the last 90 days of the xp_events ledger, both directions, decayed with HALF_LIFE_DAYS. */
+export async function pairTieStats(userId: number, friendId: number): Promise<TieStats> {
+  const [row] = await sql`
+    with pair as (
+      select user_id, source_type, power(0.5, extract(epoch from now() - created_at) / 86400 / ${HALF_LIFE_DAYS}) as w
+      from xp_events
+      where ((user_id = ${userId} and friend_id = ${friendId}) or (user_id = ${friendId} and friend_id = ${userId}))
+        and created_at > now() - interval '90 days' and source_type not like 'rally%'
+    )
+    select
+      coalesce(sum(w) filter (where user_id = ${userId}), 0)::float8 as out_w,
+      coalesce(sum(w) filter (where user_id = ${friendId}), 0)::float8 as in_w,
+      count(distinct source_type)::int as channels
+    from pair`;
+  return {outWeight: Number(row?.out_w ?? 0), inWeight: Number(row?.in_w ?? 0), channels: Number(row?.channels ?? 0)};
+}
+
+/** Guarded, deterministic XP award: dedupe + daily cap, then base XP x tie strength. No model call. */
+export async function awardXp(opts: {userId: number; friendId?: number | null; sourceType: ScorableEvent; sourceId?: number | null}): Promise<ScoreResult | {blocked: string}> {
+  const blocked = await xpBlocked(opts);
+  if (blocked) return {blocked};
+  const stats = opts.friendId ? await pairTieStats(opts.userId, opts.friendId) : {outWeight: 0, inWeight: 0, channels: 0};
+  const scored = scoreXp(opts.sourceType, stats);
+  await insertXpEvent({...opts, xp: scored.xp, reason: scored.reason});
+  return scored;
 }
 
 export async function weekLeaderboard(viewerId: number, limit = 10): Promise<LeaderboardRow[]> {

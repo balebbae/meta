@@ -1,5 +1,8 @@
-import {NextResponse, type NextRequest} from 'next/server';
+import {after, NextResponse, type NextRequest} from 'next/server';
 import {sql} from '@/lib/db';
+import {awardXp} from '@/lib/closeness-queries';
+import {museConfigured} from '@/lib/muse/client';
+import {nudgeOrNull} from '@/lib/muse/nudge';
 import {badRequest, notFound, readJson, REACTION_TYPES, withUser} from '@/lib/api';
 import {getPost} from '@/lib/queries';
 
@@ -30,46 +33,20 @@ export async function PUT(req: NextRequest, {params}: Ctx) {
     if (!prev && (post.author_id as number) !== user.id) {
       await sql`insert into notifications (user_id, actor_id, type, post_id, message)
         values (${post.author_id as number}, ${user.id}, 'reaction', ${id}, ${user.name + ' reacted to your post.'})`;
-      // Best-effort Muse closeness XP (never fail the reaction)
-      void import('@/lib/muse/client')
-        .then(({museConfigured}) => {
-          if (!museConfigured() || !process.env.DATABASE_URL) return null;
-          return Promise.all([
-            import('@/lib/muse/score'),
-            import('@/lib/closeness-queries'),
-            import('@/lib/muse/nudge'),
-          ]);
-        })
-        .then(async mods => {
-          if (!mods) return;
-          const [{scoreInteraction}, {insertXpEvent, xpBlocked}, {generateNudge}] = mods;
-          // un-react + re-react must not re-award XP; also capped per day (lib/xp-guard.ts)
-          if (await xpBlocked({userId: user.id, friendId: post.author_id as number, sourceType: 'reaction', sourceId: id})) return;
-          const [author] = await sql`select name from users where id = ${post.author_id as number}`;
-          const scored = await scoreInteraction({
-            actorName: user.name,
-            friendName: (author?.name as string) ?? 'friend',
-            eventType: 'reaction',
-            detail: `Reacted with ${type}`,
-          });
-          await insertXpEvent({
-            userId: user.id,
-            friendId: post.author_id as number,
-            sourceType: 'reaction',
-            sourceId: id,
-            xp: scored.xp,
-            reason: scored.reason,
-          });
-          const nudge = await generateNudge({
-            recipientName: (author?.name as string) ?? 'friend',
-            actorName: user.name,
-            context: `reacted ${type} on your post`,
-          });
+      const authorId = post.author_id as number;
+      // Deterministic closeness XP, no model call; un-react + re-react never re-awards (lib/xp-guard.ts). Never fails the reaction.
+      await awardXp({userId: user.id, friendId: authorId, sourceType: 'reaction', sourceId: id}).catch(() => undefined);
+      // Muse only rewrites the notification copy, after the response; the template above stays on timeout/error.
+      if (museConfigured()) {
+        after(async () => {
+          const [author] = await sql`select name from users where id = ${authorId}`;
+          const nudge = await nudgeOrNull({recipientName: (author?.name as string) ?? 'friend', actorName: user.name, context: `reacted ${type} on your post`});
+          if (!nudge?.message) return;
           await sql`update notifications set message = ${nudge.message}
-            where user_id = ${post.author_id as number} and actor_id = ${user.id} and post_id = ${id} and type = 'reaction'
+            where user_id = ${authorId} and actor_id = ${user.id} and post_id = ${id} and type = 'reaction'
             and created_at > now() - interval '1 minute'`;
-        })
-        .catch(() => undefined);
+        });
+      }
     }
     return NextResponse.json({post: await getPost(id, user.id)});
   });

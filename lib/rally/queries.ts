@@ -13,6 +13,8 @@ import {generateBadgeArt} from '@/lib/muse/image';
 import {sendPushToUser} from '@/lib/push';
 import {narrate, recapText} from '@/lib/rally/narration';
 import {verifyProofImage} from '@/lib/rally/proof';
+import {fuseClipProof, type PoseVerdict} from '@/lib/rally/proof-fusion';
+import {POSE_SUPPORTED} from '@/lib/rally/pose-classify';
 import {CONFIDENT, EXERCISE_LABEL, countReps, type ClipExercise} from '@/lib/rally/repcount';
 import {
   adaptiveAdjust,
@@ -196,8 +198,10 @@ export function levelDayFor(quest: Pick<QuestRow, 'startsAt' | 'spec'>, now = ne
 }
 
 export type MoveSource = 'manual' | 'photo' | 'voice' | 'vault' | 'clip';
-/** Clip proof: the per-frame joint signal the phone extracted (the video itself never leaves the phone) + 1-3 stills. */
-export type ClipInput = {exercise: ClipExercise; fps: number; signal: (number | null)[]; frames: string[]};
+/** The phone's pose classifier verdict (lib/rally/pose-classify.ts), small enough to send instead of any video. */
+export type ClipPose = Pick<PoseVerdict, 'exercise' | 'confidence' | 'abstain' | 'person_found' | 'reps'>;
+/** Clip proof: the per-frame joint signal and pose verdict the phone extracted (the video itself never leaves the phone) + 1-3 stills. */
+export type ClipInput = {exercise: ClipExercise; fps: number; signal: (number | null)[]; frames: string[]; pose?: ClipPose | null};
 export type LogMoveInput = {source: MoveSource; vaultEventId?: number | null; note?: string | null; image?: string | null; amount?: number | null; dareId?: string | null; clip?: ClipInput | null};
 export type LogMoveResult =
   | {ok: true; move: MoveRow; event: BossEvent; damage: number; critical: boolean; hpLeft: number; narration: string; museUsed: boolean; proof?: {status: string; verdict: string}; completed: boolean}
@@ -240,7 +244,9 @@ export async function logMove(questId: number, user: {id: number; name: string},
     const c = countReps(input.clip.signal, input.clip.fps, input.clip.exercise);
     const label = EXERCISE_LABEL[input.clip.exercise];
     if (c.reps === 0) return {ok: false, error: `No full ${label} counted in that clip. Film from the side with your whole body in frame.`, status: 422};
-    const r = await verifyProofImage({image: input.clip.frames[0], frames: input.clip.frames, task: `${label}, about ${c.reps} reps`});
+    const {frames, pose} = input.clip;
+    // the server decides which exercises the pose model may vouch for, not the phone
+    const r = await fuseClipProof(label, pose ? {...pose, supported: POSE_SUPPORTED} : null, () => verifyProofImage({image: frames[0], frames, task: `${label}, about ${c.reps} reps`}));
     if (r.status === 'rejected') return {ok: false, error: `Clip not accepted: ${r.verdict}`, status: 422};
     const confident = c.confidence >= CONFIDENT;
     if (confident) clip = {reps: c.reps};

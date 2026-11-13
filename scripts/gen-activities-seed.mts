@@ -1,11 +1,11 @@
-// Generates the idempotent Activities seed block (profiles, tags, demo-week vault events for users 1-6).
+// Generates the idempotent Activities seed block (profiles, tags, demo-week vault events for users 1-6, 16-week history for the mentor demo).
 // Run: node scripts/gen-activities-seed.mts >> db/seed.sql   (uses the same generator as the mock connector)
 import {readFileSync, writeFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 const src = readFileSync(new URL('../lib/activities/demo-week.ts', import.meta.url), 'utf8').replace(/import type .*\n/, '');
 const tmp = new URL('../.demo-week.tmp.mts', import.meta.url);
 writeFileSync(tmp, src);
-const {generateDemoWeek} = await import(pathToFileURL(tmp.pathname).href);
+const {generateDemoWeek, generateDemoHistory} = await import(pathToFileURL(tmp.pathname).href);
 const now = new Date();
 const q = (s: unknown) => (s == null ? 'null' : `'${String(s).replace(/'/g, "''")}'`);
 const rel = (iso: string | undefined) => (iso ? `now() - interval '${Math.round((now.getTime() - new Date(iso).getTime()) / 60000)} minutes'` : 'null');
@@ -30,9 +30,11 @@ const tags: [number, string, string, string][] = [
 out.push(`insert into user_tags (user_id, tag, kind, origin, visibility, confirmed)\nvalues ${tags.map(t => `(${t[0]}, ${q(t[1])}, ${q(t[2])}, 'selected', ${q(t[3])}, true)`).join(',\n       ')}\non conflict (user_id, kind, tag) do nothing;`);
 out.push(`-- Caleb (user 1): heart rate is Muse-only for every other audience so the live redaction demo (§14) works out of the box.\ninsert into share_policies (user_id, category, audience, level)\nvalues (1, 'heart', 'game_participants', 'muse_only'), (1, 'heart', 'friends', 'muse_only'), (1, 'heart', 'mentor_match', 'muse_only'), (1, 'heart', 'public', 'none'), (1, 'heart', 'only_me', 'exact')\non conflict (user_id, category, audience) do nothing;`);
 out.push(`insert into connections (user_id, source, status, tokens, connected_at)\nvalues ${[1, 2, 3, 4, 5, 6].map(u => `(${u}, 'mock', 'connected', '{"device":"Demo watch","seeded":true}'::jsonb, now())`).join(', ')}\non conflict (user_id, source) do nothing;`);
-for (let u = 1; u <= 6; u++) {
-  const events = generateDemoWeek(u, 'mock', now);
-  const rows = events.map((e: any) => `(${u}, 'mock', ${q(e.externalId)}, ${q(e.kind)}, ${rel(e.startedAt)}, ${rel(e.endedAt)}, ${e.distanceKm ?? 'null'}, ${e.durationMin ?? 'null'}, ${e.steps ?? 'null'}, ${e.avgHr ?? 'null'}, 'device', 'normal')`);
+function insertEvents(u: number, events: any[]) {
+  const rows = events.map((e: any) => `(${u}, 'mock', ${q(e.externalId)}, ${q(e.kind)}, ${rel(e.startedAt)}, ${rel(e.endedAt)}, ${e.distanceKm ?? 'null::numeric'}, ${e.durationMin ?? 'null::numeric'}, ${e.steps ?? 'null::int'}, ${e.avgHr ?? 'null::int'}, 'device', 'normal')`);
   out.push(`insert into vault_events (user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)\nselect v.* from (values\n  ${rows.join(',\n  ')}\n) as v(user_id, source, external_id, kind, started_at, ended_at, distance_km, duration_min, steps, avg_hr, trust, display_scope)\nwhere not exists (select 1 from vault_events e where e.user_id = v.user_id and e.source = v.source and e.external_id = v.external_id);`);
 }
+for (let u = 1; u <= 6; u++) insertEvents(u, generateDemoWeek(u, 'mock', now));
+out.push('-- ---- "A few months ahead": 15 more weeks of synthetic workout history for the seeker (1) and mentors (idempotent) ----');
+for (let u = 1; u <= 12; u++) if (generateDemoHistory(u, 'mock', now).length) insertEvents(u, generateDemoHistory(u, 'mock', now));
 process.stdout.write(out.join('\n\n') + '\n');
